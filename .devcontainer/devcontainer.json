@@ -1,3 +1,8 @@
 {
   "image": "mcr.microsoft.com/devcontainers/javascript-node:18",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker": {
+      "dockerDashComposeVersion": "v2"
+    }
+  }
 }
