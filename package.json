@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "main": "index.js",
+  "exports": "./index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "watch": "node --watch --watch-preserve-output ."
   },
   "repository": {
     "type": "git",

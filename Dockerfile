@@ -1,10 +1,9 @@
+# https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md
+# docker run --publish 8080:8080 --rm --init "$(docker build --quiet .)"
+
 FROM node:18-alpine
 
-ARG NODE_ENV
-ENV NODE_ENV=${NODE_ENV}
-
-# Ensure NODE_ENV is set
-RUN test -n "$NODE_ENV"
+USER node
 
 WORKDIR /usr/src/app
 
@@ -15,7 +14,5 @@ RUN npm ci --omit=dev
 COPY . .
 
 EXPOSE 8080
-
-WORKDIR /app/apps/server
 
 CMD ["node", "index.js"]
