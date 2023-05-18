@@ -25,6 +25,9 @@ function getProtocolFromRequest(req) {
 }
 
 export class Request {
+  /** @type {import("node:http").IncomingMessage} */
+  _UNSAFE_nodeRequest;
+
   /**
    * The URL based on the original request without looking at any proxy headers.
    * @type {URL}
@@ -40,6 +43,8 @@ export class Request {
    * @param {import("node:http").IncomingMessage} req
    */
   constructor(req) {
+    this._UNSAFE_nodeRequest = req;
+
     const hostHeader = req.headers.host
     // https://github.com/nodejs/node/issues/3094#issue-108564685
     if (!hostHeader) {
