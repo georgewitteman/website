@@ -36,8 +36,15 @@ export class Request {
 
   /**
    * The URL including proxy headers. Assumes the proxy is trusted.
+   * @type {URL}
    */
   #originalUrl;
+
+  /** @type {{ minorVersion: string, majorVersion: string, version: string }} */
+  #httpVersion
+
+  /** @type {"GET" | "HEAD"} */
+  #method;
 
   /**
    * @param {import("node:http").IncomingMessage} req
@@ -51,11 +58,34 @@ export class Request {
       throw new Error("Missing required Host header");
     }
 
+    if (req.method === "HEAD" || req.method === "GET") {
+      this.#method = req.method
+    } else {
+      throw new Error(`Unsupported request method: ${req.method}`)
+    }
+
     if (!req.url) {
       throw new Error("Missing request path");
     }
+
+    // https://datatracker.ietf.org/doc/html/rfc7230#section-5.3
+    // https://datatracker.ietf.org/doc/html/rfc7230#section-5.5
     this.#rawUrl = new URL(req.url, `${getProtocolFromRequest(req)}://${hostHeader}`);
     this.#originalUrl = new URL(req.url, `${req.headers["x-forwarded-proto"] ?? getProtocolFromRequest(req)}://${hostHeader}`);
+
+    this.#httpVersion = {
+      version: req.httpVersion,
+      minor: req.httpVersionMinor,
+      major: req.httpVersionMajor,
+    }
+  }
+
+  get method() {
+    return this.#method;
+  }
+
+  get httpVersion() {
+    return this.#httpVersion.version;
   }
 
   /**

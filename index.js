@@ -2,10 +2,10 @@ import { getActiveResourcesInfo } from 'node:process';
 import { createServer } from "node:http";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { createReadStream } from 'node:fs';
 import { pipeline } from "node:stream/promises";
 import { contentType } from "mime-types";
 import { Request } from './Request.js';
+import { Response } from './Response.js';
 
 const PORT = 8080;
 
@@ -28,7 +28,7 @@ async function serveStaticFile(pathname) {
   if (!stats.isFile()) {
     return undefined;
   }
-  return { stream: createReadStream(normalizedFullFilePath), filePath: normalizedFullFilePath };
+  return { contentsBuffer: await fs.readFile(normalizedFullFilePath), filePath: normalizedFullFilePath };
 }
 
 // https://github.com/jshttp/mime-types https://github.com/broofa/mime
@@ -48,7 +48,7 @@ async function serveStaticFile(pathname) {
 
 /**
  * @param {Request} req
- * @param {import("node:http").ServerResponse} res
+ * @param {Response} res
  * @param {() => Promise<void>} next
  */
 async function staticHandler(req, res, next) {
@@ -64,12 +64,12 @@ async function staticHandler(req, res, next) {
   // const contentTypeHeader = MIME_TYPES[extension] ?? MIME_TYPES.default;
   const contentTypeHeader = contentType(extension) || 'application/octet-stream';
   res.writeHead(200, { "Content-Type": contentTypeHeader });
-  await pipeline(fileInfo.stream, res);
+  res.end(fileInfo.contentsBuffer);
 }
 
 /**
  * @param {Request} req
- * @param {import("node:http").ServerResponse} res
+ * @param {Response} res
  */
 async function notFound(req, res) {
   res.writeHead(404);
@@ -78,19 +78,20 @@ async function notFound(req, res) {
 
 /**
  * @param {Request} req
- * @param {import("node:http").ServerResponse} res
+ * @param {Response} res
  * @param {() => Promise<void>} next
  */
 async function logger(req, res, next) {
   const nodeRequest = req._UNSAFE_nodeRequest;
   const startNs = process.hrtime.bigint();
-  console.log(`START: ${nodeRequest.method} (${nodeRequest.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${JSON.stringify(nodeRequest.headers)}`);
+  console.log(`START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${JSON.stringify(nodeRequest.headers)}`);
   try {
     await next();
   } catch (err) {
-    console.log(res.closed, res.destroyed, res.errored, res.writable, res.writableEnded, res.writableFinished);
+    const res2 = res._UNSAFE_serverResponse;
+    console.log(res2.closed, res2.destroyed, res2.errored, res2.writable, res2.writableEnded, res2.writableFinished);
     console.error(err);
-    if (res.closed) {
+    if (res.headersSent) {
       return;
     }
     res.writeHead(500);
@@ -98,7 +99,7 @@ async function logger(req, res, next) {
   } finally {
     const durationNs = process.hrtime.bigint() - startNs;
     const durationMs = durationNs / 1_000_000n;
-    console.log(`END: ${nodeRequest.method} (${nodeRequest.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
+    console.log(`END: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
   }
 }
 
@@ -106,7 +107,7 @@ const middleware = [logger, staticHandler, notFound];
 
 /**
  * @param {Request} req
- * @param {import("node:http").ServerResponse} res
+ * @param {Response} res
  */
 async function handleRequest(req, res) {
   let index = -1;
@@ -123,13 +124,12 @@ async function handleRequest(req, res) {
       return
     }
     const fn = middleware[i];
-    return fn(req, res, dispatch.bind(null, i + 1));
+    await fn(req, res, dispatch.bind(null, i + 1));
   }
-  return dispatch(0);
+  await dispatch(0);
 }
 
-const server = createServer((nodeRequest, res) => {
-
+const server = createServer((nodeRequest, nodeResponse) => {
   if (typeof nodeRequest.headers.host !== "string") {
     // RFC 7230: "A server MUST respond with a 400 (Bad Request) status code to
     // any HTTP/1.1 request message that lacks a Host header field and to any
@@ -137,12 +137,23 @@ const server = createServer((nodeRequest, res) => {
     // header field with an invalid field-value."
     //
     // https://github.com/nodejs/node/issues/3094#issue-108564685
-    res.writeHead(400);
-    res.end();
+    nodeResponse.writeHead(400);
+    nodeResponse.end("Missing Host header");
+    return;
+  }
+  if (!["GET", "HEAD"].includes(nodeRequest.method)) {
+    // When a request method is received that is unrecognized or not implemented
+    // by an origin server, the origin server SHOULD respond with the 501 (Not
+    // Implemented) status code.  When a request method is received that is
+    // known by an origin server but not allowed for the target resource, the
+    // origin server SHOULD respond with the 405 (Method Not Allowed) status
+    // code.
+    nodeResponse.writeHead(501);
+    nodeResponse.end(`Unsupported method: ${nodeRequest.method}`);
     return;
   }
   const req = new Request(nodeRequest);
-
+  const res = new Response(nodeResponse);
   handleRequest(req, res).catch(console.error)
 });
 
