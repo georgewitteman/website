@@ -5,33 +5,9 @@ import * as fs from "node:fs/promises";
 import { createReadStream } from 'node:fs';
 import { pipeline } from "node:stream/promises";
 import { contentType } from "mime-types";
+import { Request } from './Request.js';
+
 const PORT = 8080;
-
-/**
- * https://github.com/expressjs/express/blob/f540c3b0195393974d4875a410f4c00a07a2ab60/lib/request.js#L292-L324
- *
- * @param {import("node:http").IncomingMessage} req
- */
-function getProtocolFromRequest(req) {
-  return req.socket.encrypted ? "https" : "http"
-  // var proto = this.connection.encrypted
-  //   ? 'https'
-  //   : 'http';
-  // var trust = this.app.get('trust proxy fn');
-
-  // if (!trust(this.connection.remoteAddress, 0)) {
-  //   return proto;
-  // }
-
-  // // Note: X-Forwarded-Proto is normally only ever a
-  // //       single value, but this is to be safe.
-  // var header = this.get('X-Forwarded-Proto') || proto
-  // var index = header.indexOf(',')
-
-  // return index !== -1
-  //   ? header.substring(0, index).trim()
-  //   : header.trim()
-}
 
 const STATIC_PATH = path.join(process.cwd(), "./static");
 
@@ -71,12 +47,11 @@ async function serveStaticFile(pathname) {
 // };
 
 /**
- * @param {import("node:http").IncomingMessage} req
+ * @param {Request} req
  * @param {import("node:http").ServerResponse} res
  */
 async function handleRequest(req, res) {
-  const url = new URL(req.url, `${getProtocolFromRequest(req)}://${req.headers.host}`);
-  const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
+  const pathname = req.pathname === "/" ? "/index.html" : req.pathname;
 
   const fileInfo = await serveStaticFile(pathname);
   if (fileInfo) {
@@ -92,15 +67,21 @@ async function handleRequest(req, res) {
   res.end("Not found");
 }
 
-const server = createServer((req, res) => {
+const server = createServer((nodeRequest, res) => {
   const startNs = process.hrtime.bigint();
-  if (typeof req.headers.host !== "string") {
-    res.writeHead(500);
-    res.end("Internal Error: Missing Host header");
+  if (typeof nodeRequest.headers.host !== "string") {
+    // RFC 7230: "A server MUST respond with a 400 (Bad Request) status code to
+    // any HTTP/1.1 request message that lacks a Host header field and to any
+    // request message that contains more than one Host header field or a Host
+    // header field with an invalid field-value."
+    //
+    // https://github.com/nodejs/node/issues/3094#issue-108564685
+    res.writeHead(400);
+    res.end();
     return;
   }
-  const url = new URL(req.url, `${getProtocolFromRequest(req)}://${req.headers.host}`);
-  console.log(`START: ${req.method} (${req.httpVersion}) ${url.href} ${JSON.stringify(req.headers)}`);
+  const req = new Request(nodeRequest);
+  console.log(`START: ${nodeRequest.method} (${nodeRequest.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${JSON.stringify(nodeRequest.headers)}`);
   handleRequest(req, res)
     .catch((err) => {
       console.log(res.closed, res.destroyed, res.errored, res.writable, res.writableEnded, res.writableFinished);
@@ -111,7 +92,7 @@ const server = createServer((req, res) => {
     .finally(() => {
       const durationNs = process.hrtime.bigint() - startNs;
       const durationMs = durationNs / 1_000_000n;
-      console.log(`END: ${req.method} (${req.httpVersion}) ${url.href} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
+      console.log(`END: ${nodeRequest.method} (${nodeRequest.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
     });
 });
 
