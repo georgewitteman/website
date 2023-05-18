@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Microwave Time Calculator</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+  <meta name="description" content="Calculate the time you should put something in the microwave based on the wattage of your microwave and the wattage used to determine the time on the box.">
+  <meta name="author" content="George Witteman">
+
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      touch-action: manipulation;
+    }
+
+    #result_time, #result_power{
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/">&lsaquo; Home</a><br>
+  </nav>
+</header>
+
+<main>
+<p>I microwave a lot of food, so this is handy to calculate the best settings. It first tries to match the intended wattage based on the power setting on the box. Using that wattage, it then calculates the time that will cook the food most similarly to the box settings.</p>
+
+<p>The URL is also updated, so you can create a bookmark with your microwave settings for easy use.</p>
+
+<form id="form">
+  <label>
+    Box Wattage<br>
+    <input type="number" name="box_wattage" id="box_wattage" value="1100" step="50" min="1" max="10000">
+  </label>
+  <button type="button" id="plus_box_wattage">+25</button>
+  <button type="button" id="minus_box_wattage">-25</button>
+  <br>
+  <label>
+    Box Time<br>
+    <input type="number" name="box_minutes" id="box_minutes" value="1" min="0" max="60">
+    mins
+  </label>
+  <label>
+    <input type="number" name="box_seconds" id="box_seconds" value="0" step="15" min="0" max="60">
+    secs
+  </label>
+  <button type="button" id="plus_15_s">+15</button>
+  <button type="button" id="minus_15_s">-15</button>
+  <button type="button" id="plus_1_s">+</button>
+  <button type="button" id="minus_1_s">-</button>
+  <br>
+  <label>
+    Box Power (1-10)<br>
+    <input type="number" name="box_power" id="box_power" value="10" min="1" max="10">
+  </label>
+  <button type="button" id="plus_1_power">+</button>
+  <button type="button" id="minus_1_power">-</button>
+  <br>
+  <label>
+    Your Wattage<br>
+    <input type="number" name="your_wattage" id="your_wattage" value="975" step="50" min="1" max="10000">
+  </label>
+  <button type="button" id="plus_your_wattage">+25</button>
+  <button type="button" id="minus_your_wattage">-25</button>
+  <p>
+    Your Time:
+    <output for="form" for="box_wattage box_minutes box_seconds box_power your_wattage" id="result_time"></output>
+
+    (Power: <output for="form" for="box_wattage box_minutes your_wattage" id="result_power"></output>)
+  </p>
+
+  <a href="/microwave_time_calculator.html">Reset</a>
+</form>
+</main>
+
+<script>
+const formElement = document.getElementById('form');
+
+const boxWattageInput = document.getElementById('box_wattage');
+const boxMinutesInput = document.getElementById('box_minutes');
+const boxSecondsInput = document.getElementById('box_seconds');
+const boxPowerInput = document.getElementById('box_power');
+const yourWattageInput = document.getElementById('your_wattage');
+const plus15Btn = document.getElementById('plus_15_s');
+const minus15Btn = document.getElementById('minus_15_s');
+const plus1Btn = document.getElementById('plus_1_s');
+const minus1Btn = document.getElementById('minus_1_s');
+const plus1PowerBtn = document.getElementById('plus_1_power');
+const minus1PowerBtn = document.getElementById('minus_1_power');
+const plusBoxWattageBtn = document.getElementById('plus_box_wattage');
+const minusBoxWattageBtn = document.getElementById('minus_box_wattage');
+const plusYourWattageBtn = document.getElementById('plus_your_wattage');
+const minusYourWattageBtn = document.getElementById('minus_your_wattage');
+
+const secondsToMinsSecs = (seconds) => ({
+  minutes: Math.floor(seconds / 60),
+  seconds: Math.round(seconds % 60),
+});
+
+const valueOrDefault = (value, nanValue) => isNaN(value) ? nanValue : value;
+
+const getBoxSeconds = () => (
+  valueOrDefault((parseInt(boxMinutesInput.value, 10) * 60), 0) +
+  valueOrDefault(parseInt(boxSecondsInput.value, 10), 0)
+);
+
+const roundToNearest = (value, nearest) => Math.round(value / nearest) * nearest;
+
+const timeBtnClickHandler = (delta) => () => {
+  const newSeconds = Math.max(1, getBoxSeconds() + delta);
+  const { minutes, seconds } = secondsToMinsSecs(newSeconds);
+  boxMinutesInput.value = minutes;
+  boxSecondsInput.value = seconds;
+  computeTime();
+};
+
+plus15Btn.addEventListener('click', timeBtnClickHandler(15));
+minus15Btn.addEventListener('click', timeBtnClickHandler(-15));
+plus1Btn.addEventListener('click', timeBtnClickHandler(1));
+minus1Btn.addEventListener('click', timeBtnClickHandler(-1));
+
+const powerBtnClickHandler = (delta) => () => {
+  boxPowerInput.value = Math.max(1, Math.min(10, parseInt(boxPowerInput.value, 10) + delta));
+  computeTime();
+}
+
+plus1PowerBtn.addEventListener('click', powerBtnClickHandler(1));
+minus1PowerBtn.addEventListener('click', powerBtnClickHandler(-1));
+
+const wattageBtnClickHandler = (delta, element) => () => {
+  element.value = Math.max(1, parseInt(element.value, 10) + delta);
+  computeTime();
+}
+
+plusBoxWattageBtn.addEventListener('click', wattageBtnClickHandler(25, boxWattageInput));
+minusBoxWattageBtn.addEventListener('click', wattageBtnClickHandler(-25, boxWattageInput));
+plusYourWattageBtn.addEventListener('click', wattageBtnClickHandler(25, yourWattageInput));
+minusYourWattageBtn.addEventListener('click', wattageBtnClickHandler(-25, yourWattageInput));
+
+const urlParams = new URLSearchParams(window.location.search);
+urlParams.forEach((value, key) => {
+  const element = document.getElementById(key);
+  if (element) {
+    element.value = value;
+  }
+});
+
+const resultTimeElement = document.getElementById('result_time');
+const resultPowerElement = document.getElementById('result_power');
+
+function computeTime() {
+  const boxWattage = valueOrDefault(parseInt(boxWattageInput.value, 10), 1100);
+  const boxSeconds = getBoxSeconds();
+  const boxPower = valueOrDefault(parseInt(boxPowerInput.value, 10), 10);
+  const yourWattage = valueOrDefault(parseInt(yourWattageInput.value, 10), 975);
+
+  const newUrl = new URL(window.location.href);
+  newUrl.searchParams.set('box_wattage', boxWattage);
+  newUrl.searchParams.set('your_wattage', yourWattage);
+  window.history.replaceState({}, '', newUrl.pathname + newUrl.search);
+
+  // We want the desired power to be as close to the power of the microwave
+  // used to make the calculations on the box. Obviously, this can't be greater
+  // than 10 (i.e. 100%).
+  const resultPower = Math.min(Math.round(boxPower * (boxWattage / yourWattage)), 10);
+
+  // Now that we have the power setting for the user's microwave that gets them
+  // closest to the box wattage, we need to calculate what the effective wattages
+  // of both are after taking into account the power settings for each. This
+  // assumes 10 = 100%, 5 = 50%, etc.
+  const effectiveBoxWattage = boxWattage * (boxPower / 10);
+  const effectiveYourWattage = yourWattage * (resultPower / 10);
+
+  const resultSeconds = boxSeconds * (effectiveBoxWattage / effectiveYourWattage);
+
+  resultTimeElement.innerHTML = `${Math.floor(resultSeconds / 60)} min ${Math.round(resultSeconds % 60)} sec`
+  resultPowerElement.innerHTML = resultPower;
+}
+
+formElement.addEventListener('input', computeTime);
+
+computeTime();
+</script>
+</body>
+</html>

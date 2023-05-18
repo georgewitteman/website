@@ -1,0 +1,33 @@
+:root {
+  --color-text: #222;
+  --color-link: #1a0dab;
+  --color-link-visited: #609;
+
+  --line-height: 1.5;
+  --width-content: 80ch;
+}
+
+body {
+  color: var(--color-text);
+  font-size: 1em;
+  line-height: var(--line-height);
+  margin: 0;
+  padding: 1rem;
+}
+
+footer,
+header,
+main {
+  margin: 0 auto;
+  max-width: var(--width-content);
+}
+
+header {
+  margin-bottom: 1em;
+}
+
+@media only screen and (max-width: 600px) {
+  button, input {
+    font-size: 1.5em;
+  }
+}

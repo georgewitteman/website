@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Amazon Short Link Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="George Witteman">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/">&lsaquo; Home</a><br>
+        </nav>
+    </header>
+      
+    <main>
+        <form id="form">
+            <label>
+                Long URL<br>
+                <input type="text" name="long_url" id="long_url" autofocus placeholder="https://www.amazon.com/gp/product/B07PWC32ZD/ref=ox_sc_act_title_14?smid=A294P4X9EWVXLJ&psc=1">
+                <button id="paste_url" type="button">Paste</button>
+                <button id="paste_copy_url" type="button">Paste & Copy</button>
+            </label>
+            <p>
+                Short URL<br>
+                <output for="form" for="long_url" id="short_url"></output>
+                <button id="copy_short_url" style="display:none" type="button">Copy</button>
+            </p> 
+            <p>
+                Shortish URL<br>
+                <output for="form" for="long_url" id="shortish_url"></output>
+                <button id="copy_shortish_url" style="display:none" type="button">Copy</button>
+            </p>
+        </form>
+        <script>
+            const ASIN_REGEX = /\W([A-Z0-9]{10})/;
+            const AMAZON_URL = 'https://amzn.com/dp/';
+            const AMAZON_LONG_URL = 'https://www.amazon.com/dp/';
+
+            function getAsin(longUrl) {
+                let asin = longUrl.match(ASIN_REGEX);
+                if (!asin || asin.length < 1) {
+                    return null;
+                }
+                return asin[1];
+            }
+
+            const formElement = document.getElementById('form');
+            const longUrlElement = document.getElementById('long_url');
+            const pasteUrlElement = document.getElementById('paste_url');
+            const pasteCopyUrlElement = document.getElementById('paste_copy_url');
+            const shortUrlElement = document.getElementById('short_url');
+            const shortishUrlElement = document.getElementById('shortish_url');
+
+            const copyShortUrl = document.getElementById('copy_short_url');
+            const copyShortishUrl = document.getElementById('copy_shortish_url');
+
+            pasteUrlElement.addEventListener(
+                'click',
+                async function() {
+                    const longUrl = await navigator.clipboard.readText();
+                    longUrlElement.value = longUrl;
+                    longUrlElement.dispatchEvent(
+                        new Event('input', {
+                            bubbles: true,
+                            cancelable: true,
+                        }),
+                    );
+                    longUrlElement.focus();
+                    longUrlElement.select();
+                },
+            );
+
+            pasteCopyUrlElement.addEventListener(
+                'click',
+                async function() {
+                    const longUrl = await navigator.clipboard.readText();
+                    longUrlElement.value = longUrl;
+                    longUrlElement.dispatchEvent(
+                        new Event('input', {
+                            bubbles: true,
+                            cancelable: true,
+                        }),
+                    );
+                    formElement.dispatchEvent(
+                        new Event('submit', {
+                            bubbles: true,
+                            cancelable: true,
+                        }),
+                    );
+                },
+            );
+            
+            formElement.addEventListener(
+                'input',
+                function() {
+                    const asin = getAsin(longUrlElement.value);
+                    if (!asin) {
+                        shortUrlElement.innerHTML = '';
+                        shortishUrlElement.innerHTML = '';
+                        copyShortUrl.style.display = 'none';
+                        copyShortishUrl.style.display = 'none';
+                        return;
+                    }
+                    const shortUrl = `${AMAZON_URL}${asin}`;
+                    const shortishUrl = `${AMAZON_LONG_URL}${asin}`;
+                    shortUrlElement.innerHTML = `<a href="${shortUrl}">${shortUrl}</a>`;
+                    shortishUrlElement.innerHTML = `<a href="${shortishUrl}">${shortishUrl}</a>`;
+                    copyShortUrl.style.display = 'initial';
+                    copyShortishUrl.style.display = 'initial';
+                },
+            );
+
+            formElement.addEventListener(
+                'submit',
+                function(e) {
+                    navigator.clipboard.writeText(shortishUrlElement.textContent);
+                    e.preventDefault();
+                },
+            );
+
+            copyShortUrl.addEventListener(
+                'click',
+                function(e) {
+                    navigator.clipboard.writeText(shortUrlElement.value);
+                    e.preventDefault();
+                },
+            );
+
+            copyShortishUrl.addEventListener(
+                'click',
+                function(e) {
+                    navigator.clipboard.writeText(shortishUrlElement.value);
+                    e.preventDefault();
+                },
+            );
+
+        </script>
+    </main>
+</body>
+</html>

@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/georgewitteman/website/issues"
   },
-  "homepage": "https://github.com/georgewitteman/website#readme"
+  "homepage": "https://github.com/georgewitteman/website#readme",
+  "dependencies": {
+    "mime-types": "^2.1.35"
+  }
 }

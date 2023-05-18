@@ -1,19 +1,121 @@
 import { getActiveResourcesInfo } from 'node:process';
 import { createServer } from "node:http";
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { createReadStream } from 'node:fs';
+import { pipeline } from "node:stream/promises";
+import { contentType } from "mime-types";
+const PORT = 8080;
 
-const server = createServer((req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  console.log(`${req.method} ${url.href}`);
-  if (url.pathname !== "/") {
-    res.writeHead(404);
-    res.end("Not found");
+/**
+ * https://github.com/expressjs/express/blob/f540c3b0195393974d4875a410f4c00a07a2ab60/lib/request.js#L292-L324
+ *
+ * @param {import("node:http").IncomingMessage} req
+ */
+function getProtocolFromRequest(req) {
+  return req.socket.encrypted ? "https" : "http"
+  // var proto = this.connection.encrypted
+  //   ? 'https'
+  //   : 'http';
+  // var trust = this.app.get('trust proxy fn');
+
+  // if (!trust(this.connection.remoteAddress, 0)) {
+  //   return proto;
+  // }
+
+  // // Note: X-Forwarded-Proto is normally only ever a
+  // //       single value, but this is to be safe.
+  // var header = this.get('X-Forwarded-Proto') || proto
+  // var index = header.indexOf(',')
+
+  // return index !== -1
+  //   ? header.substring(0, index).trim()
+  //   : header.trim()
+}
+
+const STATIC_PATH = path.join(process.cwd(), "./static");
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Learn/Server-side/Node_server_without_framework
+ * @param {string} pathname
+ */
+async function serveStaticFile(pathname) {
+  const normalizedFullFilePath = path.join(STATIC_PATH, pathname);
+  if (!normalizedFullFilePath.startsWith(STATIC_PATH)) {
+    // Security: Don't allow path traversal
+    return undefined;
+  }
+  if (!await fs.access(normalizedFullFilePath).then(() => true, () => false)) {
+    return undefined
+  }
+  const stats = await fs.stat(normalizedFullFilePath)
+  if (!stats.isFile()) {
+    return undefined;
+  }
+  return { stream: createReadStream(normalizedFullFilePath), filePath: normalizedFullFilePath };
+}
+
+// https://github.com/jshttp/mime-types https://github.com/broofa/mime
+// https://github.com/jshttp/mime-db
+// const MIME_TYPES = {
+//   default: "application/octet-stream",
+//   html: "text/html; charset=UTF-8",
+//   js: "application/javascript",
+//   css: "text/css",
+//   png: "image/png",
+//   jpg: "image/jpg",
+//   gif: "image/gif",
+//   ico: "image/x-icon",
+//   svg: "image/svg+xml",
+//   pdf: "application/pdf",
+// };
+
+/**
+ * @param {import("node:http").IncomingMessage} req
+ * @param {import("node:http").ServerResponse} res
+ */
+async function handleRequest(req, res) {
+  const url = new URL(req.url, `${getProtocolFromRequest(req)}://${req.headers.host}`);
+  const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
+
+  const fileInfo = await serveStaticFile(pathname);
+  if (fileInfo) {
+    const extension = path.extname(fileInfo.filePath).substring(1).toLowerCase();
+    // const contentTypeHeader = MIME_TYPES[extension] ?? MIME_TYPES.default;
+    const contentTypeHeader = contentType(extension) || 'application/octet-stream';
+    res.writeHead(200, { "Content-Type": contentTypeHeader });
+    await pipeline(fileInfo.stream, res);
     return;
   }
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end('<!doctype html><html lang="en"><body>Hi!</body></html>');
+
+  res.writeHead(404);
+  res.end("Not found");
+}
+
+const server = createServer((req, res) => {
+  const startNs = process.hrtime.bigint();
+  if (typeof req.headers.host !== "string") {
+    res.writeHead(500);
+    res.end("Internal Error: Missing Host header");
+    return;
+  }
+  const url = new URL(req.url, `${getProtocolFromRequest(req)}://${req.headers.host}`);
+  console.log(`START: ${req.method} (${req.httpVersion}) ${url.href} ${JSON.stringify(req.headers)}`);
+  handleRequest(req, res)
+    .catch((err) => {
+      console.log(res.closed, res.destroyed, res.errored, res.writable, res.writableEnded, res.writableFinished);
+      console.error(err);
+      res.writeHead(500);
+      res.end("Internal Error");
+    })
+    .finally(() => {
+      const durationNs = process.hrtime.bigint() - startNs;
+      const durationMs = durationNs / 1_000_000n;
+      console.log(`END: ${req.method} (${req.httpVersion}) ${url.href} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
+    });
 });
 
-server.listen(8080, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log("listening on %s", server.address());
 });
 
