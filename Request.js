@@ -4,7 +4,7 @@
  * @param {import("node:http").IncomingMessage} req
  */
 function getProtocolFromRequest(req) {
-  return req.socket.encrypted ? "https" : "http"
+  return "encrypted" in req.socket && req.socket.encrypted ? "https" : "http"
   // var proto = this.connection.encrypted
   //   ? 'https'
   //   : 'http';
@@ -26,7 +26,7 @@ function getProtocolFromRequest(req) {
 
 export class Request {
   /** @type {import("node:http").IncomingMessage} */
-  _UNSAFE_nodeRequest;
+  #nodeRequest;
 
   /**
    * The URL based on the original request without looking at any proxy headers.
@@ -40,7 +40,7 @@ export class Request {
    */
   #originalUrl;
 
-  /** @type {{ minorVersion: string, majorVersion: string, version: string }} */
+  /** @type {{ minor: number, major: number, version: string }} */
   #httpVersion
 
   /** @type {"GET" | "HEAD"} */
@@ -50,7 +50,7 @@ export class Request {
    * @param {import("node:http").IncomingMessage} req
    */
   constructor(req) {
-    this._UNSAFE_nodeRequest = req;
+    this.#nodeRequest = req;
 
     const hostHeader = req.headers.host
     // https://github.com/nodejs/node/issues/3094#issue-108564685
@@ -71,13 +71,17 @@ export class Request {
     // https://datatracker.ietf.org/doc/html/rfc7230#section-5.3
     // https://datatracker.ietf.org/doc/html/rfc7230#section-5.5
     this.#rawUrl = new URL(req.url, `${getProtocolFromRequest(req)}://${hostHeader}`);
-    this.#originalUrl = new URL(req.url, `${req.headers["x-forwarded-proto"] ?? getProtocolFromRequest(req)}://${hostHeader}`);
+    this.#originalUrl = new URL(req.url, `${req.headers["x-forwarded-proto"] ?? getProtocolFromRequest(req)}://${req.headers["x-forwarded-host"] ?? hostHeader}`);
 
     this.#httpVersion = {
       version: req.httpVersion,
       minor: req.httpVersionMinor,
       major: req.httpVersionMajor,
     }
+  }
+
+  get headers() {
+    return this.#nodeRequest.headers
   }
 
   get method() {

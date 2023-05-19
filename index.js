@@ -1,8 +1,6 @@
-import { getActiveResourcesInfo } from 'node:process';
 import { createServer } from "node:http";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { pipeline } from "node:stream/promises";
 import { contentType } from "mime-types";
 import { Request } from './Request.js';
 import { Response } from './Response.js';
@@ -18,33 +16,20 @@ const STATIC_PATH = path.join(process.cwd(), "./static");
 async function serveStaticFile(pathname) {
   const normalizedFullFilePath = path.join(STATIC_PATH, pathname);
   if (!normalizedFullFilePath.startsWith(STATIC_PATH)) {
-    // Security: Don't allow path traversal
+    // Security: Don't allow path traversal. I don't think this is actually
+    // necessary based on my testing.
     return undefined;
   }
-  if (!await fs.access(normalizedFullFilePath).then(() => true, () => false)) {
-    return undefined
+  try {
+    return { contentsBuffer: await fs.readFile(normalizedFullFilePath), filePath: normalizedFullFilePath };
+  } catch (err) {
+    // Common system errors
+    if (err.code === "ENOENT" || err.code === "EISDIR") {
+      return undefined;
+    }
+    throw err;
   }
-  const stats = await fs.stat(normalizedFullFilePath)
-  if (!stats.isFile()) {
-    return undefined;
-  }
-  return { contentsBuffer: await fs.readFile(normalizedFullFilePath), filePath: normalizedFullFilePath };
 }
-
-// https://github.com/jshttp/mime-types https://github.com/broofa/mime
-// https://github.com/jshttp/mime-db
-// const MIME_TYPES = {
-//   default: "application/octet-stream",
-//   html: "text/html; charset=UTF-8",
-//   js: "application/javascript",
-//   css: "text/css",
-//   png: "image/png",
-//   jpg: "image/jpg",
-//   gif: "image/gif",
-//   ico: "image/x-icon",
-//   svg: "image/svg+xml",
-//   pdf: "application/pdf",
-// };
 
 /**
  * @param {Request} req
@@ -60,8 +45,9 @@ async function staticHandler(req, res, next) {
     return;
   }
 
+  // https://github.com/jshttp/mime-types https://github.com/broofa/mime
+  // https://github.com/jshttp/mime-db
   const extension = path.extname(fileInfo.filePath).substring(1).toLowerCase();
-  // const contentTypeHeader = MIME_TYPES[extension] ?? MIME_TYPES.default;
   const contentTypeHeader = contentType(extension) || 'application/octet-stream';
   res.writeHead(200, { "Content-Type": contentTypeHeader });
   res.writeToKernelBuffer(fileInfo.contentsBuffer);
@@ -84,9 +70,8 @@ async function notFound(req, res) {
  * @param {() => Promise<void>} next
  */
 async function logger(req, res, next) {
-  const nodeRequest = req._UNSAFE_nodeRequest;
   const startNs = process.hrtime.bigint();
-  console.log(`START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${JSON.stringify(nodeRequest.headers)}`);
+  console.log(`START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${JSON.stringify(req.headers)}`);
   try {
     await next();
   } catch (err) {
@@ -144,7 +129,7 @@ const server = createServer((nodeRequest, nodeResponse) => {
     nodeResponse.end("Missing Host header");
     return;
   }
-  if (!["GET", "HEAD"].includes(nodeRequest.method)) {
+  if (nodeRequest.method && !["GET"].includes(nodeRequest.method)) {
     // When a request method is received that is unrecognized or not implemented
     // by an origin server, the origin server SHOULD respond with the 501 (Not
     // Implemented) status code.  When a request method is received that is
@@ -172,7 +157,6 @@ let forceClose = false;
 function shutdown(signal) {
   if (forceClose) {
     console.log("Forcing exit");
-    console.log(getActiveResourcesInfo()); // experimental
     process.exit(1);
   }
   forceClose = true;

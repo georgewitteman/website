@@ -35,6 +35,7 @@ export class Response {
    * https://nodejs.org/docs/latest-v18.x/api/http.html#outgoingmessagewritechunk-encoding-callback
    * https://nodejs.org/docs/latest-v18.x/api/stream.html#writablewritechunk-encoding-callback
    * @param {Buffer | string} data
+   * @returns {Promise<void>}
   */
  writeToKernelBuffer(data) {
    return new Promise((resolve) => {

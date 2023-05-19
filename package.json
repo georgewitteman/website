@@ -5,6 +5,7 @@
   "private": true,
   "exports": "./index.js",
   "scripts": {
+    "typecheck": "tsc",
     "watch": "node --watch --watch-preserve-output ."
   },
   "repository": {
@@ -19,5 +20,10 @@
   "homepage": "https://github.com/georgewitteman/website#readme",
   "dependencies": {
     "mime-types": "^2.1.35"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^2.1.1",
+    "@types/node": "^20.2.1",
+    "typescript": "^5.0.4"
   }
 }
