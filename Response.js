@@ -31,14 +31,28 @@ export class Response {
   }
 
   /**
+   * https://nodejs.org/docs/latest-v18.x/api/http.html#class-httpserverresponse
+   * https://nodejs.org/docs/latest-v18.x/api/http.html#outgoingmessagewritechunk-encoding-callback
+   * https://nodejs.org/docs/latest-v18.x/api/stream.html#writablewritechunk-encoding-callback
    * @param {Buffer | string} data
-   */
-  end(data) {
+  */
+ writeToKernelBuffer(data) {
+   return new Promise((resolve) => {
+      // https://nodejs.org/docs/latest-v18.x/api/stream.html#writablewritechunk-encoding-callback
+      if (!this._UNSAFE_serverResponse.write(data)) {
+        this._UNSAFE_serverResponse.once('drain', resolve);
+      } else {
+        resolve()
+      }
+    })
+  }
+
+  end() {
     if (this.#endCalled) {
       throw new Error("Already called end")
     }
     this.#endCalled = true;
-    this._UNSAFE_serverResponse.end(data);
+    this._UNSAFE_serverResponse.end();
   }
 
   get headersSent() {

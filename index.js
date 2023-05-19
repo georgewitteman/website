@@ -64,7 +64,8 @@ async function staticHandler(req, res, next) {
   // const contentTypeHeader = MIME_TYPES[extension] ?? MIME_TYPES.default;
   const contentTypeHeader = contentType(extension) || 'application/octet-stream';
   res.writeHead(200, { "Content-Type": contentTypeHeader });
-  res.end(fileInfo.contentsBuffer);
+  res.writeToKernelBuffer(fileInfo.contentsBuffer);
+  res.end();
 }
 
 /**
@@ -73,7 +74,8 @@ async function staticHandler(req, res, next) {
  */
 async function notFound(req, res) {
   res.writeHead(404);
-  res.end("Not found\n");
+  res.writeToKernelBuffer("Not found\n");
+  res.end();
 }
 
 /**
@@ -95,7 +97,8 @@ async function logger(req, res, next) {
       return;
     }
     res.writeHead(500);
-    res.end("Internal Server Error\n");
+    res.writeToKernelBuffer("Internal Server Error\n");
+    res.end();
   } finally {
     const durationNs = process.hrtime.bigint() - startNs;
     const durationMs = durationNs / 1_000_000n;
