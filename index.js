@@ -24,7 +24,7 @@ async function serveStaticFile(pathname) {
     return { contentsBuffer: await fs.readFile(normalizedFullFilePath), filePath: normalizedFullFilePath };
   } catch (err) {
     // Common system errors
-    if (err.code === "ENOENT" || err.code === "EISDIR") {
+    if (typeof err === "object" && err && "code" in err && typeof err.code === "string" && (err.code === "ENOENT" || err.code === "EISDIR")) {
       return undefined;
     }
     throw err;
