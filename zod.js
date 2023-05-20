@@ -2,18 +2,34 @@
  * @template Output
  * @typedef {Object} ZodSchema
  * @property {(data: unknown) => Output} parse
+ * @property {(data: unknown, errors: string[]) => data is Output} isSatisfiedBy
  */
 
 /** @implements {ZodSchema<string>} */
 class ZodString {
   /**
    * @param {unknown} data
+   * @param {string[]} errors
+   * @return {data is string}
+   */
+  isSatisfiedBy(data, errors) {
+    if (typeof data === "string") {
+      return true
+    }
+    errors.push(`${data} is not a string`)
+    return false
+  }
+
+  /**
+   * @param {unknown} data
    */
   parse(data) {
-    if (typeof data === "string") {
+    /** @type {string[]} */
+    const errors = []
+    if (this.isSatisfiedBy(data, errors)) {
       return data;
     }
-    throw new Error("Input was not a string");
+    throw new Error("did not match schema");
   }
 }
 
@@ -21,63 +37,51 @@ class ZodString {
 class ZodNumber {
   /**
    * @param {unknown} data
+   * @param {string[]} errors
+   * @return {data is number}
+   */
+  isSatisfiedBy(data, errors) {
+    if (typeof data !== "number") {
+      errors.push(`${data} is not a number`);
+      return false;
+    }
+    if (isNaN(data)) {
+      errors.push(`${data} is NaN`)
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * @param {unknown} data
    */
   parse(data) {
-    if (typeof data === "number" && !isNaN(data)) {
+    /** @type {string[]} */
+    const errors = []
+    if (this.isSatisfiedBy(data, errors)) {
       return data;
     }
-    throw new Error("Input was not a number");
+    throw new Error(errors.join(" "));
   }
 }
 
-
 /**
- * @template { [string, any]} T
- * @typedef { {[K in T[0]]: T extends [ K, any ] ? T[1] : never }} ObjectFromEntries
- */
-
-/**
- * @template { [string, any]} T
- * @param { T[]} entries
- * @returns {ObjectFromEntries<T>}
- */
-function fromEntries(entries) {
-  return /** @type {ObjectFromEntries<T>} */ (Object.fromEntries(entries));
-}
-
-/**
- * @template {Record<string, unknown>} T
- * @param {T} obj
- * @returns {{ [K in keyof T]: [K, T[K]]; }[keyof T][]}
- */
-function entries(obj) {
-  return /** @type {{ [K in keyof T]: [K, T[K]]; }[keyof T][]} */ (Object.entries(obj));
-}
-
-const _testentries = entries({asdf: 123, asdf2: null})
-const _testFromEntries = fromEntries(_testentries);
-// const _blah = _testFromEntries.asdf2
-const _testFromEntriesArr = fromEntries([[/** @type {const} */("asdf"), 123], [/** @type {const} */("asdf2"), null]])
-
-/**
- * @template S
+ * @template {ZodSchema<unknown>} S
  * @typedef {S extends ZodSchema<infer A> ? A : never} TypeOf
  */
 
 /**
- * https://stackoverflow.com/a/50512697
- * @template {Record<string, ZodString | ZodNumber>} T
- * @param {T} obj
- * @return {{[K in keyof T]: T[K]}}
+ * @template {string} T
+ * @param {unknown} obj
+ * @returns {obj is Record<T, unknown>}
  */
-function asObject(obj) {
-  return obj
+function isRecord(obj) {
+  return typeof obj === 'object' && obj !== null;
 }
 
 /**
  * @template {string} Keys
- * @template {ZodString | ZodNumber} Schemas
- * @template {Record<Keys, Schemas>} Schema
+ * @template {Record<Keys, ZodSchema<any>>} Schema
  * @template {{[key in keyof Schema]: TypeOf<Schema[key]>}} Output
  * @implements {ZodSchema<Output>}
  * */
@@ -88,29 +92,37 @@ class ZodObject {
    */
   constructor(schema) {
     /** @type {{ [K in keyof Schema]: Schema[K]; }} */
-    this.schema = asObject(schema);
+    this.schema = schema;
+  }
+
+  /**
+   * @param {unknown} data
+   * @param {string[]} errors
+   * @return {data is Output}
+   */
+  isSatisfiedBy(data, errors) {
+    if (!isRecord(data)) {
+      errors.push(`${data} is not an object`)
+      return false;
+    }
+    return Object.entries(this.schema).reduce((prev, [key, schema]) => {
+      if (!prev) {
+        return prev;
+      }
+      return schema.isSatisfiedBy(data[key], errors);
+    }, true);
   }
 
   /**
    * @param {unknown} data
    */
   parse(data) {
-    if (typeof data !== "object" || data === null) {
-      throw new Error("Input was not an object")
+    /** @type {string[]} */
+    const errors = []
+    if (this.isSatisfiedBy(data, errors)) {
+      return data;
     }
-    return /** @type {Output} */(fromEntries(entries(this.schema).map(
-      ([key, schema]) => {
-        if (key in data) {
-          return [
-            key,
-            schema.parse(
-             (/** @type {Record<keyof Schema, unknown>} */(data)[key])
-            )
-          ]
-        }
-        throw new Error(`key ${String(key)} not in the object`);
-      }
-    )));
+    throw new Error(errors.join(" "));
   }
 }
 
@@ -120,7 +132,9 @@ class ZodObject {
 const z = {
   string: () => new ZodString(),
   number: () => new ZodNumber(),
-  object: (/** @type {any} */ schema) => new ZodObject(schema),
+  object: (
+    /** @type {ConstructorParameters<typeof ZodObject>[0]} */ schema
+  ) => new ZodObject(schema),
 };
 
 // TESTS
@@ -153,4 +167,10 @@ expectError(() => z.number().parse("123"));
 expectError(() => z.number().parse(NaN));
 
 // object
-console.log(z.object({num: z.number(), str: z.string()}).parse({num: 123, str: "abc"}))
+console.log(
+  z.object({
+    num: z.number(), str: z.string(), obj: z.object({foo: z.string()}),
+  }).parse({
+    num: 123, str: "abc", obj: { foo: "foo", bar: "bar" },
+  })
+);
