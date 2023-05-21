@@ -1,20 +1,60 @@
 /**
+ * @typedef {Object} ZodObjectIssue
+ * @property {string} message
+ * @property {(string | number)[]} path
+ * @property {ZodIssue[]} issues
+ */
+
+/**
+ * @typedef {Object} ZodBasicIssue
+ * @property {string} message
+ */
+
+/**
+ * @typedef {ZodObjectIssue | ZodBasicIssue} ZodIssue
+ */
+
+/**
+ * @typedef {Object} ZodContext
+ * @property {(issue: ZodIssue) => void} addIssue
+ * @property {ZodIssue[]} issues
+ */
+
+/** @implements {ZodContext} */
+class ZodContextImpl {
+  constructor() {
+    /**
+     * @type {ZodIssue[]}
+     */
+    this.issues = [];
+  }
+
+  /**
+   * @param {ZodIssue} issue
+   */
+  addIssue(issue) {
+    this.issues.push(issue)
+  }
+}
+
+/**
  * @template Output
  * @typedef {Object} ZodSchema
- * @property {(data: unknown) => data is Output} isSatisfiedBy
+ * @property {(data: unknown, ctx: ZodContext) => data is Output} isSatisfiedBy
  */
 
 /** @implements {ZodSchema<string>} */
 class ZodString {
   /**
    * @param {unknown} data
+   * @param {ZodContext} ctx
    * @return {data is string}
    */
-  isSatisfiedBy(data) {
+  isSatisfiedBy(data, ctx) {
     if (typeof data === "string") {
       return true
     }
-    console.error(`${data} is not a string`)
+    ctx.addIssue({message: `${data} is not a string`})
     return false
   }
 }
@@ -23,15 +63,16 @@ class ZodString {
 class ZodNumber {
   /**
    * @param {unknown} data
+   * @param {ZodContext} ctx
    * @return {data is number}
    */
-  isSatisfiedBy(data) {
+  isSatisfiedBy(data, ctx) {
     if (typeof data !== "number") {
-      console.error(`${data} is not a number`)
+      ctx.addIssue({message:`${data} is not a number`})
       return false;
     }
     if (isNaN(data)) {
-      console.error(`${data} is NaN`)
+      ctx.addIssue({message:`${data} is NaN`})
       return false;
     }
     return true;
@@ -69,28 +110,23 @@ class ZodObject {
 
   /**
    * @param {unknown} data
+   * @param {ZodContext} ctx
    * @return {data is Output}
    */
-  isSatisfiedBy(data) {
+  isSatisfiedBy(data, ctx) {
     if (!isRecord(data)) {
-      console.error("not a record")
+      ctx.addIssue({message: `${data} is not a record`})
       return false;
     }
-    if (Object.entries(this.schema).reduce((prev, [key, schema]) => {
-      if (!prev) {
+    return Object.entries(this.schema).reduce((prev, [key, schema]) => {
+      const subCtx = new ZodContextImpl();
+      if(schema.isSatisfiedBy(data[key], subCtx)) {
         return prev;
       }
-      if(schema.isSatisfiedBy(data[key])) {
-        return true;
-      }
-      console.error(`${data} (${key}) is not ok`)
+      // TODO: Figure out how to do path stuff
+      ctx.addIssue({message: `${data} (${key}) is not ok`, path: [key], issues: subCtx.issues })
       return false;
-    }, true)) {
-      return true;
-    }
-
-    console.error(`${JSON.stringify(data)} is not an object`);
-    return false;
+    }, true);
   }
 }
 
@@ -111,23 +147,20 @@ class ZodArray {
 
   /**
    * @param {unknown} data
+   * @param {ZodContext} ctx
    * @return {data is Output}
    */
-  isSatisfiedBy(data) {
-    console.log(`data: ${JSON.stringify(data)}`)
+  isSatisfiedBy(data, ctx) {
     if (!Array.isArray(data)) {
-      console.error("Not an array")
+      ctx.addIssue({ message: `${data} is not an array` })
       return false;
     }
-    return data.reduce((previousValue, currentValue) => {
-      console.log(`prev: ${previousValue} cur: ${currentValue}`)
-      if (!previousValue) {
-        return false;
+    return data.reduce((previousValue, currentValue, currentIndex) => {
+      const subCtx = new ZodContextImpl();
+      if (this.schema.isSatisfiedBy(currentValue, subCtx)) {
+        return previousValue;
       }
-      if (this.schema.isSatisfiedBy(currentValue)) {
-        return true;
-      }
-      console.error("array: field bad")
+      ctx.addIssue({message: "bad array element", path: [currentIndex], issues: subCtx.issues })
       return false;
     }, true)
   }
@@ -170,12 +203,14 @@ const blah = new ZodObject({
 /** @typedef {typeof blah["schema"]} BlahSchemaType */
 /** @typedef {TypeOf<typeof blah>} BlahType */
 
+const ctx = new ZodContextImpl();
 // object
 console.log(
   blah.isSatisfiedBy({
-    arr: [{ num: 123 }, { num: 456 }],
+    arr: [{ num: "foo" }, { num: 456 }],
     num: 123,
-    str: "abc",
-    obj: { foo: "foo"},
-  })
+    str: "foo",
+    obj: { foo: null },
+  }, ctx)
 );
+console.dir(ctx.issues, { depth: null });
