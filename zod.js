@@ -1,35 +1,21 @@
 /**
  * @template Output
  * @typedef {Object} ZodSchema
- * @property {(data: unknown) => Output} parse
- * @property {(data: unknown, errors: string[]) => data is Output} isSatisfiedBy
+ * @property {(data: unknown) => data is Output} isSatisfiedBy
  */
 
 /** @implements {ZodSchema<string>} */
 class ZodString {
   /**
    * @param {unknown} data
-   * @param {string[]} errors
    * @return {data is string}
    */
-  isSatisfiedBy(data, errors) {
+  isSatisfiedBy(data) {
     if (typeof data === "string") {
       return true
     }
-    errors.push(`${data} is not a string`)
+    console.error(`${data} is not a string`)
     return false
-  }
-
-  /**
-   * @param {unknown} data
-   */
-  parse(data) {
-    /** @type {string[]} */
-    const errors = []
-    if (this.isSatisfiedBy(data, errors)) {
-      return data;
-    }
-    throw new Error("did not match schema");
   }
 }
 
@@ -37,31 +23,18 @@ class ZodString {
 class ZodNumber {
   /**
    * @param {unknown} data
-   * @param {string[]} errors
    * @return {data is number}
    */
-  isSatisfiedBy(data, errors) {
+  isSatisfiedBy(data) {
     if (typeof data !== "number") {
-      errors.push(`${data} is not a number`);
+      console.error(`${data} is not a number`)
       return false;
     }
     if (isNaN(data)) {
-      errors.push(`${data} is NaN`)
+      console.error(`${data} is NaN`)
       return false;
     }
     return true;
-  }
-
-  /**
-   * @param {unknown} data
-   */
-  parse(data) {
-    /** @type {string[]} */
-    const errors = []
-    if (this.isSatisfiedBy(data, errors)) {
-      return data;
-    }
-    throw new Error(errors.join(" "));
   }
 }
 
@@ -80,9 +53,8 @@ function isRecord(obj) {
 }
 
 /**
- * @template {string} Keys
- * @template {Record<Keys, ZodSchema<any>>} Schema
- * @template {{[key in keyof Schema]: TypeOf<Schema[key]>}} Output
+ * @template {Record<string, ZodSchema<unknown>>} Schema
+ * @template {{[k in keyof Schema]: TypeOf<Schema[k]>}} Output
  * @implements {ZodSchema<Output>}
  * */
 class ZodObject {
@@ -91,38 +63,73 @@ class ZodObject {
    * @param {Schema} schema
    */
   constructor(schema) {
-    /** @type {{ [K in keyof Schema]: Schema[K]; }} */
+    /** @type {Schema} */
     this.schema = schema;
   }
 
   /**
    * @param {unknown} data
-   * @param {string[]} errors
    * @return {data is Output}
    */
-  isSatisfiedBy(data, errors) {
+  isSatisfiedBy(data) {
     if (!isRecord(data)) {
-      errors.push(`${data} is not an object`)
+      console.error("not a record")
       return false;
     }
-    return Object.entries(this.schema).reduce((prev, [key, schema]) => {
+    if (Object.entries(this.schema).reduce((prev, [key, schema]) => {
       if (!prev) {
         return prev;
       }
-      return schema.isSatisfiedBy(data[key], errors);
-    }, true);
+      if(schema.isSatisfiedBy(data[key])) {
+        return true;
+      }
+      console.error(`${data} (${key}) is not ok`)
+      return false;
+    }, true)) {
+      return true;
+    }
+
+    console.error(`${JSON.stringify(data)} is not an object`);
+    return false;
+  }
+}
+
+/**
+ * @template {ZodSchema<unknown>} Schema
+ * @template {TypeOf<Schema>[]} Output
+ * @implements {ZodSchema<Output>}
+ * */
+class ZodArray {
+  /**
+   *
+   * @param {Schema} schema
+   */
+  constructor(schema) {
+    /** @type {Schema} */
+    this.schema = schema;
   }
 
   /**
    * @param {unknown} data
+   * @return {data is Output}
    */
-  parse(data) {
-    /** @type {string[]} */
-    const errors = []
-    if (this.isSatisfiedBy(data, errors)) {
-      return data;
+  isSatisfiedBy(data) {
+    console.log(`data: ${JSON.stringify(data)}`)
+    if (!Array.isArray(data)) {
+      console.error("Not an array")
+      return false;
     }
-    throw new Error(errors.join(" "));
+    return data.reduce((previousValue, currentValue) => {
+      console.log(`prev: ${previousValue} cur: ${currentValue}`)
+      if (!previousValue) {
+        return false;
+      }
+      if (this.schema.isSatisfiedBy(currentValue)) {
+        return true;
+      }
+      console.error("array: field bad")
+      return false;
+    }, true)
   }
 }
 
@@ -132,45 +139,43 @@ class ZodObject {
 const z = {
   string: () => new ZodString(),
   number: () => new ZodNumber(),
-  object: (
-    /** @type {ConstructorParameters<typeof ZodObject>[0]} */ schema
-  ) => new ZodObject(schema),
+  object:
+    /**
+     * @template {Record<string, ZodSchema<unknown>>} Schema
+     * @param {Schema} schema
+     */ (schema) => new ZodObject(schema),
+  array:
+    /**
+     * @template {ZodSchema<unknown>} Schema
+     * @param {Schema} schema
+     */ (schema) => new ZodArray(schema),
 };
 
 // TESTS
 // TODO: Use node:test
 
-/**
- * @param {any} callback
- */
-function expectError(callback) {
-  try {
-    callback();
-    throw "FAILED";
-  } catch (e) {
-    if (e === "FAILED") {
-      console.assert(false, "Did not throw");
-    }
-  }
-}
+const num = z.number();
+/** @typedef {TypeOf<typeof num>} NumType */
 
-// string
-console.assert(z.string().parse("asdf") === "asdf");
-expectError(() => z.string().parse(123));
+const str = z.string();
+/** @typedef {TypeOf<typeof str>} StrType */
 
-// number
-console.assert(z.number().parse(123) === 123);
-console.assert(z.number().parse(0) === 0);
-console.assert(z.number().parse(-123) === -123);
-expectError(() => z.number().parse("asdf"));
-expectError(() => z.number().parse("123"));
-expectError(() => z.number().parse(NaN));
+const blah = new ZodObject({
+  arr: z.array(z.object({ num: z.number() })),
+  num: z.number(),
+  str: z.string(),
+  obj: z.object({ foo: z.string() }),
+})
+
+/** @typedef {typeof blah["schema"]} BlahSchemaType */
+/** @typedef {TypeOf<typeof blah>} BlahType */
 
 // object
 console.log(
-  z.object({
-    num: z.number(), str: z.string(), obj: z.object({foo: z.string()}),
-  }).parse({
-    num: 123, str: "abc", obj: { foo: "foo", bar: "bar" },
+  blah.isSatisfiedBy({
+    arr: [{ num: 123 }, { num: 456 }],
+    num: 123,
+    str: "abc",
+    obj: { foo: "foo"},
   })
 );
