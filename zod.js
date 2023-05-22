@@ -178,10 +178,9 @@ class ZodObject {
  * @template {ZodSchema<unknown>} Schema
  * @template {TypeOf<Schema>[]} Output
  * @implements {ZodSchema<Output>}
- * */
+ */
 class ZodArray {
   /**
-   *
    * @param {Schema} schema
    */
   constructor(schema) {
@@ -210,10 +209,71 @@ class ZodArray {
   }
 }
 
+/**
+ * @template T
+ * @typedef {(x: unknown) => x is T} TypeGuard
+ */
+
+/**
+ * @template Output
+ * @implements {ZodSchema<Output>}
+ */
+class GenericSchema {
+  /**
+   * @param {TypeGuard<Output>} guard
+   */
+  constructor(guard) {
+    /** @type {TypeGuard<Output>} */
+    this.guard = guard;
+  }
+
+  /**
+   * @param {unknown} data
+   * @param {ZodContext} ctx
+   * @return {data is Output}
+   */
+  isSatisfiedBy(data, ctx) {
+    return this.guard(data);
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<Output>}
+   */
+  parse(data) {
+    const ctx = new ZodContextImpl();
+    if (this.isSatisfiedBy(data, ctx)) {
+      return {
+        ok: true,
+        data: data,
+      }
+    }
+    return {
+      ok: false,
+      error: ctx.issues,
+    }
+  }
+}
+
 // TODO!
 // - make all the type checking happen in type predicates https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates
 
+/**
+ * @param {unknown} data
+ * @return {data is number}
+ */
+function numberGuard(data) {
+  if (typeof data !== "number") {
+    return false;
+  }
+  if (isNaN(data)) {
+    return false;
+  }
+  return true;
+}
+
 const z = {
+  number2: () => new GenericSchema(numberGuard),
   string: () => new ZodString(),
   number: () => new ZodNumber(),
   object:
@@ -244,7 +304,7 @@ const z = {
 describe("zod clone", () => {
   test("object", () => {
     const schema = z.object({
-      arr: z.array(z.object({ num: z.number() })),
+      arr: z.array(z.object({ num: z.number2() })),
       num: z.number(),
       str: z.string(),
       obj: z.object({ foo: z.string() }),
