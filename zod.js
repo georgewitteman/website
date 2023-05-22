@@ -1,3 +1,24 @@
+import assert, { deepEqual, equal } from "node:assert";
+import { describe, test } from "node:test";
+
+/**
+ * @template T
+ * @typedef {Object} ParseSuccess
+ * @property {true} ok
+ * @property {T} data
+ */
+
+/**
+ * @typedef {Object} ParseFailure
+ * @property {false} ok
+ * @property {ZodIssue[]} error
+ */
+
+/**
+ * @template T
+ * @typedef {ParseSuccess<T> | ParseFailure} ParseResult
+ */
+
 /**
  * @typedef {Object} ZodObjectIssue
  * @property {string} message
@@ -123,10 +144,33 @@ class ZodObject {
       if(schema.isSatisfiedBy(data[key], subCtx)) {
         return prev;
       }
-      // TODO: Figure out how to do path stuff
-      ctx.addIssue({message: `${data} (${key}) is not ok`, path: [key], issues: subCtx.issues })
+      for (let issue of subCtx.issues) {
+        if ("path" in issue) {
+          ctx.addIssue({ message: issue.message, path: [key, ...issue.path] })
+        } else {
+          ctx.addIssue({ message: issue.message, path: [key] });
+        }
+      }
       return false;
     }, true);
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<Output>}
+   */
+  parse(data) {
+    const ctx = new ZodContextImpl();
+    if (this.isSatisfiedBy(data, ctx)) {
+      return {
+        ok: true,
+        data: data,
+      }
+    }
+    return {
+      ok: false,
+      error: ctx.issues,
+    }
   }
 }
 
@@ -184,33 +228,49 @@ const z = {
      */ (schema) => new ZodArray(schema),
 };
 
-// TESTS
-// TODO: Use node:test
+/**
+ * https://github.com/type-challenges/type-challenges/blob/f389d3ea427164e95db44680a8ca9422dd176cb8/utils/index.d.ts#LL7C1-L9C48
+ * @template X
+ * @template Y
+ * @typedef {(<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2) ? true : false} Equal
+ */
 
-const num = z.number();
-/** @typedef {TypeOf<typeof num>} NumType */
+/**
+ * https://github.com/type-challenges/type-challenges/blob/f389d3ea427164e95db44680a8ca9422dd176cb8/utils/index.d.ts#LL1C1-L1C1
+ * @template {true} T
+ * @typedef {T} Expect
+ */
 
-const str = z.string();
-/** @typedef {TypeOf<typeof str>} StrType */
+describe("zod clone", () => {
+  test("object", () => {
+    const schema = z.object({
+      arr: z.array(z.object({ num: z.number() })),
+      num: z.number(),
+      str: z.string(),
+      obj: z.object({ foo: z.string() }),
+    });
 
-const blah = new ZodObject({
-  arr: z.array(z.object({ num: z.number() })),
-  num: z.number(),
-  str: z.string(),
-  obj: z.object({ foo: z.string() }),
-})
+    /** @typedef {Expect<Equal<TypeOf<typeof schema>, { arr: { num: number; }[]; num: number; str: string; obj: { foo: string; }; }>>} case_1 */
 
-/** @typedef {typeof blah["schema"]} BlahSchemaType */
-/** @typedef {TypeOf<typeof blah>} BlahType */
+    const data = {
+      arr: [{ num: 123 }, { num: 456 }],
+      num: 123,
+      str: "foo",
+      obj: { foo: "foo" },
+    };
+    const result = schema.parse(data);
+    assert(result.ok === true);
+    deepEqual(result.data, data);
+  });
 
-const ctx = new ZodContextImpl();
-// object
-console.log(
-  blah.isSatisfiedBy({
-    arr: [{ num: "foo" }, { num: 456 }],
-    num: 123,
-    str: "foo",
-    obj: { foo: null },
-  }, ctx)
-);
-console.dir(ctx.issues, { depth: null });
+  test("object error", () => {
+    const schema = z.object({ foo: z.string(), obj: z.object({ bar: z.string() })});
+    const data = {
+      foo: "string",
+      obj: { bar: 123 },
+    };
+    const result = schema.parse(data);
+    assert(result.ok === false);
+    deepEqual(result.error, [{ message: '123 is not a string', path: ['obj', 'bar'] }])
+  })
+});
