@@ -1,5 +1,3 @@
-import { assert } from "node:console";
-
 export const extensionToContentTypeHeader = /** @type {const} */({
   js: "application/javascript; charset=utf-8",
   html: "text/html; charset=utf-8",
