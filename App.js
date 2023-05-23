@@ -4,12 +4,12 @@ import { MyResponse } from "./Response.js";
 
 export class App {
   constructor() {
-    /** @type {((req: MyRequest, res: MyResponse, next: () => Promise<void>) => Promise<void>)[]} */
+    /** @type {((req: MyRequest, next: () => Promise<MyResponse>) => Promise<MyResponse>)[]} */
     this.middleware = [];
   }
 
   /**
-   * @param {(req: MyRequest, res: MyResponse, next: () => Promise<void>) => Promise<void>} middleware
+   * @param {(req: MyRequest, next: () => Promise<MyResponse>) => Promise<MyResponse>} middleware
    */
   use(middleware) {
     this.middleware.push(middleware);
@@ -17,27 +17,27 @@ export class App {
 
   /**
    * @param {MyRequest} req
-   * @param {MyResponse} res
+   * @returns {Promise<MyResponse>}
    */
-  async handleRequest(req, res) {
-    const middleware = this.middleware;
+  async handleRequest(req) {
     let index = -1;
     /**
      * https://github.com/koajs/compose/blob/master/index.js
      * @param {number} i
+     * @returns {Promise<MyResponse>}
      */
-    async function dispatch(i) {
+    const dispatch = async (i) => {
       if (i <= index) {
         throw new Error("next() called multiple times");
       }
       index = i;
-      if (i >= middleware.length) {
-        return;
+      if (i >= this.middleware.length) {
+        return new MyResponse(500, {}, "");
       }
-      const fn = middleware[i];
-      await fn(req, res, dispatch.bind(null, i + 1));
+      const fn = this.middleware[i];
+      return await fn(req, dispatch.bind(null, i + 1));
     }
-    await dispatch(0);
+    return await dispatch(0);
   }
 
   createServer() {
@@ -65,8 +65,10 @@ export class App {
         return;
       }
       const req = new MyRequest(nodeRequest);
-      const res = new MyResponse(nodeResponse);
-      this.handleRequest(req, res).catch(console.error)
+      this.handleRequest(req).then(res => {
+        nodeResponse.writeHead(res.statusCode, res.headers);
+        nodeResponse.end(res.body);
+      }).catch(console.error)
     });
   }
 }

@@ -33,10 +33,13 @@ async function serveStaticFile(pathname) {
 
 /**
  * @param {MyRequest} req
- * @param {MyResponse} res
- * @param {() => Promise<void>} next
+ * @param {() => Promise<MyResponse>} next
+ * @returns {Promise<MyResponse>}
  */
-async function staticHandler(req, res, next) {
+async function staticHandler(req, next) {
+  if (req.method !== "GET") {
+    return next();
+  }
   const pathname = req.pathname === "/" ? "/index.html" : req.pathname;
 
   const fileInfo = await serveStaticFile(pathname);
@@ -50,46 +53,45 @@ async function staticHandler(req, res, next) {
   if (!isSupportedExtension(extension)) {
     return next();
   }
-
-  res.writeHead(200, { "Content-Type": getContentTypeFromExtension(extension) });
-  res.writeToKernelBuffer(fileInfo.contentsBuffer);
-  res.end();
+  return new MyResponse(200, { "Content-Type": getContentTypeFromExtension(extension) }, fileInfo.contentsBuffer);
 }
 
 /**
  * @param {MyRequest} req
- * @param {MyResponse} res
+ * @returns {Promise<MyResponse>}
  */
-async function notFound(req, res) {
-  res.writeHead(404);
-  res.writeToKernelBuffer("Not found\n");
-  res.end();
+async function notFound(req) {
+  return new MyResponse(404, {}, `Not found: ${req.originalUrl.href}\n`);
 }
+
 
 /**
  * @param {MyRequest} req
  * @param {MyResponse} res
- * @param {() => Promise<void>} next
+ * @param {bigint} startTimeNs
  */
-async function logger(req, res, next) {
+function logResponse(req, res, startTimeNs) {
+  const durationNs = process.hrtime.bigint() - startTimeNs;
+  const durationMs = durationNs / 1_000_000n;
+  console.log(`END: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
+}
+
+/**
+ * @param {MyRequest} req
+ * @param {() => Promise<MyResponse>} next
+ */
+async function logger(req, next) {
   const startNs = process.hrtime.bigint();
   console.log(`START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${JSON.stringify(req.headers)}`);
   try {
-    await next();
+    const res = await next();
+    logResponse(req, res, startNs);
+    return res;
   } catch (err) {
-    const res2 = res._UNSAFE_serverResponse;
-    console.log(res2.closed, res2.destroyed, res2.errored, res2.writable, res2.writableEnded, res2.writableFinished);
     console.error(err);
-    if (res.headersSent) {
-      return;
-    }
-    res.writeHead(500);
-    res.writeToKernelBuffer("Internal Server Error\n");
-    res.end();
-  } finally {
-    const durationNs = process.hrtime.bigint() - startNs;
-    const durationMs = durationNs / 1_000_000n;
-    console.log(`END: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
+    const res = new MyResponse(500, {}, "Internal Server Error\n");
+    logResponse(req, res, startNs);
+    return res;
   }
 }
 
