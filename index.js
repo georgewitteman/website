@@ -1,6 +1,5 @@
-import { createServer } from "node:http";
 import * as path from "node:path";
-import * as fs from "node:fs/promises";
+import * as fs from "node:fs";
 import { MyRequest } from './Request.js';
 import { MyResponse } from './Response.js';
 import { getContentTypeFromExtension, isSupportedExtension } from "./contentType.js";
@@ -22,7 +21,7 @@ async function serveStaticFile(pathname) {
     return undefined;
   }
   try {
-    return { contentsBuffer: await fs.readFile(normalizedFullFilePath), filePath: normalizedFullFilePath };
+    return { contentsBuffer: await fs.promises.readFile(normalizedFullFilePath), filePath: normalizedFullFilePath };
   } catch (err) {
     // Common system errors
     if (typeof err === "object" && err && "code" in err && typeof err.code === "string" && (err.code === "ENOENT" || err.code === "EISDIR")) {

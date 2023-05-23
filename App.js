@@ -4,20 +4,20 @@ import { MyResponse } from "./Response.js";
 
 export class App {
   constructor() {
-    /** @type {((req: import("./Request.js").MyRequest, res: import("./Response.js").MyResponse, next: () => Promise<void>) => Promise<void>)[]} */
+    /** @type {((req: MyRequest, res: MyResponse, next: () => Promise<void>) => Promise<void>)[]} */
     this.middleware = [];
   }
 
   /**
-   * @param {(req: import("./Request.js").MyRequest, res: import("./Response.js").MyResponse, next: () => Promise<void>) => Promise<void>} middleware
+   * @param {(req: MyRequest, res: MyResponse, next: () => Promise<void>) => Promise<void>} middleware
    */
   use(middleware) {
     this.middleware.push(middleware);
   }
 
   /**
-   * @param {import("./Request.js").MyRequest} req
-   * @param {import("./Response.js").MyResponse} res
+   * @param {MyRequest} req
+   * @param {MyResponse} res
    */
   async handleRequest(req, res) {
     const middleware = this.middleware;
