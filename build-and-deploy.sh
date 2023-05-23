@@ -10,4 +10,4 @@ aws ecr get-login-password --region us-west-2 | docker login --username AWS --pa
 docker build -t website .
 docker tag website:latest 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest
 docker push 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest
-aws ecs update-service --cluster Prod --service website-v4 --force-new-deployment --no-cli-pager
+aws ecs update-service --cluster Prod --service website-v5 --force-new-deployment --no-cli-pager

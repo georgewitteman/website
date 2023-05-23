@@ -1,4 +1,8 @@
-export class Response {
+/**
+ * @typedef {{"Content-Type": import("./contentType.js").ContentTypeHeaderValues}} Headers
+ */
+
+export class MyResponse {
   /** @type {import("node:http").ServerResponse} */
   _UNSAFE_serverResponse;
 
@@ -19,8 +23,8 @@ export class Response {
 
   /**
    *
-   * @param {number} statusCode
-   * @param {import("node:http").OutgoingHttpHeaders} [headers]
+   * @param {200 | 404 | 500} statusCode
+   * @param {Headers} [headers]
    */
   writeHead(statusCode, headers) {
     if (this.#headWritten) {

@@ -24,7 +24,7 @@ function getProtocolFromRequest(req) {
   //   : header.trim()
 }
 
-export class Request {
+export class MyRequest {
   /** @type {import("node:http").IncomingMessage} */
   #nodeRequest;
 
@@ -43,7 +43,7 @@ export class Request {
   /** @type {{ minor: number, major: number, version: string }} */
   #httpVersion
 
-  /** @type {"GET" | "HEAD"} */
+  /** @type {string} */
   #method;
 
   /**
@@ -58,7 +58,7 @@ export class Request {
       throw new Error("Missing required Host header");
     }
 
-    if (req.method === "HEAD" || req.method === "GET") {
+    if (req.method) {
       this.#method = req.method
     } else {
       throw new Error(`Unsupported request method: ${req.method}`)

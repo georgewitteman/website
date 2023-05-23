@@ -1,9 +1,10 @@
 import { createServer } from "node:http";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { contentType } from "mime-types";
-import { Request } from './Request.js';
-import { Response } from './Response.js';
+import { MyRequest } from './Request.js';
+import { MyResponse } from './Response.js';
+import { getContentTypeFromExtension, isSupportedExtension } from "./contentType.js";
+import { App } from "./App.js";
 
 const PORT = 8080;
 
@@ -32,8 +33,8 @@ async function serveStaticFile(pathname) {
 }
 
 /**
- * @param {Request} req
- * @param {Response} res
+ * @param {MyRequest} req
+ * @param {MyResponse} res
  * @param {() => Promise<void>} next
  */
 async function staticHandler(req, res, next) {
@@ -41,22 +42,24 @@ async function staticHandler(req, res, next) {
 
   const fileInfo = await serveStaticFile(pathname);
   if (!fileInfo) {
-    await next();
-    return;
+    return next();
   }
 
   // https://github.com/jshttp/mime-types https://github.com/broofa/mime
   // https://github.com/jshttp/mime-db
   const extension = path.extname(fileInfo.filePath).substring(1).toLowerCase();
-  const contentTypeHeader = contentType(extension) || 'application/octet-stream';
-  res.writeHead(200, { "Content-Type": contentTypeHeader });
+  if (!isSupportedExtension(extension)) {
+    return next();
+  }
+
+  res.writeHead(200, { "Content-Type": getContentTypeFromExtension(extension) });
   res.writeToKernelBuffer(fileInfo.contentsBuffer);
   res.end();
 }
 
 /**
- * @param {Request} req
- * @param {Response} res
+ * @param {MyRequest} req
+ * @param {MyResponse} res
  */
 async function notFound(req, res) {
   res.writeHead(404);
@@ -65,8 +68,8 @@ async function notFound(req, res) {
 }
 
 /**
- * @param {Request} req
- * @param {Response} res
+ * @param {MyRequest} req
+ * @param {MyResponse} res
  * @param {() => Promise<void>} next
  */
 async function logger(req, res, next) {
@@ -91,61 +94,12 @@ async function logger(req, res, next) {
   }
 }
 
-const middleware = [logger, staticHandler, notFound];
+const app = new App();
+app.use(logger);
+app.use(staticHandler);
+app.use(notFound);
 
-/**
- * @param {Request} req
- * @param {Response} res
- */
-async function handleRequest(req, res) {
-  let index = -1;
-  /**
-   * https://github.com/koajs/compose/blob/master/index.js
-   * @param {number} i
-   */
-  async function dispatch(i) {
-    if (i <= index) {
-      throw new Error('next() called multiple times');
-    }
-    index = i;
-    if (i >= middleware.length) {
-      return
-    }
-    const fn = middleware[i];
-    await fn(req, res, dispatch.bind(null, i + 1));
-  }
-  await dispatch(0);
-}
-
-const server = createServer((nodeRequest, nodeResponse) => {
-  if (typeof nodeRequest.headers.host !== "string") {
-    // RFC 7230: "A server MUST respond with a 400 (Bad Request) status code to
-    // any HTTP/1.1 request message that lacks a Host header field and to any
-    // request message that contains more than one Host header field or a Host
-    // header field with an invalid field-value."
-    //
-    // https://github.com/nodejs/node/issues/3094#issue-108564685
-    nodeResponse.writeHead(400);
-    nodeResponse.end("Missing Host header");
-    return;
-  }
-  if (nodeRequest.method && !["GET"].includes(nodeRequest.method)) {
-    // When a request method is received that is unrecognized or not implemented
-    // by an origin server, the origin server SHOULD respond with the 501 (Not
-    // Implemented) status code.  When a request method is received that is
-    // known by an origin server but not allowed for the target resource, the
-    // origin server SHOULD respond with the 405 (Method Not Allowed) status
-    // code.
-    nodeResponse.writeHead(501);
-    nodeResponse.end(`Unsupported method: ${nodeRequest.method}`);
-    return;
-  }
-  const req = new Request(nodeRequest);
-  const res = new Response(nodeResponse);
-  handleRequest(req, res).catch(console.error)
-});
-
-server.listen(PORT, '0.0.0.0', () => {
+const server = app.createServer().listen(PORT, '0.0.0.0', () => {
   console.log("listening on %s", server.address());
 });
 
