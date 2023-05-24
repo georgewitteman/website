@@ -4,6 +4,8 @@ import { MyRequest } from './Request.js';
 import { MyResponse } from './Response.js';
 import { getContentTypeFromExtension, isSupportedExtension } from "./contentType.js";
 import { App } from "./App.js";
+import { pool, typeSafeQuery } from "./db.js";
+import { z } from "./zod.js";
 
 const PORT = 8080;
 
@@ -58,12 +60,24 @@ async function staticHandler(req, next) {
 
 /**
  * @param {MyRequest} req
+ * @param {() => Promise<MyResponse>} next
+ * @returns {Promise<MyResponse>}
+ */
+async function now(req, next) {
+  if (req.rawUrl.pathname !== "/now") {
+    return next();
+  }
+  const result = await typeSafeQuery("SELECT NOW()", z.array(z.object({ now: z.date() })).length(1))
+  return new MyResponse(404, {'Content-Type': 'application/json; charset=utf-8'}, JSON.stringify(result[0]));
+}
+
+/**
+ * @param {MyRequest} req
  * @returns {Promise<MyResponse>}
  */
 async function notFound(req) {
   return new MyResponse(404, {}, `Not found: ${req.originalUrl.href}\n`);
 }
-
 
 /**
  * @param {MyRequest} req
@@ -98,6 +112,7 @@ async function logger(req, next) {
 const app = new App();
 app.use(logger);
 app.use(staticHandler);
+app.use(now);
 app.use(notFound);
 
 const server = app.createServer().listen(PORT, '0.0.0.0', () => {
@@ -123,7 +138,11 @@ function shutdown(signal) {
       console.error(err)
       return;
     }
-    console.log("Successfully shut down server")
+    console.log("Successfully shut down server");
+
+    pool.end(() => {
+      console.log("Pool closed");
+    })
   });
 }
 

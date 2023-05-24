@@ -5,6 +5,7 @@ export const extensionToContentTypeHeader = /** @type {const} */({
   css: "text/css; charset=utf-8",
   jpg: "image/jpeg",
   ico: "image/x-icon",
+  json: "application/json; charset=utf-8",
 });
 
 /**
