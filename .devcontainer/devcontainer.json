@@ -1,5 +1,6 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:18",
+  "dockerComposeFile": "docker-compose.yml",
+	"service": "app",
   "features": {
     "ghcr.io/devcontainers/features/aws-cli": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {

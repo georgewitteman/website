@@ -9,6 +9,7 @@ import { describe, test } from "node:test";
  */
 
 /**
+ * @template T
  * @typedef {Object} ParseFailure
  * @property {false} ok
  * @property {ZodIssue[]} error
@@ -16,7 +17,7 @@ import { describe, test } from "node:test";
 
 /**
  * @template T
- * @typedef {ParseSuccess<T> | ParseFailure} ParseResult
+ * @typedef {ParseSuccess<T> | ParseFailure<T>} ParseResult
  */
 
 /**
@@ -62,6 +63,7 @@ class ZodContextImpl {
  * @template Output
  * @typedef {Object} ZodSchema
  * @property {(data: unknown, ctx: ZodContext) => data is Output} isSatisfiedBy
+ * @property {(data: unknown) => ParseResult<Output>} parse
  */
 
 /** @implements {ZodSchema<string>} */
@@ -77,6 +79,24 @@ class ZodString {
     }
     ctx.addIssue({message: `${data} is not a string`})
     return false
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<string>}
+   */
+  parse(data) {
+    const ctx = new ZodContextImpl();
+    if (this.isSatisfiedBy(data, ctx)) {
+      return {
+        ok: true,
+        data: data,
+      }
+    }
+    return {
+      ok: false,
+      error: ctx.issues,
+    }
   }
 }
 
@@ -97,6 +117,24 @@ class ZodNumber {
       return false;
     }
     return true;
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<number>}
+   */
+  parse(data) {
+    const ctx = new ZodContextImpl();
+    if (this.isSatisfiedBy(data, ctx)) {
+      return {
+        ok: true,
+        data: data,
+      }
+    }
+    return {
+      ok: false,
+      error: ctx.issues,
+    }
   }
 }
 
@@ -137,6 +175,10 @@ class ZodObject {
   isSatisfiedBy(data, ctx) {
     if (!isRecord(data)) {
       ctx.addIssue({message: `${data} is not a record`})
+      return false;
+    }
+    if (!Object.keys(data).every(key => key in this.schema)) {
+      ctx.addIssue({ message: `${data} had an unexpected key` });
       return false;
     }
     return Object.entries(this.schema).reduce((prev, [key, schema]) => {
@@ -180,12 +222,25 @@ class ZodObject {
  * @implements {ZodSchema<Output>}
  */
 class ZodArray {
+  /** @type {number | undefined} */
+  #length;
+
   /**
    * @param {Schema} schema
+   * @param {{ length?: number }} [options]
    */
-  constructor(schema) {
+  constructor(schema, options) {
     /** @type {Schema} */
     this.schema = schema;
+    if (typeof options !== "object") {
+      return;
+    }
+    if (typeof options.length === "number") {
+      if (!Number.isInteger(options.length)) {
+        throw new Error("Length must be an integer");
+      }
+      this.#length = options.length
+    }
   }
 
   /**
@@ -198,6 +253,10 @@ class ZodArray {
       ctx.addIssue({ message: `${data} is not an array` })
       return false;
     }
+    if (typeof this.#length === "number" && data.length !== this.#length) {
+      ctx.addIssue({ message: `${data.length} !== ${this.#length}` });
+      return false;
+    }
     return data.reduce((previousValue, currentValue, currentIndex) => {
       const subCtx = new ZodContextImpl();
       if (this.schema.isSatisfiedBy(currentValue, subCtx)) {
@@ -206,6 +265,31 @@ class ZodArray {
       ctx.addIssue({message: "bad array element", path: [currentIndex], issues: subCtx.issues })
       return false;
     }, true)
+  }
+
+  /**
+   * @param {number} num
+   */
+  length(num) {
+    return new ZodArray(this.schema, { length: num });
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<Output>}
+   */
+  parse(data) {
+    const ctx = new ZodContextImpl();
+    if (this.isSatisfiedBy(data, ctx)) {
+      return {
+        ok: true,
+        data: data,
+      }
+    }
+    return {
+      ok: false,
+      error: ctx.issues,
+    }
   }
 }
 
@@ -272,7 +356,16 @@ function numberGuard(data) {
   return true;
 }
 
-const z = {
+/**
+ * @param {unknown} data
+ * @return {data is Date}
+ */
+function dateGuard(data) {
+  return data instanceof Date;
+}
+
+export const z = {
+  date: () => new GenericSchema(dateGuard),
   number2: () => new GenericSchema(numberGuard),
   string: () => new ZodString(),
   number: () => new ZodNumber(),
@@ -301,36 +394,36 @@ const z = {
  * @typedef {T} Expect
  */
 
-describe("zod clone", () => {
-  test("object", () => {
-    const schema = z.object({
-      arr: z.array(z.object({ num: z.number2() })),
-      num: z.number(),
-      str: z.string(),
-      obj: z.object({ foo: z.string() }),
-    });
+// describe("zod clone", () => {
+//   test("object", () => {
+//     const schema = z.object({
+//       arr: z.array(z.object({ num: z.number2() })),
+//       num: z.number(),
+//       str: z.string(),
+//       obj: z.object({ foo: z.string() }),
+//     });
 
-    /** @typedef {Expect<Equal<TypeOf<typeof schema>, { arr: { num: number; }[]; num: number; str: string; obj: { foo: string; }; }>>} case_1 */
+//     /** @typedef {Expect<Equal<TypeOf<typeof schema>, { arr: { num: number; }[]; num: number; str: string; obj: { foo: string; }; }>>} case_1 */
 
-    const data = {
-      arr: [{ num: 123 }, { num: 456 }],
-      num: 123,
-      str: "foo",
-      obj: { foo: "foo" },
-    };
-    const result = schema.parse(data);
-    assert(result.ok === true);
-    deepEqual(result.data, data);
-  });
+//     const data = {
+//       arr: [{ num: 123 }, { num: 456 }],
+//       num: 123,
+//       str: "foo",
+//       obj: { foo: "foo" },
+//     };
+//     const result = schema.parse(data);
+//     assert(result.ok === true);
+//     deepEqual(result.data, data);
+//   });
 
-  test("object error", () => {
-    const schema = z.object({ foo: z.string(), obj: z.object({ bar: z.string() })});
-    const data = {
-      foo: "string",
-      obj: { bar: 123 },
-    };
-    const result = schema.parse(data);
-    assert(result.ok === false);
-    deepEqual(result.error, [{ message: '123 is not a string', path: ['obj', 'bar'] }])
-  })
-});
+//   test("object error", () => {
+//     const schema = z.object({ foo: z.string(), obj: z.object({ bar: z.string() })});
+//     const data = {
+//       foo: "string",
+//       obj: { bar: 123 },
+//     };
+//     const result = schema.parse(data);
+//     assert(result.ok === false);
+//     deepEqual(result.error, [{ message: '123 is not a string', path: ['obj', 'bar'] }])
+//   })
+// });

@@ -21,6 +21,10 @@
   "devDependencies": {
     "@types/mime-types": "^2.1.1",
     "@types/node": "^20.2.3",
+    "@types/pg": "^8.10.1",
     "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "pg": "^8.11.0"
   }
 }

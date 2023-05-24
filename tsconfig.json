@@ -1,5 +1,5 @@
 {
-  "include": ["index.js", "Request.js", "Response.js", "zod.js"],
+  "include": ["./*.js"],
   // https://github.com/tsconfig/bases/blob/main/bases/node18.json
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
