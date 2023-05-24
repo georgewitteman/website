@@ -1,6 +1,7 @@
 {
   "dockerComposeFile": "docker-compose.yml",
 	"service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "features": {
     "ghcr.io/devcontainers/features/aws-cli": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {
