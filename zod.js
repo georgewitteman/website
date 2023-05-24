@@ -217,30 +217,34 @@ class ZodObject {
 }
 
 /**
+ * @template {number | undefined} L
+ * @template Value
+ * @typedef {L extends 1 ? [Value] : L extends 2 ? [Value, Value] : Value[]} ArrayOfLength
+ */
+
+/**
+ * @template {number | undefined} L
  * @template {ZodSchema<unknown>} Schema
- * @template {TypeOf<Schema>[]} Output
+ * @template {ArrayOfLength<L, TypeOf<Schema>>} Output
  * @implements {ZodSchema<Output>}
  */
 class ZodArray {
-  /** @type {number | undefined} */
+  /** @type {L} */
   #length;
 
   /**
    * @param {Schema} schema
-   * @param {{ length?: number }} [options]
+   * @param {{ length: L }} options
    */
   constructor(schema, options) {
     /** @type {Schema} */
     this.schema = schema;
-    if (typeof options !== "object") {
-      return;
-    }
-    if (typeof options.length === "number") {
+    if (options && typeof options.length === "number") {
       if (!Number.isInteger(options.length)) {
         throw new Error("Length must be an integer");
       }
-      this.#length = options.length
     }
+    this.#length = options.length
   }
 
   /**
@@ -268,7 +272,8 @@ class ZodArray {
   }
 
   /**
-   * @param {number} num
+   * @template {number} N
+   * @param {N} num
    */
   length(num) {
     return new ZodArray(this.schema, { length: num });
@@ -378,7 +383,7 @@ export const z = {
     /**
      * @template {ZodSchema<unknown>} Schema
      * @param {Schema} schema
-     */ (schema) => new ZodArray(schema),
+     */ (schema) => new ZodArray(schema, { length: undefined }),
 };
 
 /**
