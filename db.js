@@ -1,9 +1,9 @@
 import pg from "pg";
 import { z } from "./zod.js";
 
-export const pool = new pg.Pool({
-  user: "postgres",
-});
+// https://node-postgres.com/features/connecting
+// https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_rds_signer.html
+export const pool = new pg.Pool();
 
 /**
  * @template {unknown[]} T
@@ -11,9 +11,7 @@ export const pool = new pg.Pool({
  * @param {import("./zod.js").ZodSchema<T>} schema
  */
 export async function typeSafeQuery(query, schema) {
-  const client = await pool.connect();
-  const result = await client.query(query);
-  client.release();
+  const result = await pool.query(query);
   const parseResult = schema.parse(result.rows);
   if (parseResult.ok){
     return parseResult.data

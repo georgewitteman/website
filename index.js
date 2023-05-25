@@ -68,7 +68,7 @@ async function now(req, next) {
     return next();
   }
   const result = await typeSafeQuery("SELECT NOW()", z.array(z.object({ now: z.date() })).length(1))
-  return new MyResponse(404, {'Content-Type': 'application/json; charset=utf-8'}, JSON.stringify(result[0]));
+  return new MyResponse(200, {'Content-Type': 'application/json; charset=utf-8'}, JSON.stringify(result[0]));
 }
 
 /**
