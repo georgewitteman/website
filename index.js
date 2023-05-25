@@ -115,6 +115,8 @@ app.use(staticHandler);
 app.use(now);
 app.use(notFound);
 
+console.log("Environment:", JSON.stringify(process.env));
+
 const server = app.createServer().listen(PORT, '0.0.0.0', () => {
   console.log("listening on %s", server.address());
 });
