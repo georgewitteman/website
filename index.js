@@ -67,7 +67,7 @@ async function now(req, next) {
   if (req.rawUrl.pathname !== "/now") {
     return next();
   }
-  const result = await typeSafeQuery("SELECT NOW()", z.array(z.object({ now: z.date() })).length(1))
+  const result = await typeSafeQuery("SELECT NOW(), VERSION()", z.array(z.object({ now: z.date(), version: z.string() })).length(1))
   return new MyResponse(200, {'Content-Type': 'application/json; charset=utf-8'}, JSON.stringify(result[0]));
 }
 
