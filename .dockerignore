@@ -7,3 +7,5 @@ README.md
 tsconfig.json
 .git
 .gitignore
+*.test.js
+build-and-deploy.sh
