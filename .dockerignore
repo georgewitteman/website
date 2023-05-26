@@ -1,2 +1,9 @@
 node_modules
 npm-debug.log
+.vscode
+.devcontainer
+.github
+README.md
+tsconfig.json
+.git
+.gitignore
