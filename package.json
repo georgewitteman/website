@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/georgewitteman/website#readme",
   "devDependencies": {
-    "@types/node": "^20.2.3",
+    "@types/node": "^20.2.4",
     "@types/pg": "^8.10.1",
     "typescript": "^5.0.4"
   },
