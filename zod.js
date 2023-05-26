@@ -369,7 +369,25 @@ function dateGuard(data) {
   return data instanceof Date;
 }
 
+/**
+ * @param {unknown} data
+ * @return {data is null}
+ */
+function nullGuard(data) {
+  return data === null;
+}
+
+/**
+ * @param {unknown} data
+ * @return {data is undefined}
+ */
+function undefinedGuard(data) {
+  return data === undefined;
+}
+
 export const z = {
+  "null": () => new GenericSchema(nullGuard),
+  "undefined": () => new GenericSchema(undefinedGuard),
   date: () => new GenericSchema(dateGuard),
   number2: () => new GenericSchema(numberGuard),
   string: () => new ZodString(),

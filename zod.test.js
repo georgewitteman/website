@@ -1,9 +1,9 @@
-import { describe, it } from "node:test";
+import { describe, test } from "node:test";
 import assert from 'node:assert';
 import { z } from "./zod.js";
 
-describe(z.object({}).constructor.name, () => {
-  it("should return the input object if successfully validates", () => {
+describe("object", () => {
+  test("returns the input object if successfully validates", () => {
     const schema = z.object({
       num: z.number(),
       num2: z.number2(),
@@ -30,17 +30,51 @@ describe(z.object({}).constructor.name, () => {
   });
 });
 
-describe(z.string().constructor.name, () => {
-  it("should work for normal strings", () => {
+describe("string", () => {
+  test("returns the string", () => {
     const schema = z.string();
     const result = schema.parse("a string")
     assert.strictEqual(result.ok, true);
     assert.deepStrictEqual(result.data, "a string");
   });
 
-  it("should return an error for numbers", () => {
+  test("returns an error for numbers", () => {
     const schema = z.string();
     const result = schema.parse(123)
     assert.strictEqual(result.ok, false);
+  });
+});
+
+describe("null", () => {
+  test("returns null", () => {
+    const schema = z.null();
+    const result = schema.parse(null)
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.data, null);
+  });
+
+  [undefined, "", 0, -0, false, true, NaN].forEach((val) => {
+    test(`returns an error for: ${val} (${typeof val})`, () => {
+      const schema = z.null();
+      const result = schema.parse(val)
+      assert.strictEqual(result.ok, false);
+    });
+  });
+});
+
+describe("undefined", () => {
+  test("returns undefined", () => {
+    const schema = z.undefined();
+    const result = schema.parse(undefined)
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.data, undefined);
+  });
+
+  [null, "", 0, -0, false, true, NaN].forEach((val) => {
+    test(`returns an error for: ${val} (${typeof val})`, () => {
+      const schema = z.undefined();
+      const result = schema.parse(val)
+      assert.strictEqual(result.ok, false);
+    });
   });
 });
