@@ -26,7 +26,12 @@ describe("object", () => {
     };
     const result = schema.parse(obj);
     assert.strictEqual(result.ok, true);
-    assert.deepStrictEqual(result.data, obj);
+    /**
+     * This will be a TypeScript error if the type inference is wrong
+     * @type {{ num: number; num2: number; str: string; date: Date; arr: string[]; obj: { str: string; }; }}
+     */
+    const data = result.data;
+    assert.deepStrictEqual(data, obj);
   });
 });
 
