@@ -211,6 +211,20 @@ class ZodObject {
       error: ctx.issues,
     }
   }
+
+  /**
+   * @param {unknown} data
+   * @returns {Output}
+   */
+  unsafeParse(data) {
+    const ctx = new ZodContextImpl();
+    if (this.isSatisfiedBy(data, ctx)) {
+      return data;
+    }
+    const e = new Error("Invalid object");
+    e.cause = ctx.issues;
+    throw e
+  }
 }
 
 /**

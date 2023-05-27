@@ -1,7 +1,6 @@
 import pg from "pg";
 import { Signer } from "@aws-sdk/rds-signer";
 import fs from "node:fs";
-import process from "node:process";
 
 /** @type {pg.PoolConfig} */
 const poolConfig = {};

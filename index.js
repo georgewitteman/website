@@ -5,7 +5,6 @@ import { getContentTypeFromExtension, isSupportedExtension } from "./contentType
 import { App } from "./App.js";
 import { pool, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
-import process from "node:process";
 
 const PORT = 8080;
 
