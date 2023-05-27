@@ -8,6 +8,7 @@ import {
 import { App } from "./App.js";
 import { pool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
+import { html } from "./html.js";
 
 const PORT = 8080;
 
@@ -88,8 +89,28 @@ async function now(req, next) {
   );
   return new MyResponse(
     200,
-    { "Content-Type": "application/json; charset=utf-8" },
-    JSON.stringify(result[0])
+    { "Content-Type": "text/html; charset=utf-8" },
+    html`<!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <title>${result[0].now.toLocaleString()}</title>
+        </head>
+        <body>
+          <ul>
+            ${Object.entries(result[0]).map(
+              ([key, value]) =>
+                html`<li>
+                  <strong><code>${key}</code>:</strong>
+                  <code
+                    >${value instanceof Date ? value.toString() : value}</code
+                  >
+                </li>`
+            )}
+          </ul>
+          <pre><code>${JSON.stringify(result, null, 2)}</code></pre>
+          <code>${'<script>alert("unsafe html test")</script>'}</code>
+        </body>
+      </html>`
   );
 }
 

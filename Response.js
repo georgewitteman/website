@@ -2,6 +2,8 @@
  * @typedef {{"Content-Type"?: import("./contentType.js").ContentTypeHeaderValues, Server?: "hi"}} Headers
  */
 
+import { SafeHTML } from "./html.js";
+
 const STATUS_MESSAGE = /** @type {const} */ ({
   100: "Continue", // RFC 7231 6.2.1
   101: "Switching Protocols", // RFC 7231 6.2.2
@@ -80,7 +82,7 @@ export class MyResponse {
   /**
    * @param {S} statusCode
    * @param {H} headers
-   * @param {string | Buffer} body
+   * @param {string | Buffer | SafeHTML} body
    */
   constructor(statusCode, headers, body) {
     /**
@@ -99,7 +101,7 @@ export class MyResponse {
      * @readonly
      * @type {string | Buffer}
      */
-    this.body = body;
+    this.body = body instanceof SafeHTML ? body.value : body;
   }
 
   /**
