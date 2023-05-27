@@ -16,10 +16,10 @@ if (
     port: 5432,
     username: process.env.PGUSER,
   });
-  (poolConfig.password = () => signer.getAuthToken()),
-    (poolConfig.ssl = {
-      ca: fs.readFileSync("rds-combined-ca-bundle.pem").toString(),
-    });
+  poolConfig.password = () => signer.getAuthToken();
+  poolConfig.ssl = {
+    ca: fs.readFileSync("rds-combined-ca-bundle.pem").toString(),
+  };
 }
 
 // https://node-postgres.com/features/connecting
@@ -27,7 +27,8 @@ export const pool = new pg.Pool(poolConfig);
 
 /**
  * @template {unknown[]} T
- * @param {string} query
+ * @template {unknown[]} V
+ * @param {string | import("pg").QueryConfig<V>} query
  * @param {import("./zod.js").ZodSchema<T>} schema
  */
 export async function typeSafeQuery(query, schema) {
@@ -38,4 +39,19 @@ export async function typeSafeQuery(query, schema) {
   }
   console.error(parseResult.error);
   throw new Error("Failed to parse");
+}
+
+/**
+ * https://node-postgres.com/features/queries#query-config-object
+ * @param {TemplateStringsArray} strings
+ * @param {unknown[]} values
+ */
+export function sql(strings, ...values) {
+  return {
+    text: /** @type {typeof strings.reduce<string>} */ (strings.reduce)(
+      (prev, curr, i) => (i === 0 ? curr : `${prev}$${i}${curr}`),
+      ""
+    ),
+    values,
+  };
 }

@@ -6,7 +6,7 @@ import {
   isSupportedExtension,
 } from "./contentType.js";
 import { App } from "./App.js";
-import { pool, typeSafeQuery } from "./db.js";
+import { pool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 
 const PORT = 8080;
@@ -83,7 +83,7 @@ async function now(req, next) {
     return next();
   }
   const result = await typeSafeQuery(
-    "SELECT NOW(), VERSION()",
+    sql`SELECT NOW(), VERSION()`,
     z.array(z.object({ now: z.date(), version: z.string() })).length(1)
   );
   return new MyResponse(
