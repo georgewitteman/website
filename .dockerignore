@@ -3,6 +3,7 @@
 .github
 .gitignore
 .prettierrc.cjs
+.eslintrc.cjs
 .vscode
 *.test.js
 build-and-deploy.js
@@ -11,3 +12,4 @@ node_modules
 npm-debug.log
 README.md
 tsconfig.json
+tsconfig-browser.json

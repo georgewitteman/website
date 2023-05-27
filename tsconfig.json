@@ -1,5 +1,6 @@
 {
-  "include": ["./*.js"],
+  "include": ["**/*.js", "**/*.cjs", "**/*.ts", ".eslintrc.cjs"],
+  "exclude": ["static/**/*.js"],
   // https://github.com/tsconfig/bases/blob/main/bases/node18.json
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */

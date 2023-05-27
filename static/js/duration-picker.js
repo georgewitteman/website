@@ -1,9 +1,12 @@
-const secondsToMinsSecs = (seconds) => ({
+const secondsToMinsSecs = (/** @type {number} */ seconds) => ({
   minutes: seconds < 0 ? Math.ceil(seconds / 60) : Math.floor(seconds / 60),
   seconds: Math.round(seconds % 60),
 });
 
-const valueOrDefault = (value, nanValue) => (isNaN(value) ? nanValue : value);
+const valueOrDefault = (
+  /** @type {number} */ value,
+  /** @type {number} */ nanValue
+) => (isNaN(value) ? nanValue : value);
 
 class DurationPicker extends HTMLElement {
   constructor() {

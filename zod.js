@@ -272,18 +272,21 @@ class ZodArray {
       ctx.addIssue({ message: `${data.length} !== ${this.#length}` });
       return false;
     }
-    return data.reduce((previousValue, currentValue, currentIndex) => {
-      const subCtx = new ZodContextImpl();
-      if (this.schema.isSatisfiedBy(currentValue, subCtx)) {
-        return previousValue;
-      }
-      ctx.addIssue({
-        message: "bad array element",
-        path: [currentIndex],
-        issues: subCtx.issues,
-      });
-      return false;
-    }, true);
+    return /** @type {typeof data.reduce<boolean>} */ (data.reduce)(
+      (previousValue, currentValue, currentIndex) => {
+        const subCtx = new ZodContextImpl();
+        if (this.schema.isSatisfiedBy(currentValue, subCtx)) {
+          return previousValue;
+        }
+        ctx.addIssue({
+          message: "bad array element",
+          path: [currentIndex],
+          issues: subCtx.issues,
+        });
+        return false;
+      },
+      true
+    );
   }
 
   /**

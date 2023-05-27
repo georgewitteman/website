@@ -17,7 +17,7 @@ function base64Decode(encodedString) {
  * @param {{ input?: string }} options
  */
 function execSync(command, options = {}) {
-  console.log("> %s", command);
+  console.log("\x1b[1;34m> %s\x1b[0m", command);
   if (typeof options.input === "string") {
     child_process.execSync(command, {
       input: options.input,

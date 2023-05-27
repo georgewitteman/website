@@ -21,14 +21,21 @@ module.exports = {
   parserOptions: {
     ecmaVersion: "latest",
     sourceType: "module",
+    project: "tsconfig.json",
   },
   plugins: ["@typescript-eslint"],
-  rules: {},
+  rules: {
+    "@typescript-eslint/require-await": "off",
+    "@typescript-eslint/restrict-template-expressions": "off",
+  },
   overrides: [
     {
       files: ["static/**/*"],
       env: {
         browser: true,
+      },
+      parserOptions: {
+        project: "tsconfig-browser.json",
       },
     },
     {
@@ -36,6 +43,12 @@ module.exports = {
       excludedFiles: "static/**/*",
       env: {
         node: true,
+      },
+    },
+    {
+      files: ["*.test.js"],
+      rules: {
+        "@typescript-eslint/no-floating-promises": "off",
       },
     },
   ],
