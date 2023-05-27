@@ -62,8 +62,9 @@ async function updateECSService() {
   console.log(response);
 }
 
+execSync("npx prettier --write .");
 execSync("npx eslint .");
-execSync("npm run typecheck");
+execSync("npx tsc");
 execSync("node --test");
 
 execSync(

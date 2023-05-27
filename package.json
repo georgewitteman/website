@@ -5,10 +5,7 @@
   "private": true,
   "exports": "./index.js",
   "scripts": {
-    "typecheck": "tsc",
-    "test": "node --test",
-    "start": "node .",
-    "watch": "node --watch --watch-preserve-output ."
+    "test": "node --test"
   },
   "repository": {
     "type": "git",

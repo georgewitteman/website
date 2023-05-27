@@ -8,11 +8,13 @@
  * [1]: https://eslint.org/docs/latest/use/configure/configuration-files-new
  */
 
+/** https://eslint.org/docs/latest/use/configure/configuration-files */
 module.exports = {
   root: true,
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "prettier",
   ],
   parser: "@typescript-eslint/parser",
