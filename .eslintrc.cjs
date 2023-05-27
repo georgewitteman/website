@@ -9,35 +9,32 @@
  */
 
 module.exports = {
-  "root": true,
-  "extends": [
-    "eslint:recommended"
+  root: true,
+  extends: [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
   ],
-  "overrides": [
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    ecmaVersion: "latest",
+    sourceType: "module",
+  },
+  plugins: ["@typescript-eslint"],
+  rules: {},
+  overrides: [
     {
-      "files": ["static/**/*.js"],
-      "env": {
-        "browser": true,
-      }
+      files: ["static/**/*"],
+      env: {
+        browser: true,
+      },
     },
     {
-      "files": ["*.js", "*.cjs", "*.mjs"],
-      "env": {
-        "node": true,
-        "es2021": true
+      files: ["**/*"],
+      excludedFiles: "static/**/*",
+      env: {
+        node: true,
       },
-      "extends": ["plugin:@typescript-eslint/recommended"],
-      "parser": "@typescript-eslint/parser",
-      "parserOptions": {
-        "ecmaVersion": "latest",
-        "sourceType": "module"
-      },
-      "plugins": [
-        "@typescript-eslint"
-      ],
-      "rules": {
-      }
-    }
+    },
   ],
-
-}
+};

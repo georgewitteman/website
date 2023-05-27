@@ -36,7 +36,7 @@ export class App {
       }
       const fn = this.middleware[i];
       return await fn(req, dispatch.bind(null, i + 1));
-    }
+    };
     return await dispatch(0);
   }
 
@@ -65,10 +65,12 @@ export class App {
         return;
       }
       const req = new MyRequest(nodeRequest);
-      this.handleRequest(req).then(res => {
-        nodeResponse.writeHead(res.statusCode, res.headers);
-        nodeResponse.end(res.body);
-      }).catch(console.error)
+      this.handleRequest(req)
+        .then((res) => {
+          nodeResponse.writeHead(res.statusCode, res.headers);
+          nodeResponse.end(res.body);
+        })
+        .catch(console.error);
     });
   }
 }

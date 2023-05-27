@@ -1,7 +1,10 @@
-import  path from "node:path";
+import path from "node:path";
 import fs from "node:fs";
-import { MyResponse } from './Response.js';
-import { getContentTypeFromExtension, isSupportedExtension } from "./contentType.js";
+import { MyResponse } from "./Response.js";
+import {
+  getContentTypeFromExtension,
+  isSupportedExtension,
+} from "./contentType.js";
 import { App } from "./App.js";
 import { pool, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
@@ -22,10 +25,19 @@ async function serveStaticFile(pathname) {
     return undefined;
   }
   try {
-    return { contentsBuffer: await fs.promises.readFile(normalizedFullFilePath), filePath: normalizedFullFilePath };
+    return {
+      contentsBuffer: await fs.promises.readFile(normalizedFullFilePath),
+      filePath: normalizedFullFilePath,
+    };
   } catch (err) {
     // Common system errors
-    if (typeof err === "object" && err && "code" in err && typeof err.code === "string" && (err.code === "ENOENT" || err.code === "EISDIR")) {
+    if (
+      typeof err === "object" &&
+      err &&
+      "code" in err &&
+      typeof err.code === "string" &&
+      (err.code === "ENOENT" || err.code === "EISDIR")
+    ) {
       return undefined;
     }
     throw err;
@@ -54,7 +66,11 @@ async function staticHandler(req, next) {
   if (!isSupportedExtension(extension)) {
     return next();
   }
-  return new MyResponse(200, { "Content-Type": getContentTypeFromExtension(extension) }, fileInfo.contentsBuffer);
+  return new MyResponse(
+    200,
+    { "Content-Type": getContentTypeFromExtension(extension) },
+    fileInfo.contentsBuffer
+  );
 }
 
 /**
@@ -66,8 +82,15 @@ async function now(req, next) {
   if (req.rawUrl.pathname !== "/now") {
     return next();
   }
-  const result = await typeSafeQuery("SELECT NOW(), VERSION()", z.array(z.object({ now: z.date(), version: z.string() })).length(1))
-  return new MyResponse(200, {'Content-Type': 'application/json; charset=utf-8'}, JSON.stringify(result[0]));
+  const result = await typeSafeQuery(
+    "SELECT NOW(), VERSION()",
+    z.array(z.object({ now: z.date(), version: z.string() })).length(1)
+  );
+  return new MyResponse(
+    200,
+    { "Content-Type": "application/json; charset=utf-8" },
+    JSON.stringify(result[0])
+  );
 }
 
 /**
@@ -86,7 +109,9 @@ async function notFound(req) {
 function logResponse(req, res, startTimeNs) {
   const durationNs = process.hrtime.bigint() - startTimeNs;
   const durationMs = durationNs / 1_000_000n;
-  console.log(`END: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`);
+  console.log(
+    `END: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`
+  );
 }
 
 /**
@@ -95,7 +120,11 @@ function logResponse(req, res, startTimeNs) {
  */
 async function logger(req, next) {
   const startNs = process.hrtime.bigint();
-  console.log(`START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${JSON.stringify(req.headers)}`);
+  console.log(
+    `START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${
+      req.rawUrl
+    } ${JSON.stringify(req.headers)}`
+  );
   try {
     const res = await next();
     logResponse(req, res, startNs);
@@ -116,7 +145,7 @@ app.use(notFound);
 
 console.log("Environment:", JSON.stringify(process.env));
 
-const server = app.createServer().listen(PORT, '0.0.0.0', () => {
+const server = app.createServer().listen(PORT, "0.0.0.0", () => {
   console.log("listening on %s", server.address());
 });
 
@@ -136,14 +165,14 @@ function shutdown(signal) {
   // https://nodejs.org/docs/latest-v18.x/api/net.html#serverclosecallback
   server.close((err) => {
     if (err) {
-      console.error(err)
+      console.error(err);
       return;
     }
     console.log("Successfully shut down server");
 
     pool.end(() => {
       console.log("Pool closed");
-    })
+    });
   });
 }
 

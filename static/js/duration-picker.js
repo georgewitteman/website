@@ -3,7 +3,7 @@ const secondsToMinsSecs = (seconds) => ({
   seconds: Math.round(seconds % 60),
 });
 
-const valueOrDefault = (value, nanValue) => isNaN(value) ? nanValue : value;
+const valueOrDefault = (value, nanValue) => (isNaN(value) ? nanValue : value);
 
 class DurationPicker extends HTMLElement {
   constructor() {
@@ -11,8 +11,8 @@ class DurationPicker extends HTMLElement {
 
     const inputHandler = () => {
       console.log(this.minsInput.value, this.secsInput.value);
-      if (this.minsInput.value === '-' || this.secsInput.value === '-') {
-        return
+      if (this.minsInput.value === "-" || this.secsInput.value === "-") {
+        return;
       }
       const mins = parseInt(this.minsInput.value, 10);
       const secs = parseInt(this.secsInput.value, 10);
@@ -22,38 +22,43 @@ class DurationPicker extends HTMLElement {
       this.secsInput.value = `${seconds}`;
     };
 
-    const minAttr = this.hasAttribute('data-min') ?
-      parseInt(this.getAttribute('data-min'), 10) : undefined;
-    const { minutes: minMinutes, seconds: minSeconds } = secondsToMinsSecs(minAttr);
-    const secondsAttr = this.hasAttribute('data-seconds') ?
-      parseInt(this.getAttribute('data-seconds'), 10) : isNaN(minAttr) ? 0 : minAttr;
+    const minAttr = this.hasAttribute("data-min")
+      ? parseInt(this.getAttribute("data-min"), 10)
+      : undefined;
+    const { minutes: minMinutes, seconds: minSeconds } =
+      secondsToMinsSecs(minAttr);
+    const secondsAttr = this.hasAttribute("data-seconds")
+      ? parseInt(this.getAttribute("data-seconds"), 10)
+      : isNaN(minAttr)
+      ? 0
+      : minAttr;
     const { minutes, seconds } = secondsToMinsSecs(secondsAttr);
 
-    const shadow = this.attachShadow({ mode: 'open' });
+    const shadow = this.attachShadow({ mode: "open" });
 
-    const wrapper = document.createElement('div');
+    const wrapper = document.createElement("div");
 
-    const minsLabel = document.createElement('label');
-    this.minsInput = document.createElement('input');
-    this.minsInput.setAttribute('type', 'number');
-    this.minsInput.setAttribute('value', `${minutes}`);
-    this.minsInput.addEventListener('change', inputHandler);
+    const minsLabel = document.createElement("label");
+    this.minsInput = document.createElement("input");
+    this.minsInput.setAttribute("type", "number");
+    this.minsInput.setAttribute("value", `${minutes}`);
+    this.minsInput.addEventListener("change", inputHandler);
     if (!isNaN(minAttr)) {
       this.minsInput.min = minMinutes;
     }
     minsLabel.appendChild(this.minsInput);
-    minsLabel.appendChild(document.createTextNode('mins'));
+    minsLabel.appendChild(document.createTextNode("mins"));
 
-    const secsLabel = document.createElement('label');
-    this.secsInput = document.createElement('input');
-    this.secsInput.setAttribute('type', 'number');
-    this.secsInput.setAttribute('value', `${seconds}`);
-    this.secsInput.addEventListener('change', inputHandler);
+    const secsLabel = document.createElement("label");
+    this.secsInput = document.createElement("input");
+    this.secsInput.setAttribute("type", "number");
+    this.secsInput.setAttribute("value", `${seconds}`);
+    this.secsInput.addEventListener("change", inputHandler);
     if (!isNaN(minAttr)) {
       this.secsInput.min = minMinutes < 0 ? -60 : minSeconds - 1;
     }
     secsLabel.appendChild(this.secsInput);
-    secsLabel.appendChild(document.createTextNode('secs'));
+    secsLabel.appendChild(document.createTextNode("secs"));
 
     wrapper.appendChild(minsLabel);
     wrapper.appendChild(secsLabel);
@@ -66,4 +71,4 @@ class DurationPicker extends HTMLElement {
     return mins + secs;
   }
 }
-customElements.define('duration-picker', DurationPicker);
+customElements.define("duration-picker", DurationPicker);

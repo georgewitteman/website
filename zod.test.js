@@ -1,5 +1,5 @@
 import { describe, test } from "node:test";
-import assert from 'node:assert';
+import assert from "node:assert";
 import { z } from "./zod.js";
 
 describe("object", () => {
@@ -38,14 +38,14 @@ describe("object", () => {
 describe("string", () => {
   test("returns the string", () => {
     const schema = z.string();
-    const result = schema.parse("a string")
+    const result = schema.parse("a string");
     assert.strictEqual(result.ok, true);
     assert.deepStrictEqual(result.data, "a string");
   });
 
   test("returns an error for numbers", () => {
     const schema = z.string();
-    const result = schema.parse(123)
+    const result = schema.parse(123);
     assert.strictEqual(result.ok, false);
   });
 });
@@ -53,7 +53,7 @@ describe("string", () => {
 describe("null", () => {
   test("returns null", () => {
     const schema = z.null();
-    const result = schema.parse(null)
+    const result = schema.parse(null);
     assert.strictEqual(result.ok, true);
     assert.strictEqual(result.data, null);
   });
@@ -61,7 +61,7 @@ describe("null", () => {
   [undefined, "", 0, -0, false, true, NaN].forEach((val) => {
     test(`returns an error for: ${val} (${typeof val})`, () => {
       const schema = z.null();
-      const result = schema.parse(val)
+      const result = schema.parse(val);
       assert.strictEqual(result.ok, false);
     });
   });
@@ -70,7 +70,7 @@ describe("null", () => {
 describe("undefined", () => {
   test("returns undefined", () => {
     const schema = z.undefined();
-    const result = schema.parse(undefined)
+    const result = schema.parse(undefined);
     assert.strictEqual(result.ok, true);
     assert.strictEqual(result.data, undefined);
   });
@@ -78,7 +78,7 @@ describe("undefined", () => {
   [null, "", 0, -0, false, true, NaN].forEach((val) => {
     test(`returns an error for: ${val} (${typeof val})`, () => {
       const schema = z.undefined();
-      const result = schema.parse(val)
+      const result = schema.parse(val);
       assert.strictEqual(result.ok, false);
     });
   });

@@ -4,7 +4,7 @@
  * @param {import("node:http").IncomingMessage} req
  */
 function getProtocolFromRequest(req) {
-  return "encrypted" in req.socket && req.socket.encrypted ? "https" : "http"
+  return "encrypted" in req.socket && req.socket.encrypted ? "https" : "http";
   // var proto = this.connection.encrypted
   //   ? 'https'
   //   : 'http';
@@ -41,7 +41,7 @@ export class MyRequest {
   #originalUrl;
 
   /** @type {{ minor: number, major: number, version: string }} */
-  #httpVersion
+  #httpVersion;
 
   /** @type {string} */
   #method;
@@ -52,16 +52,16 @@ export class MyRequest {
   constructor(req) {
     this.#nodeRequest = req;
 
-    const hostHeader = req.headers.host
+    const hostHeader = req.headers.host;
     // https://github.com/nodejs/node/issues/3094#issue-108564685
     if (!hostHeader) {
       throw new Error("Missing required Host header");
     }
 
     if (req.method) {
-      this.#method = req.method
+      this.#method = req.method;
     } else {
-      throw new Error(`Unsupported request method: ${req.method}`)
+      throw new Error(`Unsupported request method: ${req.method}`);
     }
 
     if (!req.url) {
@@ -70,18 +70,26 @@ export class MyRequest {
 
     // https://datatracker.ietf.org/doc/html/rfc7230#section-5.3
     // https://datatracker.ietf.org/doc/html/rfc7230#section-5.5
-    this.#rawUrl = new URL(req.url, `${getProtocolFromRequest(req)}://${hostHeader}`);
-    this.#originalUrl = new URL(req.url, `${req.headers["x-forwarded-proto"] ?? getProtocolFromRequest(req)}://${req.headers["x-forwarded-host"] ?? hostHeader}`);
+    this.#rawUrl = new URL(
+      req.url,
+      `${getProtocolFromRequest(req)}://${hostHeader}`
+    );
+    this.#originalUrl = new URL(
+      req.url,
+      `${req.headers["x-forwarded-proto"] ?? getProtocolFromRequest(req)}://${
+        req.headers["x-forwarded-host"] ?? hostHeader
+      }`
+    );
 
     this.#httpVersion = {
       version: req.httpVersion,
       minor: req.httpVersionMinor,
       major: req.httpVersionMajor,
-    }
+    };
   }
 
   get headers() {
-    return this.#nodeRequest.headers
+    return this.#nodeRequest.headers;
   }
 
   get method() {

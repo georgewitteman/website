@@ -52,7 +52,7 @@ class ZodContextImpl {
    * @param {ZodIssue} issue
    */
   addIssue(issue) {
-    this.issues.push(issue)
+    this.issues.push(issue);
   }
 }
 
@@ -72,10 +72,10 @@ class ZodString {
    */
   isSatisfiedBy(data, ctx) {
     if (typeof data === "string") {
-      return true
+      return true;
     }
-    ctx.addIssue({message: `${data} is not a string`})
-    return false
+    ctx.addIssue({ message: `${data} is not a string` });
+    return false;
   }
 
   /**
@@ -88,12 +88,12 @@ class ZodString {
       return {
         ok: true,
         data: data,
-      }
+      };
     }
     return {
       ok: false,
       error: ctx.issues,
-    }
+    };
   }
 }
 
@@ -106,11 +106,11 @@ class ZodNumber {
    */
   isSatisfiedBy(data, ctx) {
     if (typeof data !== "number") {
-      ctx.addIssue({message:`${data} is not a number`})
+      ctx.addIssue({ message: `${data} is not a number` });
       return false;
     }
     if (isNaN(data)) {
-      ctx.addIssue({message:`${data} is NaN`})
+      ctx.addIssue({ message: `${data} is NaN` });
       return false;
     }
     return true;
@@ -126,12 +126,12 @@ class ZodNumber {
       return {
         ok: true,
         data: data,
-      }
+      };
     }
     return {
       ok: false,
       error: ctx.issues,
-    }
+    };
   }
 }
 
@@ -146,7 +146,7 @@ class ZodNumber {
  * @returns {obj is Record<T, unknown>}
  */
 function isRecord(obj) {
-  return typeof obj === 'object' && obj !== null;
+  return typeof obj === "object" && obj !== null;
 }
 
 /**
@@ -171,21 +171,21 @@ class ZodObject {
    */
   isSatisfiedBy(data, ctx) {
     if (!isRecord(data)) {
-      ctx.addIssue({message: `${data} is not a record`})
+      ctx.addIssue({ message: `${data} is not a record` });
       return false;
     }
-    if (!Object.keys(data).every(key => key in this.schema)) {
+    if (!Object.keys(data).every((key) => key in this.schema)) {
       ctx.addIssue({ message: `${data} had an unexpected key` });
       return false;
     }
     return Object.entries(this.schema).reduce((prev, [key, schema]) => {
       const subCtx = new ZodContextImpl();
-      if(schema.isSatisfiedBy(data[key], subCtx)) {
+      if (schema.isSatisfiedBy(data[key], subCtx)) {
         return prev;
       }
       for (let issue of subCtx.issues) {
         if ("path" in issue) {
-          ctx.addIssue({ message: issue.message, path: [key, ...issue.path] })
+          ctx.addIssue({ message: issue.message, path: [key, ...issue.path] });
         } else {
           ctx.addIssue({ message: issue.message, path: [key] });
         }
@@ -204,12 +204,12 @@ class ZodObject {
       return {
         ok: true,
         data: data,
-      }
+      };
     }
     return {
       ok: false,
       error: ctx.issues,
-    }
+    };
   }
 
   /**
@@ -223,7 +223,7 @@ class ZodObject {
     }
     const e = new Error("Invalid object");
     e.cause = ctx.issues;
-    throw e
+    throw e;
   }
 }
 
@@ -255,7 +255,7 @@ class ZodArray {
         throw new Error("Length must be an integer");
       }
     }
-    this.#length = options.length
+    this.#length = options.length;
   }
 
   /**
@@ -265,7 +265,7 @@ class ZodArray {
    */
   isSatisfiedBy(data, ctx) {
     if (!Array.isArray(data)) {
-      ctx.addIssue({ message: `${data} is not an array` })
+      ctx.addIssue({ message: `${data} is not an array` });
       return false;
     }
     if (typeof this.#length === "number" && data.length !== this.#length) {
@@ -277,9 +277,13 @@ class ZodArray {
       if (this.schema.isSatisfiedBy(currentValue, subCtx)) {
         return previousValue;
       }
-      ctx.addIssue({message: "bad array element", path: [currentIndex], issues: subCtx.issues })
+      ctx.addIssue({
+        message: "bad array element",
+        path: [currentIndex],
+        issues: subCtx.issues,
+      });
       return false;
-    }, true)
+    }, true);
   }
 
   /**
@@ -300,12 +304,12 @@ class ZodArray {
       return {
         ok: true,
         data: data,
-      }
+      };
     }
     return {
       ok: false,
       error: ctx.issues,
-    }
+    };
   }
 }
 
@@ -350,12 +354,12 @@ class GenericSchema {
       return {
         ok: true,
         data: data,
-      }
+      };
     }
     return {
       ok: false,
       error: ctx.issues,
-    }
+    };
   }
 }
 
@@ -401,20 +405,18 @@ function undefinedGuard(data) {
 }
 
 export const z = {
-  "null": () => new GenericSchema(nullGuard),
-  "undefined": () => new GenericSchema(undefinedGuard),
+  null: () => new GenericSchema(nullGuard),
+  undefined: () => new GenericSchema(undefinedGuard),
   date: () => new GenericSchema(dateGuard),
   number2: () => new GenericSchema(numberGuard),
   string: () => new ZodString(),
   number: () => new ZodNumber(),
-  object:
-    /**
-     * @template {Record<string, ZodSchema<unknown>>} Schema
-     * @param {Schema} schema
-     */ (schema) => new ZodObject(schema),
-  array:
-    /**
-     * @template {ZodSchema<unknown>} Schema
-     * @param {Schema} schema
-     */ (schema) => new ZodArray(schema, { length: undefined }),
+  object: /**
+   * @template {Record<string, ZodSchema<unknown>>} Schema
+   * @param {Schema} schema
+   */ (schema) => new ZodObject(schema),
+  array: /**
+   * @template {ZodSchema<unknown>} Schema
+   * @param {Schema} schema
+   */ (schema) => new ZodArray(schema, { length: undefined }),
 };

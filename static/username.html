@@ -1,45 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
 
-  <title>Stuff I Use</title>
+    <title>Stuff I Use</title>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="description" content="A list of stuff that I use and useful links for it like product pages and manuals.">
-  <meta name="author" content="George Witteman">
+    <meta
+      name="description"
+      content="A list of stuff that I use and useful links for it like product pages and manuals."
+    />
+    <meta name="author" content="George Witteman" />
 
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <header>
-    <nav>
-      <a href="/">&lsaquo; Home</a><br>
-    </nav>
-  </header>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <nav><a href="/">&lsaquo; Home</a><br /></nav>
+    </header>
 
-  <main>
-    <form id="form">
-      <label>
-          Length<br>
-          <input type="number" name="length" id="length" autofocus value="8">
+    <main>
+      <form id="form">
+        <label>
+          Length<br />
+          <input type="number" name="length" id="length" autofocus value="8" />
           <button id="generate" type="submit">Generate</button>
-      </label>
-      <p>
-          Username<br>
-          <output for="form" for="number" id="username" style="font-family: monospace;"></output>
+        </label>
+        <p>
+          Username<br />
+          <output
+            for="form"
+            for="number"
+            id="username"
+            style="font-family: monospace"
+          ></output>
           <button id="copy_username" type="button">Copy</button>
-      </p>
-    </form>
-    <script>
-        const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        </p>
+      </form>
+      <script>
+        const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
         const default_length = 8;
         function generate(length) {
-          let result = '';
+          let result = "";
           for (var i = 0; i < length; i++) {
             result += characters.charAt(
-              Math.floor(Math.random() * characters.length),
+              Math.floor(Math.random() * characters.length)
             );
           }
           return result;
@@ -60,7 +66,7 @@
           const username = generate(length);
           outputElement.value = username;
         };
- 
+
         formElement.addEventListener("submit", handleFormInput);
         formElement.addEventListener("input", handleFormInput);
         handleFormInput(new Event("submit", {}));
@@ -70,8 +76,7 @@
           const username = outputElement.value;
           navigator.clipboard.writeText(username);
         });
-    </script>
-  </main>
-
-</body>
+      </script>
+    </main>
+  </body>
 </html>

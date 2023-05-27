@@ -1,4 +1,4 @@
-export const extensionToContentTypeHeader = /** @type {const} */({
+export const extensionToContentTypeHeader = /** @type {const} */ ({
   js: "application/javascript; charset=utf-8",
   html: "text/html; charset=utf-8",
   pdf: "application/pdf",
