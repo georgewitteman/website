@@ -1,15 +1,9 @@
 export class SafeHTML {
-  #value;
-
   /**
    * @param {string} value
    */
   constructor(value) {
-    this.#value = value;
-  }
-
-  get value() {
-    return this.#value;
+    this.value = value;
   }
 }
 

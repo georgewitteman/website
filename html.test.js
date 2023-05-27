@@ -2,7 +2,16 @@ import assert from "node:assert";
 import { describe, test } from "node:test";
 import { SafeHTML, html, unescaped } from "./html.js";
 
-describe("unescaped", () => {
+describe(`${SafeHTML.name}`, () => {
+  test("can check equality", () => {
+    assert.throws(() => {
+      assert.deepStrictEqual(new SafeHTML("foo"), new SafeHTML("bar"));
+    });
+    assert.deepStrictEqual(new SafeHTML("foo"), new SafeHTML("foo"));
+  });
+});
+
+describe(`${unescaped.name}`, () => {
   test(`returns a ${SafeHTML.name} instance`, () => {
     const safeQueryResult = unescaped("<script>alert('hi')</script>");
     assert.deepStrictEqual(
@@ -21,7 +30,7 @@ describe("unescaped", () => {
 });
 
 // TODO: Add more tests for this
-describe("html", () => {
+describe(`${html.name}`, () => {
   test("fills in string values", () => {
     const val1 = "val1";
     const val2 = "val2";
