@@ -1,11 +1,11 @@
-import * as path from "node:path";
-import * as fs from "node:fs";
-import { MyRequest } from './Request.js';
+import  path from "node:path";
+import fs from "node:fs";
 import { MyResponse } from './Response.js';
 import { getContentTypeFromExtension, isSupportedExtension } from "./contentType.js";
 import { App } from "./App.js";
 import { pool, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
+import process from "node:process";
 
 const PORT = 8080;
 
@@ -34,7 +34,7 @@ async function serveStaticFile(pathname) {
 }
 
 /**
- * @param {MyRequest} req
+ * @param {import("./Request.js").MyRequest} req
  * @param {() => Promise<MyResponse>} next
  * @returns {Promise<MyResponse>}
  */
@@ -59,7 +59,7 @@ async function staticHandler(req, next) {
 }
 
 /**
- * @param {MyRequest} req
+ * @param {import("./Request.js").MyRequest} req
  * @param {() => Promise<MyResponse>} next
  * @returns {Promise<MyResponse>}
  */
@@ -72,7 +72,7 @@ async function now(req, next) {
 }
 
 /**
- * @param {MyRequest} req
+ * @param {import("./Request.js").MyRequest} req
  * @returns {Promise<MyResponse>}
  */
 async function notFound(req) {
@@ -80,7 +80,7 @@ async function notFound(req) {
 }
 
 /**
- * @param {MyRequest} req
+ * @param {import("./Request.js").MyRequest} req
  * @param {MyResponse} res
  * @param {bigint} startTimeNs
  */
@@ -91,7 +91,7 @@ function logResponse(req, res, startTimeNs) {
 }
 
 /**
- * @param {MyRequest} req
+ * @param {import("./Request.js").MyRequest} req
  * @param {() => Promise<MyResponse>} next
  */
 async function logger(req, next) {

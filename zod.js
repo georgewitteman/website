@@ -1,6 +1,3 @@
-import assert, { deepEqual, equal } from "node:assert";
-import { describe, test } from "node:test";
-
 /**
  * @template T
  * @typedef {Object} ParseSuccess
@@ -322,7 +319,11 @@ class GenericSchema {
    * @return {data is Output}
    */
   isSatisfiedBy(data, ctx) {
-    return this.guard(data);
+    if (this.guard(data)) {
+      return true;
+    }
+    ctx.addIssue({ message: `${data} was the wrong type` });
+    return false;
   }
 
   /**

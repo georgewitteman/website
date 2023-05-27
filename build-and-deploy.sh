@@ -6,8 +6,9 @@ set -o xtrace
 
 export AWS_REGION=us-west-2
 
-node --test
+npx eslint .
 npm run typecheck
+node --test
 
 aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 866631827662.dkr.ecr.us-west-2.amazonaws.com
 docker build -t website .
