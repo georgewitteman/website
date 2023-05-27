@@ -1,7 +1,7 @@
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md
 # docker run --publish 8080:8080 --rm --init "$(docker build --quiet .)"
 
-FROM node:18-alpine
+FROM node:20-alpine
 
 USER node
 
