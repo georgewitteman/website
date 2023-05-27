@@ -1,4 +1,7 @@
 export class SafeHTML {
+  /** @readonly */
+  value;
+
   /**
    * @param {string} value
    */
