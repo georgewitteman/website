@@ -27,14 +27,15 @@
           // https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/create
           // https://web.dev/passkey-form-autofill/
           const publicKey = {
-            challenge: getChallenge(),
             rp: { name: "ACME Corporation" },
             user: {
               id: USER_ID,
               name: "george@witteman.me",
               displayName: "George Witteman",
             },
+            challenge: getChallenge(),
             pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+            timeout: 3e4,
           };
 
           navigator.credentials
