@@ -18,9 +18,6 @@ export function pathMatches(routePath, realPath) {
   for (let i = 0; i < routeSplit.length; i++) {
     const routeSegment = routeSplit[i];
     const realSegment = realSplit[i];
-    if (routeSegment === undefined || realSegment === undefined) {
-      return false;
-    }
     if (routeSegment.startsWith(":")) {
       continue;
     }
@@ -63,9 +60,7 @@ export class Router {
      */
     return (req, next) => {
       const route = this.#routes.find(
-        (route) =>
-          req.method === route.method &&
-          pathMatches(route.path, req.rawUrl.pathname)
+        (route) => req.method === route.method && pathMatches(route.path, req.rawUrl.pathname)
       );
       if (!route) {
         return next();
