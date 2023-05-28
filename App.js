@@ -64,7 +64,12 @@ export class App {
         nodeResponse.end(`Unsupported method: ${nodeRequest.method}`);
         return;
       }
-      const req = new MyRequest(nodeRequest);
+      if (!nodeRequest.method) {
+        nodeResponse.writeHead(501);
+        nodeResponse.end(`Missing method`);
+        return;
+      }
+      const req = new MyRequest(nodeRequest.method, nodeRequest);
       this.handleRequest(req)
         .then((res) => {
           nodeResponse.writeHead(res.statusCode, res.headers);

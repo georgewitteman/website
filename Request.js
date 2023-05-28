@@ -26,6 +26,9 @@ function getProtocolFromRequest(req) {
   //   : header.trim()
 }
 
+/**
+ * @template {string} [Method=string]
+ */
 export class MyRequest {
   /** @type {import("node:http").IncomingMessage} */
   #nodeRequest;
@@ -45,16 +48,17 @@ export class MyRequest {
   /** @type {{ minor: number, major: number, version: string }} */
   #httpVersion;
 
-  /** @type {string} */
+  /** @readonly @type {Method} */
   #method;
 
   /** @type {string | undefined} */
   #rawBody;
 
   /**
+   * @param {Method} method
    * @param {import("node:http").IncomingMessage} req
    */
-  constructor(req) {
+  constructor(method, req) {
     this.#nodeRequest = req;
 
     const hostHeader = req.headers.host;
@@ -63,11 +67,7 @@ export class MyRequest {
       throw new Error("Missing required Host header");
     }
 
-    if (req.method) {
-      this.#method = req.method;
-    } else {
-      throw new Error(`Unsupported request method: ${req.method}`);
-    }
+    this.#method = method;
 
     if (!req.url) {
       throw new Error("Missing request path");

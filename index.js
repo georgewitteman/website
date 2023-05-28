@@ -10,6 +10,7 @@ import { pool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 import { html } from "./html.js";
 import { getSignup, getUser, postSignup } from "./users.js";
+import { testRoutes } from "./Router.js";
 
 const PORT = 8080;
 
@@ -166,6 +167,7 @@ app.use(now);
 app.use(getSignup);
 app.use(postSignup);
 app.use(getUser);
+app.use(testRoutes.middleware());
 app.use(notFound);
 
 console.log("Environment:", JSON.stringify(process.env));
