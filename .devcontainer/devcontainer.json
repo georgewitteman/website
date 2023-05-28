@@ -8,6 +8,7 @@
       "dockerDashComposeVersion": "v2"
     }
   },
+  "updateContentCommand": ["npm", "install"],
   "containerEnv": {
     "PGUSER": "postgres"
   }

@@ -9,7 +9,7 @@ import { App } from "./App.js";
 import { pool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 import { html } from "./html.js";
-import { getSignup, getUser, postSignup } from "./users.js";
+import { router as usersRouter } from "./users.js";
 import { testRoutes } from "./Router.js";
 
 const PORT = 8080;
@@ -164,9 +164,7 @@ const app = new App();
 app.use(logger);
 app.use(staticHandler);
 app.use(now);
-app.use(getSignup);
-app.use(postSignup);
-app.use(getUser);
+app.use(usersRouter.middleware());
 app.use(testRoutes.middleware());
 app.use(notFound);
 

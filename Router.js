@@ -5,7 +5,33 @@
 
 import { MyResponse } from "./Response.js";
 
-class Router {
+/**
+ * @param {string} routePath
+ * @param {string} realPath
+ */
+export function pathMatches(routePath, realPath) {
+  const routeSplit = routePath.split("/");
+  const realSplit = realPath.split("/");
+  if (routeSplit.length !== realSplit.length) {
+    return false;
+  }
+  for (let i = 0; i < routeSplit.length; i++) {
+    const routeSegment = routeSplit[i];
+    const realSegment = realSplit[i];
+    if (routeSegment === undefined || realSegment === undefined) {
+      return false;
+    }
+    if (routeSegment.startsWith(":")) {
+      continue;
+    }
+    if (routeSegment !== realSegment) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export class Router {
   /**
    * @type {{ method: string, path: string, handler: RequestHandler }[]}
    */
@@ -20,6 +46,15 @@ class Router {
     this.#routes.push({ method: "GET", path, handler });
   }
 
+  /**
+   *
+   * @param {string} path
+   * @param {RequestHandler} handler
+   */
+  post(path, handler) {
+    this.#routes.push({ method: "POST", path, handler });
+  }
+
   middleware() {
     /**
      * @param {import("./Request.js").MyRequest} req
@@ -28,7 +63,9 @@ class Router {
      */
     return (req, next) => {
       const route = this.#routes.find(
-        (val) => req.method === val.method && val.path === req.rawUrl.pathname
+        (route) =>
+          req.method === route.method &&
+          pathMatches(route.path, req.rawUrl.pathname)
       );
       if (!route) {
         return next();
@@ -45,5 +82,13 @@ testRoutes.get("/router/test", async (req) => {
 });
 
 testRoutes.get("/router/test2", async (req) => {
-  return MyResponse.json(200, {}, { test: req.rawUrl.href });
+  return MyResponse.json(200, {}, { test2: req.rawUrl.href });
+});
+
+testRoutes.get("/router/:id", async (req) => {
+  return MyResponse.json(200, {}, { testid: req.rawUrl.href });
+});
+
+testRoutes.get("/router/:id/foo", async (req) => {
+  return MyResponse.json(200, {}, { testidfoo: req.rawUrl.href });
 });
