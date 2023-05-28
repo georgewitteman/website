@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Auth Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="George Witteman" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <nav><a href="/">&lsaquo; Home</a><br /></nav>
+    </header>
+
+    <main>
+      <p><button id="signup">Start signup</button></p>
+      <script>
+        const USER_ID = new Uint8Array([79, 252, 83, 72, 214, 7, 89, 26]);
+        function getChallenge() {
+          const array = new Uint8Array(64);
+          crypto.getRandomValues(array);
+          return array;
+        }
+        let passkeyId = undefined;
+        document.getElementById("signup").addEventListener("click", () => {
+          // https://web.dev/passkey-registration/
+          // https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/create
+          // https://web.dev/passkey-form-autofill/
+          const publicKey = {
+            challenge: getChallenge(),
+            rp: { name: "ACME Corporation" },
+            user: {
+              id: USER_ID,
+              name: "george@witteman.me",
+              displayName: "George Witteman",
+            },
+            pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          };
+
+          navigator.credentials
+            .create({ publicKey })
+            .then((publicKeyCredential) => {
+              console.log("SUCCESS", publicKeyCredential);
+              passkeyId = publicKeyCredential.id;
+            })
+            .catch((e) => {
+              console.error("ERROR", e);
+            });
+        });
+      </script>
+
+      <p><button id="signin">Start signin</button></p>
+      <script>
+        const textEncoder = new TextEncoder();
+        document.getElementById("signin").addEventListener("click", () => {
+          console.log("calling get", passkeyId);
+          const get = {
+            publicKey: {
+              challenge: getChallenge(),
+              allowCredentials: [
+                {
+                  type: "public-key",
+                  id: textEncoder.encode(passkeyId),
+                },
+              ],
+            },
+          };
+          console.log(get);
+          navigator.credentials
+            .get(get)
+            .then((response) => {
+              console.log("SUCCESS", response);
+              console.log("response.userHandle", response.response.userHandle);
+            })
+            .catch((e) => {
+              console.error("ERROR", e);
+            });
+        });
+      </script>
+    </main>
+  </body>
+</html>
