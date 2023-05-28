@@ -1,3 +1,5 @@
+import querystring from "node:querystring";
+
 /**
  * https://github.com/expressjs/express/blob/f540c3b0195393974d4875a410f4c00a07a2ab60/lib/request.js#L292-L324
  *
@@ -46,6 +48,9 @@ export class MyRequest {
   /** @type {string} */
   #method;
 
+  /** @type {string | undefined} */
+  #rawBody;
+
   /**
    * @param {import("node:http").IncomingMessage} req
    */
@@ -86,6 +91,21 @@ export class MyRequest {
       minor: req.httpVersionMinor,
       major: req.httpVersionMajor,
     };
+  }
+
+  async body() {
+    if (typeof this.#rawBody !== "string") {
+      /** @type {Buffer[]} */
+      const chunks = [];
+
+      for await (const chunk of this.#nodeRequest) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        chunks.push(Buffer.from(chunk));
+      }
+
+      this.#rawBody = Buffer.concat(chunks).toString("utf-8");
+    }
+    return querystring.parse(this.#rawBody);
   }
 
   get headers() {

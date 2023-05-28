@@ -71,6 +71,16 @@ const STATUS_MESSAGE = /** @type {const} */ ({
 });
 
 /**
+ * https://github.com/microsoft/TypeScript/issues/46369
+ * @typedef {null | boolean | number | string | JsonArray | {[Key in string]: JsonValue}} JsonValue
+ */
+
+/**
+ * https://github.com/microsoft/TypeScript/issues/46369
+ * @typedef {JsonValue[]} JsonArray
+ */
+
+/**
  * @typedef {keyof typeof STATUS_MESSAGE} StatusCode
  */
 
@@ -102,6 +112,19 @@ export class MyResponse {
      * @type {string | Buffer}
      */
     this.body = body instanceof SafeHTML ? body.value : body;
+  }
+
+  /**
+   * @param {StatusCode} statusCode
+   * @param {Omit<Headers, "Content-Type">} headers
+   * @param {JsonValue} body
+   */
+  static json(statusCode, headers, body) {
+    return new MyResponse(
+      statusCode,
+      { ...headers, "Content-Type": "application/json; charset=utf-8" },
+      JSON.stringify(body)
+    );
   }
 
   /**
