@@ -9,6 +9,7 @@ import { App } from "./App.js";
 import { pool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 import { html } from "./html.js";
+import { getSignup, postSignup } from "./users.js";
 
 const PORT = 8080;
 
@@ -162,6 +163,8 @@ const app = new App();
 app.use(logger);
 app.use(staticHandler);
 app.use(now);
+app.use(getSignup);
+app.use(postSignup);
 app.use(notFound);
 
 console.log("Environment:", JSON.stringify(process.env));

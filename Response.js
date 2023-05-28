@@ -1,5 +1,5 @@
 /**
- * @typedef {{"Content-Type"?: import("./contentType.js").ContentTypeHeaderValues, Server?: "hi"}} Headers
+ * @typedef {{"Content-Type"?: import("./contentType.js").ContentTypeHeaderValues, Server?: "hi", Location?: string}} Headers
  */
 
 import { SafeHTML } from "./html.js";
