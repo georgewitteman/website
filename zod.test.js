@@ -33,6 +33,30 @@ describe("object", () => {
     const data = result.data;
     assert.deepStrictEqual(data, obj);
   });
+
+  test("handles optional values", () => {
+    const schema = z.object({
+      foo: z.string().optional(),
+      bar: z.string(),
+    });
+    const result = schema.parse({ bar: "bar" });
+    assert.ok(result.ok);
+    /** @type {{ foo: string | undefined, bar: string }} */
+    const data = result.data;
+    assert.deepStrictEqual(data, { foo: undefined, bar: "bar" });
+  });
+
+  test("handles nullish values", () => {
+    const schema = z.object({
+      foo: z.string().nullish(),
+      bar: z.string().nullish(),
+    });
+    const result = schema.parse({ foo: null });
+    assert.ok(result.ok);
+    /** @type {{ foo: string | null |undefined, bar: string | null | undefined }} */
+    const data = result.data;
+    assert.deepStrictEqual(data, { foo: null, bar: undefined });
+  });
 });
 
 describe("array", () => {

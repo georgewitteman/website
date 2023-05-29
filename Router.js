@@ -35,8 +35,8 @@ export class Router {
   #routes = [];
 
   /**
-   *
-   * @param {string} path
+   * @template {string} T
+   * @param {T} path
    * @param {RequestHandler} handler
    */
   get(path, handler) {
@@ -44,8 +44,8 @@ export class Router {
   }
 
   /**
-   *
-   * @param {string} path
+   * @template {string} T
+   * @param {T} path
    * @param {RequestHandler} handler
    */
   post(path, handler) {

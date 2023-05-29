@@ -91,6 +91,60 @@ class ZodDateString {
   }
 }
 
+/**
+ * @template T
+ * @implements {ZodSchema<T | undefined>}
+ */
+class ZodOptional {
+  /** @type {ZodSchema<T>} */
+  #schema;
+
+  /**
+   * @param {ZodSchema<T>} schema
+   */
+  constructor(schema) {
+    this.#schema = schema;
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<T | undefined>}
+   */
+  parse(data) {
+    if (data === undefined) {
+      return { ok: true, data };
+    }
+    return this.#schema.parse(data);
+  }
+}
+
+/**
+ * @template T
+ * @implements {ZodSchema<T | null | undefined>}
+ */
+class ZodNullish {
+  /** @type {ZodSchema<T>} */
+  #schema;
+
+  /**
+   * @param {ZodSchema<T>} schema
+   */
+  constructor(schema) {
+    this.#schema = schema;
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<T | null | undefined>}
+   */
+  parse(data) {
+    if (data === undefined || data === null) {
+      return { ok: true, data };
+    }
+    return this.#schema.parse(data);
+  }
+}
+
 /** @implements {ZodSchema<string>} */
 class ZodString {
   /**
@@ -104,6 +158,14 @@ class ZodString {
     }
     ctx.addIssue({ message: `${data} is not a string` });
     return false;
+  }
+
+  optional() {
+    return new ZodOptional(this);
+  }
+
+  nullish() {
+    return new ZodNullish(this);
   }
 
   /**
@@ -228,6 +290,7 @@ class ZodObject {
       }
       result[key] = subResult.data;
     }
+
     return {
       ok: true,
       data: /** @type {Output} */ (result),
