@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { MyRequest } from "./Request.js";
 import { MyResponse } from "./Response.js";
+import { logger } from "./logger.js";
 
 export class App {
   constructor() {
@@ -72,10 +73,11 @@ export class App {
       const req = new MyRequest(nodeRequest.method, nodeRequest);
       this.handleRequest(req)
         .then((res) => {
-          nodeResponse.writeHead(res.statusCode, res.headers);
-          nodeResponse.end(res.body);
-        })
-        .catch(console.error);
+          nodeResponse.writeHead(res.statusCode, res.headers).end(res.body);
+        }).catch(e => {
+          logger.error("Request error", nodeRequest.url, e);
+          nodeResponse.writeHead(500).end("Internal Server Error");
+        });
     });
   }
 }

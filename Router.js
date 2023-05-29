@@ -60,7 +60,9 @@ export class Router {
      */
     return (req, next) => {
       const route = this.#routes.find(
-        (route) => req.method === route.method && pathMatches(route.path, req.rawUrl.pathname)
+        (route) =>
+          req.method === route.method &&
+          pathMatches(route.path, req.rawUrl.pathname)
       );
       if (!route) {
         return next();
@@ -78,6 +80,10 @@ testRoutes.get("/router/test", async (req) => {
 
 testRoutes.get("/router/test2", async (req) => {
   return MyResponse.json(200, {}, { test2: req.rawUrl.href });
+});
+
+testRoutes.get("/router/error", async () => {
+  throw new Error("Test error");
 });
 
 testRoutes.get("/router/:id", async (req) => {

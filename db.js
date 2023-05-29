@@ -1,6 +1,7 @@
 import pg from "pg";
 import { Signer } from "@aws-sdk/rds-signer";
 import fs from "node:fs";
+import { logger } from "./logger.js";
 
 /** @type {pg.PoolConfig} */
 const poolConfig = {};
@@ -37,7 +38,7 @@ export async function typeSafeQuery(query, schema) {
   if (parseResult.ok) {
     return parseResult.data;
   }
-  console.error(parseResult.error);
+  logger.error(parseResult.error);
   throw new Error("Failed to parse");
 }
 

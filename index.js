@@ -4,13 +4,15 @@ import { MyResponse } from "./Response.js";
 import {
   getContentTypeFromExtension,
   isSupportedExtension,
-} from "./contentType.js";
+} from "./content-type.js";
 import { App } from "./App.js";
 import { pool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 import { html } from "./html.js";
 import { router as usersRouter } from "./users.js";
 import { testRoutes } from "./Router.js";
+import { runMigrations } from "./migrations.js";
+import { logger } from "./logger.js";
 
 const PORT = 8080;
 
@@ -132,7 +134,7 @@ async function notFound(req) {
 function logResponse(req, res, startTimeNs) {
   const durationNs = process.hrtime.bigint() - startTimeNs;
   const durationMs = durationNs / 1_000_000n;
-  console.log(
+  logger.info(
     `END: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`
   );
 }
@@ -141,9 +143,9 @@ function logResponse(req, res, startTimeNs) {
  * @param {import("./Request.js").MyRequest} req
  * @param {() => Promise<MyResponse>} next
  */
-async function logger(req, next) {
+async function requestLogger(req, next) {
   const startNs = process.hrtime.bigint();
-  console.log(
+  logger.info(
     `START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${
       req.rawUrl
     } ${JSON.stringify(req.headers)}`
@@ -153,7 +155,7 @@ async function logger(req, next) {
     logResponse(req, res, startNs);
     return res;
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     const res = new MyResponse(500, {}, "Internal Server Error\n");
     logResponse(req, res, startNs);
     return res;
@@ -161,17 +163,19 @@ async function logger(req, next) {
 }
 
 const app = new App();
-app.use(logger);
+app.use(requestLogger);
 app.use(staticHandler);
 app.use(now);
 app.use(usersRouter.middleware());
 app.use(testRoutes.middleware());
 app.use(notFound);
 
-console.log("Environment:", JSON.stringify(process.env));
+logger.info("Environment", { env: process.env });
+
+await runMigrations();
 
 const server = app.createServer().listen(PORT, "0.0.0.0", () => {
-  console.log("listening on %s", server.address());
+  logger.info("listening on", server.address());
 });
 
 let forceClose = false;
@@ -181,22 +185,22 @@ let forceClose = false;
  */
 function shutdown(signal) {
   if (forceClose) {
-    console.log("Forcing exit");
+    logger.info("Forcing exit");
     process.exit(1);
   }
   forceClose = true;
-  console.log("signal %s", signal);
+  logger.info(`signal ${signal}`);
 
   // https://nodejs.org/docs/latest-v18.x/api/net.html#serverclosecallback
   server.close((err) => {
     if (err) {
-      console.error(err);
+      logger.error(err);
       return;
     }
-    console.log("Successfully shut down server");
+    logger.info("Successfully shut down server");
 
     pool.end(() => {
-      console.log("Pool closed");
+      logger.info("Pool closed");
     });
   });
 }
