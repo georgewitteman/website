@@ -74,7 +74,8 @@ export class App {
       this.handleRequest(req)
         .then((res) => {
           nodeResponse.writeHead(res.statusCode, res.headers).end(res.body);
-        }).catch(e => {
+        })
+        .catch((e) => {
           logger.error("Request error", nodeRequest.url, e);
           nodeResponse.writeHead(500).end("Internal Server Error");
         });
