@@ -35,6 +35,75 @@ describe("object", () => {
   });
 });
 
+describe("array", () => {
+  test("returns the input object if successfully validates", () => {
+    const schema = z.array(z.string()).length(1);
+    const arr = ["foo"];
+    const result = schema.parse(arr);
+    assert.strictEqual(result.ok, true);
+    /**
+     * This will be a TypeScript error if the type inference is wrong
+     * @type {[string]}
+     */
+    const data = result.data;
+    assert.deepStrictEqual(data, arr);
+  });
+
+  test("supports min: undefined, max: 1 with [string] array", () => {
+    const schema = z.array(z.string()).max(1);
+    const arr = ["foo"];
+    const result = schema.parse(arr);
+    assert.strictEqual(result.ok, true);
+    /**
+     * This will be a TypeScript error if the type inference is wrong
+     * @type {[] | [string]}
+     */
+    const data = result.data;
+    assert.deepStrictEqual(data, arr);
+  });
+
+  test("supports min: undefined, max: 1 with [] array", () => {
+    const schema = z.array(z.string()).max(1);
+    /** @type {unknown[]} */
+    const arr = [];
+    const result = schema.parse(arr);
+    assert.strictEqual(result.ok, true);
+    /**
+     * This will be a TypeScript error if the type inference is wrong
+     * @type {[] | [string]}
+     */
+    const data = result.data;
+    assert.deepStrictEqual(data, arr);
+  });
+
+  test("supports min: 0, max: 1 with [string] array", () => {
+    const schema = z.array(z.string()).min(0).max(1);
+    const arr = ["foo"];
+    const result = schema.parse(arr);
+    assert.strictEqual(result.ok, true);
+    /**
+     * This will be a TypeScript error if the type inference is wrong
+     * @type {[] | [string]}
+     */
+    const data = result.data;
+    assert.deepStrictEqual(data, arr);
+  });
+
+  test("supports min: 0, max: 1 with [] array", () => {
+    const schema = z.array(z.string()).min(0).max(1);
+    /** @type {unknown[]} */
+    const arr = [];
+    const result = schema.parse(arr);
+    assert.strictEqual(result.ok, true);
+    /**
+     * This will be a TypeScript error if the type inference is wrong
+     * @type {[] | [string]}
+     */
+    const data = result.data;
+    assert.deepStrictEqual(data, arr);
+  });
+});
+
 describe("string", () => {
   test("returns the string", () => {
     const schema = z.string();

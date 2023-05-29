@@ -40,12 +40,9 @@ router.get("/user/:userId", async (req) => {
     sql`SELECT id, email FROM app_user WHERE id = ${
       req.rawUrl.pathname.split("/")[2]
     }`,
-    z.array(z.object({ id: z.number(), email: z.string() }))
+    z.array(z.object({ id: z.number(), email: z.string() })).max(1)
   );
-  if (result.length < 1) {
-    return MyResponse.json(404, {}, {});
-  }
-  if (result.length > 1) {
+  if (typeof result[0] === "undefined") {
     throw new Error("Expected at most 1 row");
   }
   return MyResponse.json(200, {}, result[0]);

@@ -250,34 +250,44 @@ class ZodObject {
 }
 
 /**
- * @template {number | undefined} L
+ * @template {number | undefined} Min
+ * @template {number | undefined} Max
  * @template Value
- * @typedef {L extends 1 ? [Value] : L extends 2 ? [Value, Value] : Value[]} ArrayOfLength
+ * @typedef {[Min, Max] extends [1, 1] ? [Value] : [Min, Max] extends [2, 2] ? [Value, Value] : [Min, Max] extends [0, 1] | [undefined, 1] ? [] | [Value] : Value[]} ArrayOfLength
  */
 
 /**
- * @template {number | undefined} L
+ * @template {number | undefined} Min
+ * @template {number | undefined} Max
  * @template {ZodSchema<unknown>} Schema
- * @template {ArrayOfLength<L, TypeOf<Schema>>} Output
+ * @template {ArrayOfLength<Min, Max, TypeOf<Schema>>} Output
  * @implements {ZodSchema<Output>}
  */
 class ZodArray {
-  /** @type {L} */
-  #length;
+  /** @type {Min} */
+  #min;
+  /** @type {Max} */
+  #max;
 
   /**
    * @param {Schema} schema
-   * @param {{ length: L }} options
+   * @param {{ min: Min; max: Max}} options
    */
   constructor(schema, options) {
     /** @type {Schema} */
     this.schema = schema;
-    if (options && typeof options.length === "number") {
-      if (!Number.isInteger(options.length)) {
-        throw new Error("Length must be an integer");
+    this.#min = options.min;
+    this.#max = options.max;
+    if (typeof options.min === "number") {
+      if (!Number.isInteger(options.min)) {
+        throw new Error("min must be an integer");
       }
     }
-    this.#length = options.length;
+    if (typeof options.max === "number") {
+      if (!Number.isInteger(options.max)) {
+        throw new Error("max must be an integer");
+      }
+    }
   }
 
   /**
@@ -285,7 +295,23 @@ class ZodArray {
    * @param {N} num
    */
   length(num) {
-    return new ZodArray(this.schema, { length: num });
+    return new ZodArray(this.schema, { min: num, max: num });
+  }
+
+  /**
+   * @template {number} N
+   * @param {N} num
+   */
+  max(num) {
+    return new ZodArray(this.schema, { min: this.#min, max: num });
+  }
+
+  /**
+   * @template {number} N
+   * @param {N} num
+   */
+  min(num) {
+    return new ZodArray(this.schema, { min: num, max: this.#max });
   }
 
   /**
@@ -299,8 +325,12 @@ class ZodArray {
       ctx.addIssue({ message: `${data} is not an array` });
       return { ok: false, error: ctx.issues };
     }
-    if (typeof this.#length === "number" && data.length !== this.#length) {
-      ctx.addIssue({ message: `${data.length} !== ${this.#length}` });
+    if (typeof this.#min === "number" && data.length < this.#min) {
+      ctx.addIssue({ message: `${data.length} < ${this.#min}` });
+      return { ok: false, error: ctx.issues };
+    }
+    if (typeof this.#max === "number" && data.length > this.#max) {
+      ctx.addIssue({ message: `${data.length} > ${this.#max}` });
       return { ok: false, error: ctx.issues };
     }
     for (let i = 0; i < data.length; i++) {
@@ -434,5 +464,5 @@ export const z = {
   array: /**
    * @template {ZodSchema<unknown>} Schema
    * @param {Schema} schema
-   */ (schema) => new ZodArray(schema, { length: undefined }),
+   */ (schema) => new ZodArray(schema, { min: undefined, max: undefined }),
 };
