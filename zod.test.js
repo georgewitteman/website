@@ -83,3 +83,41 @@ describe("undefined", () => {
     });
   });
 });
+
+describe("ISO 8601 date string", () => {
+  [
+    ["1970-01-01T00:00:00.000Z", new Date(1970, 0, 1)],
+    ["2009-05-19T12:34:56.987Z", new Date(2009, 4, 19, 12, 34, 56, 987)],
+  ].forEach(([val, expected]) => {
+    test(`${val} accepted as valid`, () => {
+      const result = z.iso8601().parse(val);
+      assert.deepStrictEqual(result, { ok: true, data: expected });
+    });
+  });
+
+  [
+    null,
+    undefined,
+    new Date("2009-05-19T12:34:56.987Z"),
+    1242736496987,
+    "date",
+    ["2009-05-19T12:34:56.987Z"],
+    "2009",
+    "2009-05",
+    "2009-05-19",
+    "2009-05-19T12:34",
+    "2009-05-19T12:34:56",
+    "2009-05-19T12:34:56.9",
+    "2009-05-19T12:34:56.98",
+    "2009-05-19T12:34:56.987",
+    "1970-01-01T00:00:00.000+00:00",
+    "2009-02-03T12:34:56.789+11:22",
+    "0000-00-00T00:00:00.000Z",
+    "9999-99-99T99:99:99.999Z",
+  ].forEach((val) => {
+    test(`${val} rejected as invalid`, () => {
+      const result = z.iso8601().parse(val);
+      assert.strictEqual(result.ok, false);
+    });
+  });
+});

@@ -59,9 +59,37 @@ class ZodContextImpl {
 /**
  * @template Output
  * @typedef {Object} ZodSchema
- * @property {(data: unknown, ctx: ZodContext) => data is Output} isSatisfiedBy
  * @property {(data: unknown) => ParseResult<Output>} parse
  */
+
+/** @implements {ZodSchema<Date>} */
+class ZodDateString {
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<Date>}
+   */
+  parse(data) {
+    const ctx = new ZodContextImpl();
+    // https://tc39.es/ecma262/#sec-date-time-string-format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/g;
+    if (typeof data !== "string") {
+      ctx.addIssue({ message: `${data} is not a string` });
+      return { ok: false, error: ctx.issues };
+    }
+    if (!dateRegex.test(data)) {
+      ctx.addIssue({ message: `${data} is not an ISO8601 formatted string` });
+      return { ok: false, error: ctx.issues };
+    }
+    const date = new Date(data);
+    if (isNaN(date.valueOf())) {
+      ctx.addIssue({
+        message: `${data} can not be converted into a Date object`,
+      });
+      return { ok: false, error: ctx.issues };
+    }
+    return { ok: true, data: date };
+  }
+}
 
 /** @implements {ZodSchema<string>} */
 class ZodString {
@@ -166,49 +194,43 @@ class ZodObject {
 
   /**
    * @param {unknown} data
-   * @param {ZodContext} ctx
-   * @return {data is Output}
-   */
-  isSatisfiedBy(data, ctx) {
-    if (!isRecord(data)) {
-      ctx.addIssue({ message: `${data} is not a record` });
-      return false;
-    }
-    if (!Object.keys(data).every((key) => key in this.schema)) {
-      ctx.addIssue({ message: `${data} had an unexpected key` });
-      return false;
-    }
-    return Object.entries(this.schema).reduce((prev, [key, schema]) => {
-      const subCtx = new ZodContextImpl();
-      if (schema.isSatisfiedBy(data[key], subCtx)) {
-        return prev;
-      }
-      for (let issue of subCtx.issues) {
-        if ("path" in issue) {
-          ctx.addIssue({ message: issue.message, path: [key, ...issue.path] });
-        } else {
-          ctx.addIssue({ message: issue.message, path: [key] });
-        }
-      }
-      return false;
-    }, true);
-  }
-
-  /**
-   * @param {unknown} data
    * @returns {ParseResult<Output>}
    */
   parse(data) {
+    /** @type {Record<string, unknown>} */
+    const result = {};
     const ctx = new ZodContextImpl();
-    if (this.isSatisfiedBy(data, ctx)) {
-      return {
-        ok: true,
-        data: data,
-      };
+
+    if (!isRecord(data)) {
+      ctx.addIssue({ message: `${data} is not a record` });
+      return { ok: false, error: ctx.issues };
+    }
+
+    if (!Object.keys(data).every((key) => key in this.schema)) {
+      ctx.addIssue({ message: `${data} had an unexpected key` });
+      return { ok: false, error: ctx.issues };
+    }
+
+    for (const [key, schema] of Object.entries(this.schema)) {
+      const subResult = schema.parse(data[key]);
+      if (!subResult.ok) {
+        for (let issue of subResult.error) {
+          if ("path" in issue) {
+            ctx.addIssue({
+              message: issue.message,
+              path: [key, ...issue.path],
+            });
+          } else {
+            ctx.addIssue({ message: issue.message, path: [key] });
+          }
+        }
+        return { ok: false, error: ctx.issues };
+      }
+      result[key] = subResult.data;
     }
     return {
-      ok: false,
-      error: ctx.issues,
+      ok: true,
+      data: /** @type {Output} */ (result),
     };
   }
 
@@ -217,13 +239,13 @@ class ZodObject {
    * @returns {Output}
    */
   unsafeParse(data) {
-    const ctx = new ZodContextImpl();
-    if (this.isSatisfiedBy(data, ctx)) {
-      return data;
+    const result = this.parse(data);
+    if (!result.ok) {
+      const e = new Error("Invalid object");
+      e.cause = result.error;
+      throw e;
     }
-    const e = new Error("Invalid object");
-    e.cause = ctx.issues;
-    throw e;
+    return result.data;
   }
 }
 
@@ -259,37 +281,6 @@ class ZodArray {
   }
 
   /**
-   * @param {unknown} data
-   * @param {ZodContext} ctx
-   * @return {data is Output}
-   */
-  isSatisfiedBy(data, ctx) {
-    if (!Array.isArray(data)) {
-      ctx.addIssue({ message: `${data} is not an array` });
-      return false;
-    }
-    if (typeof this.#length === "number" && data.length !== this.#length) {
-      ctx.addIssue({ message: `${data.length} !== ${this.#length}` });
-      return false;
-    }
-    return /** @type {typeof data.reduce<boolean>} */ (data.reduce)(
-      (previousValue, currentValue, currentIndex) => {
-        const subCtx = new ZodContextImpl();
-        if (this.schema.isSatisfiedBy(currentValue, subCtx)) {
-          return previousValue;
-        }
-        ctx.addIssue({
-          message: "bad array element",
-          path: [currentIndex],
-          issues: subCtx.issues,
-        });
-        return false;
-      },
-      true
-    );
-  }
-
-  /**
    * @template {number} N
    * @param {N} num
    */
@@ -303,15 +294,36 @@ class ZodArray {
    */
   parse(data) {
     const ctx = new ZodContextImpl();
-    if (this.isSatisfiedBy(data, ctx)) {
+    const result = [];
+    if (!Array.isArray(data)) {
+      ctx.addIssue({ message: `${data} is not an array` });
+      return { ok: false, error: ctx.issues };
+    }
+    if (typeof this.#length === "number" && data.length !== this.#length) {
+      ctx.addIssue({ message: `${data.length} !== ${this.#length}` });
+      return { ok: false, error: ctx.issues };
+    }
+    for (let i = 0; i < data.length; i++) {
+      const subResult = this.schema.parse(data[i]);
+      if (!subResult.ok) {
+        ctx.addIssue({
+          message: "bad array element",
+          path: [i],
+          issues: subResult.error,
+        });
+        continue;
+      }
+      result.push(subResult.data);
+    }
+    if (ctx.issues.length !== 0) {
       return {
-        ok: true,
-        data: data,
+        ok: false,
+        error: ctx.issues,
       };
     }
     return {
-      ok: false,
-      error: ctx.issues,
+      ok: true,
+      data: /** @type {Output} */ (result),
     };
   }
 }
@@ -408,6 +420,7 @@ function undefinedGuard(data) {
 }
 
 export const z = {
+  iso8601: () => new ZodDateString(),
   null: () => new GenericSchema(nullGuard),
   undefined: () => new GenericSchema(undefinedGuard),
   date: () => new GenericSchema(dateGuard),
