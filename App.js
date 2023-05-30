@@ -36,6 +36,9 @@ export class App {
         return new MyResponse(500, {}, "");
       }
       const fn = this.middleware[i];
+      if (!fn) {
+        throw new Error("middleware was not a function");
+      }
       return await fn(req, dispatch.bind(null, i + 1));
     };
     return await dispatch(0);

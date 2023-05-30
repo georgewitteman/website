@@ -1,31 +1,40 @@
-/**
- * @template {string} [T=string]
- * @typedef {(req: import("./Request.js").MyRequest<T>) => Promise<import("./Response.js").MyResponse>} RequestHandler
- */
-
 import { MyResponse } from "./Response.js";
+
+/** @typedef {Record<string, string>} Params */
+
+/**
+ * @typedef {(req: import("./Request.js").MyRequest, params: Params) => Promise<import("./Response.js").MyResponse>} RequestHandler
+ */
 
 /**
  * @param {string} routePath
  * @param {string} realPath
+ * @returns {[boolean, Params]}
  */
 export function pathMatches(routePath, realPath) {
+  /** @type {Params} */
+  const params = {};
   const routeSplit = routePath.split("/");
   const realSplit = realPath.split("/");
   if (routeSplit.length !== realSplit.length) {
-    return false;
+    return [false, params];
   }
   for (let i = 0; i < routeSplit.length; i++) {
     const routeSegment = routeSplit[i];
     const realSegment = realSplit[i];
-    if (routeSegment.startsWith(":")) {
+    if (
+      typeof routeSegment === "string" &&
+      routeSegment.startsWith(":") &&
+      typeof realSegment === "string"
+    ) {
+      params[routeSegment.substring(1)] = realSegment;
       continue;
     }
     if (routeSegment !== realSegment) {
-      return false;
+      return [false, params];
     }
   }
-  return true;
+  return [true, params];
 }
 
 export class Router {
@@ -62,12 +71,13 @@ export class Router {
       const route = this.#routes.find(
         (route) =>
           req.method === route.method &&
-          pathMatches(route.path, req.rawUrl.pathname)
+          pathMatches(route.path, req.rawUrl.pathname)[0]
       );
       if (!route) {
         return next();
       }
-      return route.handler(req);
+      const [, params] = pathMatches(route.path, req.rawUrl.pathname);
+      return route.handler(req, params);
     };
   }
 }

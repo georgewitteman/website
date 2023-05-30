@@ -35,15 +35,25 @@ router.post("/signup", async (req) => {
   return new MyResponse(302, { Location: `/user/${result[0].id}` }, "");
 });
 
-router.get("/user/:userId", async (req) => {
+router.get("/user/:userId", async (_, params) => {
+  const userIdString = params.userId;
+  if (!userIdString) {
+    return MyResponse.json(
+      404,
+      {},
+      { code: "NOT_FOUND", id: userIdString ?? null }
+    );
+  }
+  const userId = parseInt(userIdString, 10);
+  if (!Number.isInteger(userId)) {
+    return MyResponse.json(404, {}, { code: "NOT_FOUND", id: userIdString });
+  }
   const result = await typeSafeQuery(
-    sql`SELECT id, email FROM app_user WHERE id = ${
-      req.rawUrl.pathname.split("/")[2]
-    }`,
+    sql`SELECT id, email FROM app_user WHERE id = ${userId}`,
     z.array(z.object({ id: z.number(), email: z.string() })).max(1)
   );
   if (!result[0]) {
-    throw new Error("Expected at most 1 row");
+    return MyResponse.json(404, {}, { code: "NOT_FOUND", id: userId });
   }
   return MyResponse.json(200, {}, result[0]);
 });
