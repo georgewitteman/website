@@ -1,8 +1,8 @@
-import { MyResponse } from "./Response.js";
-import { Router } from "./Router.js";
-import { sql, typeSafeQuery } from "./db.js";
-import { html } from "./html.js";
-import { z } from "./zod.js";
+import { MyResponse } from "../Response.js";
+import { Router } from "../Router.js";
+import { sql, typeSafeQuery } from "../db.js";
+import { html } from "../html.js";
+import { z } from "../zod.js";
 
 export const router = new Router();
 
@@ -42,7 +42,7 @@ router.get("/user/:userId", async (req) => {
     }`,
     z.array(z.object({ id: z.number(), email: z.string() })).max(1)
   );
-  if (typeof result[0] === "undefined") {
+  if (!result[0]) {
     throw new Error("Expected at most 1 row");
   }
   return MyResponse.json(200, {}, result[0]);

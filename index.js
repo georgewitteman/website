@@ -9,10 +9,12 @@ import { App } from "./App.js";
 import { pool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 import { html } from "./html.js";
-import { router as usersRouter } from "./users.js";
+import { router as usersRouter } from "./routes/users.js";
+import { router as oldRouter } from "./routes/old.js";
 import { testRoutes } from "./Router.js";
 import { runMigrations } from "./migrations.js";
 import { logger } from "./logger.js";
+import { documentLayout } from "./layout.js";
 
 const PORT = 8080;
 
@@ -94,12 +96,12 @@ async function now(req, next) {
   return new MyResponse(
     200,
     { "Content-Type": "text/html; charset=utf-8" },
-    html`<!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <title>${result[0].now.toLocaleString()}</title>
-        </head>
-        <body>
+    documentLayout({
+      title: result[0].now.toLocaleString(),
+      body: html`<header>
+          <nav><a href="/">&lsaquo; Home</a><br /></nav>
+        </header>
+        <main>
           <ul>
             ${Object.entries(result[0]).map(
               ([key, value]) =>
@@ -113,8 +115,8 @@ async function now(req, next) {
           </ul>
           <pre><code>${JSON.stringify(result, null, 2)}</code></pre>
           <code>${'<script>alert("unsafe html test")</script>'}</code>
-        </body>
-      </html>`
+        </main>`,
+    })
   );
 }
 
@@ -168,6 +170,7 @@ app.use(staticHandler);
 app.use(now);
 app.use(usersRouter.middleware());
 app.use(testRoutes.middleware());
+app.use(oldRouter.middleware());
 app.use(notFound);
 
 logger.info("Environment", { env: process.env });

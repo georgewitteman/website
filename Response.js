@@ -128,6 +128,19 @@ export class MyResponse {
   }
 
   /**
+   * @param {StatusCode} statusCode
+   * @param {Omit<Headers, "Content-Type">} headers
+   * @param {SafeHTML} body
+   */
+  static html(statusCode, headers, body) {
+    return new MyResponse(
+      statusCode,
+      { ...headers, "Content-Type": "text/html; charset=utf-8" },
+      body
+    );
+  }
+
+  /**
    * @template {keyof Headers} K
    * @param {K} key
    * @param {Headers[K]} value
