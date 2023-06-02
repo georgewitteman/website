@@ -5,7 +5,7 @@
   "private": true,
   "exports": "./index.js",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test --throw-deprecation"
   },
   "repository": {
     "type": "git",
