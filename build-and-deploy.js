@@ -55,7 +55,7 @@ async function updateECSService() {
   const response = await client.send(
     new UpdateServiceCommand({
       cluster: "Prod",
-      service: "website-v5",
+      service: "website-v6-public",
       forceNewDeployment: true,
     })
   );
