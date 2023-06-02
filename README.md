@@ -5,6 +5,7 @@
 - https://repost.aws/knowledge-center/ecs-fargate-tasks-private-subnet
   - https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html
 - https://nodejs.org/api/async_context.html#class-asynclocalstorage
+- https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights-Prometheus.html
 
 ## Things I'm experimenting with
 
