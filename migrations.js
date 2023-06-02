@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { pool } from "./db.js";
+import { getPool } from "./db.js";
 import path from "node:path";
 import { logger } from "./logger.js";
 
@@ -11,7 +11,7 @@ async function runMigration(file) {
   const migration = (await fs.promises.readFile(file)).toString().trim();
   logger.info(migration);
 
-  const client = await pool.connect();
+  const client = await getPool().connect();
   await client.query("BEGIN");
   try {
     await client.query(migration);

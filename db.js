@@ -3,28 +3,45 @@ import { Signer } from "@aws-sdk/rds-signer";
 import fs from "node:fs";
 import { logger } from "./logger.js";
 
-/** @type {pg.PoolConfig} */
-const poolConfig = {};
+/** @type {pg.Pool | undefined} */
+let pool = undefined;
 
-// https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_rds_signer.html
-if (
-  process.env.AWS_EXECUTION_ENV === "AWS_ECS_FARGATE" &&
-  process.env.PGHOST &&
-  process.env.PGUSER
-) {
-  const signer = new Signer({
-    hostname: process.env.PGHOST,
-    port: 5432,
-    username: process.env.PGUSER,
-  });
-  poolConfig.password = () => signer.getAuthToken();
-  poolConfig.ssl = {
-    ca: fs.readFileSync("rds-combined-ca-bundle.pem").toString(),
-  };
+/**
+ * @returns {pg.Pool}
+ */
+export function getPool() {
+  if (process.env.NODE_TEST_CONTEXT) {
+    throw new Error("Don't use the database in tests");
+  }
+
+  if (pool) {
+    return pool;
+  }
+
+  /** @type {pg.PoolConfig} */
+  const poolConfig = {};
+
+  // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_rds_signer.html
+  if (
+    process.env.AWS_EXECUTION_ENV === "AWS_ECS_FARGATE" &&
+    process.env.PGHOST &&
+    process.env.PGUSER
+  ) {
+    const signer = new Signer({
+      hostname: process.env.PGHOST,
+      port: 5432,
+      username: process.env.PGUSER,
+    });
+    poolConfig.password = () => signer.getAuthToken();
+    poolConfig.ssl = {
+      ca: fs.readFileSync("rds-combined-ca-bundle.pem").toString(),
+    };
+  }
+
+  // https://node-postgres.com/features/connecting
+  pool = new pg.Pool(poolConfig);
+  return pool;
 }
-
-// https://node-postgres.com/features/connecting
-export const pool = new pg.Pool(poolConfig);
 
 /**
  * @template {unknown[]} T
@@ -33,7 +50,7 @@ export const pool = new pg.Pool(poolConfig);
  * @param {import("./zod.js").ZodSchema<T>} schema
  */
 export async function typeSafeQuery(query, schema) {
-  const result = await pool.query(query);
+  const result = await getPool().query(query);
   const parseResult = schema.parse(result.rows);
   if (parseResult.ok) {
     return parseResult.data;

@@ -6,7 +6,7 @@ import {
   isSupportedExtension,
 } from "./content-type.js";
 import { App } from "./App.js";
-import { pool, sql, typeSafeQuery } from "./db.js";
+import { getPool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 import { html } from "./html.js";
 import { router as usersRouter } from "./routes/users.js";
@@ -202,7 +202,7 @@ function shutdown(signal) {
     }
     logger.info("Successfully shut down server");
 
-    pool.end(() => {
+    getPool().end(() => {
       logger.info("Pool closed");
     });
   });
