@@ -57,7 +57,10 @@ export class App {
         nodeResponse.end("Missing Host header");
         return;
       }
-      if (!nodeRequest.method || !["GET", "POST"].includes(nodeRequest.method)) {
+      if (
+        !nodeRequest.method ||
+        !["GET", "POST"].includes(nodeRequest.method)
+      ) {
         // When a request method is received that is unrecognized or not implemented
         // by an origin server, the origin server SHOULD respond with the 501 (Not
         // Implemented) status code.  When a request method is received that is

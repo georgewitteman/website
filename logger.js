@@ -1,23 +1,25 @@
+import { getRequestId } from "./request-id-middleware.js";
+
 export class ConsoleLogger {
   /**
    * @param {unknown[]} params
    */
   info(...params) {
-    console.log(...params);
+    console.log(getRequestId(), ...params);
   }
 
   /**
    * @param {unknown[]} params
    */
   warn(...params) {
-    console.warn(...params);
+    console.warn(getRequestId(), ...params);
   }
 
   /**
    * @param {unknown[]} params
    */
   error(...params) {
-    console.error(...params);
+    console.error(getRequestId(), ...params);
   }
 }
 

@@ -15,6 +15,7 @@ import { testRoutes } from "./Router.js";
 import { runMigrations } from "./migrations.js";
 import { logger } from "./logger.js";
 import { documentLayout } from "./layout.js";
+import { requestIdMiddleware } from "./request-id-middleware.js";
 
 const PORT = 8080;
 
@@ -165,6 +166,7 @@ async function requestLogger(req, next) {
 }
 
 const app = new App();
+app.use(requestIdMiddleware);
 app.use(requestLogger);
 app.use(staticHandler);
 app.use(now);
