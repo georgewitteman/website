@@ -1,7 +1,8 @@
-import child_process from "node:child_process";
+import "./check.js";
 import { ECRClient, GetAuthorizationTokenCommand } from "@aws-sdk/client-ecr";
-import { z } from "./zod.js";
+import { z } from "../zod.js";
 import { ECSClient, UpdateServiceCommand } from "@aws-sdk/client-ecs";
+import { execSync } from "./run.js";
 
 process.env.AWS_REGION = "us-west-2";
 
@@ -10,22 +11,6 @@ process.env.AWS_REGION = "us-west-2";
  */
 function base64Decode(encodedString) {
   return Buffer.from(encodedString, "base64").toString("utf-8");
-}
-
-/**
- * @param {string} command
- * @param {{ input?: string }} options
- */
-function execSync(command, options = {}) {
-  console.log("\x1b[1;34m> %s\x1b[0m", command);
-  if (typeof options.input === "string") {
-    child_process.execSync(command, {
-      input: options.input,
-      stdio: ["pipe", process.stdout, process.stderr],
-    });
-    return;
-  }
-  child_process.execSync(command, { stdio: "inherit" });
 }
 
 async function getECRAuthorizationToken() {
@@ -61,11 +46,6 @@ async function updateECSService() {
   );
   console.log(response);
 }
-
-execSync("npx prettier --write .");
-execSync("npx eslint .");
-execSync("npx tsc");
-execSync("node --test");
 
 execSync(
   "docker login --username AWS --password-stdin 866631827662.dkr.ecr.us-west-2.amazonaws.com",
