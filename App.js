@@ -57,7 +57,7 @@ export class App {
         nodeResponse.end("Missing Host header");
         return;
       }
-      if (nodeRequest.method && !["GET", "POST"].includes(nodeRequest.method)) {
+      if (!nodeRequest.method || !["GET", "POST"].includes(nodeRequest.method)) {
         // When a request method is received that is unrecognized or not implemented
         // by an origin server, the origin server SHOULD respond with the 501 (Not
         // Implemented) status code.  When a request method is received that is
@@ -66,11 +66,6 @@ export class App {
         // code.
         nodeResponse.writeHead(501);
         nodeResponse.end(`Unsupported method: ${nodeRequest.method}`);
-        return;
-      }
-      if (!nodeRequest.method) {
-        nodeResponse.writeHead(501);
-        nodeResponse.end(`Missing method`);
         return;
       }
       const req = new MyRequest(nodeRequest.method, nodeRequest);
