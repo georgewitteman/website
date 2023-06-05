@@ -131,14 +131,20 @@ async function notFound(req) {
 
 /**
  * @param {import("./Request.js").MyRequest} req
- * @param {MyResponse} res
+ * @param {MyResponse | undefined} res
  * @param {bigint} startTimeNs
  */
 function logResponse(req, res, startTimeNs) {
   const durationNs = process.hrtime.bigint() - startTimeNs;
   const durationMs = durationNs / 1_000_000n;
   logger.info(
-    `END: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${req.rawUrl} ${res.statusCode} ${res.statusMessage} ${durationMs}ms`
+    `${req.method} ${req.originalUrl} ${res?.statusCode} ${res?.statusMessage} ${durationMs}ms`,
+    {
+      originalUrl: req.originalUrl,
+      rawUrl: req.rawUrl,
+      httpVersion: req.httpVersion,
+      headers: req.headers,
+    }
   );
 }
 
@@ -148,20 +154,14 @@ function logResponse(req, res, startTimeNs) {
  */
 async function requestLogger(req, next) {
   const startNs = process.hrtime.bigint();
-  logger.info(
-    `START: ${req.method} (${req.httpVersion}) ${req.originalUrl} ${
-      req.rawUrl
-    } ${JSON.stringify(req.headers)}`
-  );
   try {
     const res = await next();
     logResponse(req, res, startNs);
     return res;
   } catch (err) {
     logger.error(err);
-    const res = new MyResponse(500, {}, "Internal Server Error\n");
-    logResponse(req, res, startNs);
-    return res;
+    logResponse(req, undefined, startNs);
+    throw err;
   }
 }
 
