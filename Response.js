@@ -1,7 +1,12 @@
 /**
- * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Server?: "hi", Location?: string}} Headers
+ * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Server?: "hi", Location?: string, 'Content-Security-Policy'?: string}} Headers
  */
 
+/**
+ * @typedef {Headers & {'Content-Security-Policy': string}} FinalHeaders
+ */
+
+import { ContentSecurityPolicy } from "./content-security-policy.js";
 import { SafeHTML } from "./html.js";
 
 const STATUS_MESSAGE = /** @type {const} */ ({
@@ -84,34 +89,40 @@ const STATUS_MESSAGE = /** @type {const} */ ({
  * @typedef {keyof typeof STATUS_MESSAGE} StatusCode
  */
 
-/**
- * @template {StatusCode} [S=StatusCode]
- * @template {Headers} [H=Headers]
- */
 export class MyResponse {
+  #headers;
   /**
-   * @param {S} statusCode
-   * @param {H} headers
+   * @param {StatusCode} statusCode
+   * @param {Headers} headers
    * @param {string | Buffer | SafeHTML} body
    */
   constructor(statusCode, headers, body) {
     /**
-     * @readonly
-     * @type {S}
+     * @type {StatusCode}
      */
     this.statusCode = statusCode;
 
     /**
-     * @readonly
-     * @type {H}
+     * @type {Headers}
      */
-    this.headers = headers;
+    this.#headers = headers;
 
     /**
-     * @readonly
      * @type {string | Buffer}
      */
     this.body = body instanceof SafeHTML ? body.value : body;
+
+    this.contentSecurityPolicy = new ContentSecurityPolicy();
+  }
+
+  /**
+   * @returns {FinalHeaders}
+   */
+  get headers() {
+    return {
+      ...this.#headers,
+      "Content-Security-Policy": this.contentSecurityPolicy.toString(),
+    };
   }
 
   /**
@@ -137,19 +148,6 @@ export class MyResponse {
       statusCode,
       { ...headers, "Content-Type": "text/html; charset=utf-8" },
       body
-    );
-  }
-
-  /**
-   * @template {keyof Headers} K
-   * @param {K} key
-   * @param {Headers[K]} value
-   */
-  setHeader(key, value) {
-    return new MyResponse(
-      this.statusCode,
-      { ...this.headers, [key]: value },
-      this.body
     );
   }
 

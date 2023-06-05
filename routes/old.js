@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { MyResponse } from "../Response.js";
 import { Router } from "../Router.js";
 import { html } from "../html.js";
@@ -45,4 +46,30 @@ router.get("/", async () => {
       </main>`,
     })
   );
+});
+
+router.get("/duration-picker-test", async () => {
+  const nonce = randomBytes(16).toString("base64");
+  const res = MyResponse.html(
+    200,
+    {},
+    documentLayout({
+      title: "Duration Picker Test",
+      head: html`<script
+        nonce="${nonce}"
+        type="module"
+        src="/js/duration-picker.js"
+      ></script>`,
+      body: html`<duration-picker data-seconds="115"></duration-picker>
+        <duration-picker data-seconds="0"></duration-picker>
+        <duration-picker data-seconds="-115"></duration-picker>
+        <duration-picker data-min="115"></duration-picker>
+        <duration-picker data-min="0"></duration-picker>
+        <duration-picker data-min="-59"></duration-picker>
+        <duration-picker data-min="-60"></duration-picker>
+        <duration-picker data-min="-115"></duration-picker>`,
+    })
+  );
+  res.contentSecurityPolicy.nonce = nonce;
+  return res;
 });
