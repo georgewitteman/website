@@ -10,6 +10,7 @@ import { getPool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
 import { html } from "./html.js";
 import { router as usersRouter } from "./routes/users.js";
+import { router as echoRouter } from "./routes/echo.js";
 import { router as oldRouter } from "./routes/old.js";
 import { testRoutes } from "./Router.js";
 import { runMigrations } from "./migrations.js";
@@ -179,6 +180,7 @@ app.use(now);
 app.use(usersRouter.middleware());
 app.use(testRoutes.middleware());
 app.use(oldRouter.middleware());
+app.use(echoRouter.middleware());
 app.use(notFound);
 
 logger.info("Environment", { env: process.env });

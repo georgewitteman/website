@@ -3,7 +3,7 @@
  */
 
 /**
- * @typedef {Headers & {'Content-Security-Policy': string}} FinalHeaders
+ * @typedef {Headers & {'Content-Security-Policy'?: string}} FinalHeaders
  */
 
 import { ContentSecurityPolicy } from "./content-security-policy.js";
@@ -121,7 +121,9 @@ export class MyResponse {
   get headers() {
     return {
       ...this.#headers,
-      "Content-Security-Policy": this.contentSecurityPolicy.toString(),
+      ...(this.#headers["Content-Type"] === "text/html; charset=utf-8"
+        ? { "Content-Security-Policy": this.contentSecurityPolicy.toString() }
+        : {}),
     };
   }
 
