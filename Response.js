@@ -3,7 +3,7 @@
  */
 
 /**
- * @typedef {Headers & {'Content-Security-Policy'?: string}} FinalHeaders
+ * @typedef {Headers & {"Content-Security-Policy"?: string, "Content-Length": number}} FinalHeaders
  */
 
 import { ContentSecurityPolicy } from "./content-security-policy.js";
@@ -91,6 +91,7 @@ const STATUS_MESSAGE = /** @type {const} */ ({
 
 export class MyResponse {
   #headers;
+
   /**
    * @param {StatusCode} statusCode
    * @param {Headers} headers
@@ -121,6 +122,7 @@ export class MyResponse {
   get headers() {
     return {
       ...this.#headers,
+      "Content-Length": Buffer.byteLength(this.body, "utf-8"),
       ...(this.#headers["Content-Type"] === "text/html; charset=utf-8"
         ? { "Content-Security-Policy": this.contentSecurityPolicy.toString() }
         : {}),
