@@ -1,2 +1,10 @@
-/** https://prettier.io/docs/en/configuration.html */
-module.exports = {};
+/**
+ * https://prettier.io/docs/en/configuration.html
+ * @type {import("prettier").Config}
+ */
+
+const config = {
+  trailingComma: "all",
+};
+
+module.exports = config;

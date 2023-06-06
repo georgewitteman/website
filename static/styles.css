@@ -1,8 +1,5 @@
 :root {
   --color-text: #222;
-  --color-link: #1a0dab;
-  --color-link-visited: #609;
-
   --line-height: 1.5;
   --width-content: 80ch;
 }
@@ -35,4 +32,8 @@ header {
 
 pre {
   overflow: auto;
+}
+
+.monospace {
+  font-family: monospace;
 }

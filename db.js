@@ -68,7 +68,7 @@ export function sql(strings, ...values) {
   return {
     text: /** @type {typeof strings.reduce<string>} */ (strings.reduce)(
       (prev, curr, i) => (i === 0 ? curr : `${prev}$${i}${curr}`),
-      ""
+      "",
     ),
     values,
   };

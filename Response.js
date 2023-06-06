@@ -134,7 +134,7 @@ export class MyResponse {
     return new MyResponse(
       statusCode,
       { ...headers, "Content-Type": "application/json; charset=utf-8" },
-      JSON.stringify(body)
+      JSON.stringify(body),
     );
   }
 
@@ -147,7 +147,7 @@ export class MyResponse {
     return new MyResponse(
       statusCode,
       { ...headers, "Content-Type": "text/html; charset=utf-8" },
-      body
+      body,
     );
   }
 

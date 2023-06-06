@@ -12,7 +12,7 @@ describe("sql template function", () => {
       {
         text: "SELECT * FROM tbl WHERE foo = $1 AND bar = $2 AND baz = $3;",
         values: [foo, bar, baz],
-      }
+      },
     );
   });
 

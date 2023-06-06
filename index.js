@@ -77,7 +77,7 @@ async function staticHandler(req, next) {
   return new MyResponse(
     200,
     { "Content-Type": getContentTypeFromExtension(extension) },
-    fileInfo.contentsBuffer
+    fileInfo.contentsBuffer,
   );
 }
 
@@ -92,7 +92,7 @@ async function now(req, next) {
   }
   const result = await typeSafeQuery(
     sql`SELECT NOW(), VERSION()`,
-    z.array(z.object({ now: z.date(), version: z.string() })).length(1)
+    z.array(z.object({ now: z.date(), version: z.string() })).length(1),
   );
   return new MyResponse(
     200,
@@ -111,13 +111,13 @@ async function now(req, next) {
                   <code
                     >${value instanceof Date ? value.toString() : value}</code
                   >
-                </li>`
+                </li>`,
             )}
           </ul>
           <pre><code>${JSON.stringify(result, null, 2)}</code></pre>
           <code>${'<script>alert("unsafe html test")</script>'}</code>
         </main>`,
-    })
+    }),
   );
 }
 
@@ -144,7 +144,7 @@ function logResponse(req, res, startTimeNs) {
       rawUrl: req.rawUrl,
       httpVersion: req.httpVersion,
       headers: req.headers,
-    }
+    },
   );
 }
 

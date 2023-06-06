@@ -18,7 +18,7 @@ describe(pathMatches.name, () => {
     assert.strictEqual(pathMatches("/:field/a", "/field/a/b")[0], false);
     assert.strictEqual(
       pathMatches("/router/:id/foo", "/router/test2/asdf")[0],
-      false
+      false,
     );
   });
 });

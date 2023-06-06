@@ -33,13 +33,13 @@ export async function runMigrations() {
   for (const filename of filenames) {
     if (!filename.match(/\d\d\d_\w+\.sql/g)) {
       logger.warn(
-        `File in migrations directory that didn't match the expected file name format: ${filename}`
+        `File in migrations directory that didn't match the expected file name format: ${filename}`,
       );
       continue;
     }
     const fullPath = new URL(
       path.join("./migrations", filename),
-      import.meta.url
+      import.meta.url,
     ).pathname;
     await runMigration(fullPath);
   }

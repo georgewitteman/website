@@ -25,7 +25,7 @@ async function getECRAuthorizationToken() {
           authorizationToken: z.string(),
           expiresAt: z.date(),
           proxyEndpoint: z.string(),
-        })
+        }),
       )
       .length(1),
   });
@@ -42,21 +42,21 @@ async function updateECSService() {
       cluster: "Prod",
       service: "website-v6-public",
       forceNewDeployment: true,
-    })
+    }),
   );
   console.log(response);
 }
 
 execSync(
   "docker login --username AWS --password-stdin 866631827662.dkr.ecr.us-west-2.amazonaws.com",
-  { input: await getECRAuthorizationToken() }
+  { input: await getECRAuthorizationToken() },
 );
 execSync("docker build -t website .");
 execSync(
-  "docker tag website:latest 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest"
+  "docker tag website:latest 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest",
 );
 execSync(
-  "docker push 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest"
+  "docker push 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest",
 );
 
 await updateECSService();

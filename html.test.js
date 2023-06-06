@@ -16,7 +16,7 @@ describe(`${unescaped.name}`, () => {
     const safeQueryResult = unescaped("<script>alert('hi')</script>");
     assert.deepStrictEqual(
       safeQueryResult,
-      new SafeHTML("<script>alert('hi')</script>")
+      new SafeHTML("<script>alert('hi')</script>"),
     );
   });
 
@@ -24,7 +24,7 @@ describe(`${unescaped.name}`, () => {
     const safeQueryResult = "<script>alert('hi')</script>";
     assert.strictEqual(
       html`this is safe: ${unescaped(safeQueryResult)}`.value,
-      "this is safe: <script>alert('hi')</script>"
+      "this is safe: <script>alert('hi')</script>",
     );
   });
 });
@@ -51,7 +51,7 @@ describe(`${html.name}`, () => {
     const val = [1, 2, -1, Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER];
     assert.strictEqual(
       html`${val}`.value,
-      "12-19007199254740991-9007199254740991"
+      "12-19007199254740991-9007199254740991",
     );
   });
 
@@ -59,7 +59,7 @@ describe(`${html.name}`, () => {
     const val = "<body>&amp;\"\"''``</body>";
     assert.strictEqual(
       html`${val}`.value,
-      "&lt;body&gt;&amp;amp;&quot;&quot;&#039;&#039;&#x60;&#x60;&lt;/body&gt;"
+      "&lt;body&gt;&amp;amp;&quot;&quot;&#039;&#039;&#x60;&#x60;&lt;/body&gt;",
     );
   });
 
@@ -77,7 +77,7 @@ describe(`${html.name}`, () => {
     assert.strictEqual(
       // prettier-ignore
       html`<html>${out2}${out1}</html>`.value,
-      "<html><div><h1>out1</h1></div><h1>out1</h1></html>"
+      "<html><div><h1>out1</h1></div><h1>out1</h1></html>",
     );
   });
 
@@ -86,7 +86,7 @@ describe(`${html.name}`, () => {
     assert.strictEqual(
       // prettier-ignore
       html`<html>${out}</html>`.value,
-      "<html><div>one</div><div>two</div></html>"
+      "<html><div>one</div><div>two</div></html>",
     );
   });
 
@@ -96,7 +96,7 @@ describe(`${html.name}`, () => {
     assert.strictEqual(
       // prettier-ignore
       html`<html>${out}</html>`.value,
-      "<html><div>&lt;script&gt;alert(&quot;foo&quot;)&lt;/script&gt;<p></p></div><div>&lt;script&gt;alert(&quot;foo&quot;)&lt;/script&gt;<p></p></div>foo</html>"
+      "<html><div>&lt;script&gt;alert(&quot;foo&quot;)&lt;/script&gt;<p></p></div><div>&lt;script&gt;alert(&quot;foo&quot;)&lt;/script&gt;<p></p></div>foo</html>",
     );
   });
 });

@@ -10,7 +10,7 @@
 
 /**
  * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/style-src
- * @typedef {{"style-src": "'self'"}} StyleSrcDirective
+ * @typedef {{"style-src": "'self'" | ("'self'" | `'nonce-${string}'`)[]}} StyleSrcDirective
  */
 
 /**
@@ -55,11 +55,15 @@ export class ContentSecurityPolicy {
   set nonce(newNonce) {
     this.#nonce = newNonce;
     this.directives["script-src"] = `'nonce-${newNonce}'`;
+    this.directives["style-src"] = ["'self'", `'nonce-${newNonce}'`];
   }
 
   toString() {
     return Object.entries(this.directives)
-      .map(([key, value]) => `${key} ${value}`)
+      .map(
+        ([key, value]) =>
+          `${key} ${Array.isArray(value) ? value.join(" ") : value}`,
+      )
       .join("; ");
   }
 }

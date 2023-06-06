@@ -5,7 +5,7 @@ const secondsToMinsSecs = (/** @type {number} */ seconds) => ({
 
 const valueOrDefault = (
   /** @type {number} */ value,
-  /** @type {number} */ nanValue
+  /** @type {number} */ nanValue,
 ) => (isNaN(value) ? nanValue : value);
 
 class DurationPicker extends HTMLElement {

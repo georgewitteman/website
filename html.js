@@ -40,7 +40,7 @@ function escapeHtml(unsafe) {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;")
-      .replaceAll("`", "&#x60;")
+      .replaceAll("`", "&#x60;"),
   );
 }
 
@@ -73,11 +73,11 @@ function getEscapedValue(value) {
         const safeValue = getEscapedValue(value);
         return new SafeHTML("".concat(result.value, safeValue.value));
       },
-      new SafeHTML("")
+      new SafeHTML(""),
     );
   }
   throw new Error(
-    `Unable to safely convert ${value} (${typeof value}) to a string`
+    `Unable to safely convert ${value} (${typeof value}) to a string`,
   );
 }
 
@@ -96,8 +96,8 @@ export function html(strings, ...values) {
       return "".concat(
         previousValue,
         getEscapedValue(values[currentIndex - 1]).value,
-        currentValue
+        currentValue,
       );
-    })
+    }),
   );
 }

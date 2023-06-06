@@ -77,13 +77,13 @@ export class MyRequest {
     // https://datatracker.ietf.org/doc/html/rfc7230#section-5.5
     this.#rawUrl = new URL(
       req.url,
-      `${getProtocolFromRequest(req)}://${hostHeader}`
+      `${getProtocolFromRequest(req)}://${hostHeader}`,
     );
     this.#originalUrl = new URL(
       req.url,
       `${req.headers["x-forwarded-proto"] ?? getProtocolFromRequest(req)}://${
         req.headers["x-forwarded-host"] ?? hostHeader
-      }`
+      }`,
     );
 
     this.#httpVersion = {

@@ -71,7 +71,7 @@ export class Router {
       const route = this.#routes.find(
         (route) =>
           req.method === route.method &&
-          pathMatches(route.path, req.rawUrl.pathname)[0]
+          pathMatches(route.path, req.rawUrl.pathname)[0],
       );
       if (!route) {
         return next();
