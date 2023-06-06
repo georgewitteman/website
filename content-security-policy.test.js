@@ -7,7 +7,7 @@ describe(ContentSecurityPolicy.name, () => {
     const policy = new ContentSecurityPolicy();
     assert.strictEqual(
       policy.toString(),
-      "default-src 'none'; style-src 'self'; require-trusted-types-for 'script'; base-uri 'none'",
+      "default-src 'none'; style-src 'self'; require-trusted-types-for 'script'; base-uri 'none'; img-src 'self'",
     );
   });
 
@@ -16,7 +16,7 @@ describe(ContentSecurityPolicy.name, () => {
     policy.nonce = "QXWaqIbUdswjho9oh6LBnw==";
     assert.strictEqual(
       policy.toString(),
-      "default-src 'none'; style-src 'self' 'nonce-QXWaqIbUdswjho9oh6LBnw=='; require-trusted-types-for 'script'; base-uri 'none'; script-src 'nonce-QXWaqIbUdswjho9oh6LBnw=='",
+      "default-src 'none'; style-src 'self' 'nonce-QXWaqIbUdswjho9oh6LBnw=='; require-trusted-types-for 'script'; base-uri 'none'; img-src 'self'; script-src 'nonce-QXWaqIbUdswjho9oh6LBnw=='",
     );
   });
 });

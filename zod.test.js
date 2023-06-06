@@ -152,6 +152,7 @@ describe("null", () => {
   });
 
   [undefined, "", 0, -0, false, true, NaN].forEach((val) => {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     test(`returns an error for: ${val} (${typeof val})`, () => {
       const schema = z.null();
       const result = schema.parse(val);
@@ -169,6 +170,7 @@ describe("undefined", () => {
   });
 
   [null, "", 0, -0, false, true, NaN].forEach((val) => {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     test(`returns an error for: ${val} (${typeof val})`, () => {
       const schema = z.undefined();
       const result = schema.parse(val);
@@ -182,6 +184,7 @@ describe("ISO 8601 date string", () => {
     ["1970-01-01T00:00:00.000Z", new Date(1970, 0, 1)],
     ["2009-05-19T12:34:56.987Z", new Date(2009, 4, 19, 12, 34, 56, 987)],
   ].forEach(([val, expected]) => {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     test(`${val} accepted as valid`, () => {
       const result = z.iso8601().parse(val);
       assert.deepStrictEqual(result, { ok: true, data: expected });
@@ -208,6 +211,7 @@ describe("ISO 8601 date string", () => {
     "0000-00-00T00:00:00.000Z",
     "9999-99-99T99:99:99.999Z",
   ].forEach((val) => {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     test(`${val} rejected as invalid`, () => {
       const result = z.iso8601().parse(val);
       assert.strictEqual(result.ok, false);

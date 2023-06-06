@@ -1,55 +1,153 @@
 import { getRequestId } from "./request-id-middleware.js";
+import { stringify } from "safe-stable-stringify";
 
-export class ConsoleLogger {
-  /**
-   * @param {unknown[]} params
-   */
-  info(...params) {
-    console.log(getRequestId(), ...params);
-  }
+/** @typedef {"debug" | "info" | "warn" | "error"} LogLevel */
 
-  /**
-   * @param {unknown[]} params
-   */
-  warn(...params) {
-    console.warn(getRequestId(), ...params);
-  }
+/**
+ * https://github.com/winstonjs/winston/blob/0ed765097dd1f67c7bcaf7e6383f2a3a98e71d9e/index.d.ts#L73
+ * https://github.com/winstonjs/winston/blob/0ed765097dd1f67c7bcaf7e6383f2a3a98e71d9e/index.d.ts#L79
+ * @typedef {{level: LogLevel; message: unknown; [key: string]: unknown}} LogRecord
+ */
 
-  /**
-   * @param {unknown[]} params
-   */
-  error(...params) {
-    console.error(getRequestId(), ...params);
+/**
+ * @param {unknown} data
+ * @returns {string}
+ */
+function castToString(data) {
+  if (typeof data === "string") {
+    return data;
   }
+  return stringify(data) ?? "";
 }
 
-export class CloudWatchLogger {
+class CloudWatchTransport {
   /**
-   * @param {unknown[]} params
+   * @param {LogRecord} data
    */
-  info(...params) {
-    process.stdout.write(JSON.stringify([getRequestId(), ...params]));
+  write(data) {
+    if (
+      "level" in data &&
+      typeof data.level === "string" &&
+      ["warn", "error"].includes(data.level)
+    ) {
+      process.stderr.write(stringify(data));
+      process.stderr.write("\n");
+      return;
+    }
+    process.stdout.write(stringify(data));
     process.stdout.write("\n");
   }
+}
+
+class LocalTransport {
+  /**
+   * @param {LogRecord} data
+   */
+  write(data) {
+    if (
+      "level" in data &&
+      typeof data.level === "string" &&
+      ["warn", "error"].includes(data.level)
+    ) {
+      console.error(data);
+      return;
+    }
+    console.log(data);
+  }
+}
+
+class Logger {
+  /** @type {{write: (data: LogRecord) => void}} */
+  #transport;
+
+  /**
+   *
+   * @param {{write: (data: LogRecord) => void}} transport
+   */
+  constructor(transport) {
+    this.#transport = transport;
+  }
+
+  /**
+   * @param {LogLevel} level
+   * @param {unknown} [message]
+   * @param {unknown} [meta]
+   */
+  #log(level, message, meta) {
+    // https://github.com/winstonjs/winston/blob/0ed765097dd1f67c7bcaf7e6383f2a3a98e71d9e/lib/winston/logger.js#L207
+    if (meta === undefined) {
+      if (
+        message &&
+        typeof message === "object" &&
+        "message" in message &&
+        message.message
+      ) {
+        this.#transport.write({ level, ...message, requestId: getRequestId() });
+        return;
+      }
+
+      this.#transport.write({
+        level,
+        message,
+        requestId: getRequestId(),
+      });
+      return;
+    }
+
+    if (typeof meta === "object" && meta !== null) {
+      /** @type {LogRecord} */
+      const info = {
+        ...meta,
+        level,
+        message,
+        requestId: getRequestId(),
+      };
+
+      if ("message" in meta && meta.message) {
+        info.message = `${castToString(info.message)} ${castToString(
+          meta.message,
+        )}`;
+      }
+      if ("stack" in meta && meta.stack) {
+        info.stack = meta.stack;
+      }
+
+      this.#transport.write(info);
+      return;
+    }
+
+    this.#transport.write({
+      level,
+      message,
+      requestId: getRequestId(),
+    });
+  }
+
+  /**
+   * @param {unknown[]} params
+   */
+  info(...params) {
+    this.#log("info", ...params);
+  }
 
   /**
    * @param {unknown[]} params
    */
   warn(...params) {
-    process.stderr.write(JSON.stringify([getRequestId(), ...params]));
-    process.stderr.write("\n");
+    this.#log("warn", ...params);
   }
 
   /**
    * @param {unknown[]} params
    */
   error(...params) {
-    process.stderr.write(JSON.stringify([getRequestId(), ...params]));
-    process.stderr.write("\n");
+    this.#log("error", ...params);
   }
 }
 
-export const logger =
-  process.env.AWS_EXECUTION_ENV === "AWS_ECS_FARGATE"
-    ? new CloudWatchLogger()
-    : new ConsoleLogger();
+export const logger = new Logger(
+  process.env.AWS_EXECUTION_ENV === "AWS_ECS_FARGATE" ||
+  process.env.LOGGER === "cloudwatch"
+    ? new CloudWatchTransport()
+    : new LocalTransport(),
+);

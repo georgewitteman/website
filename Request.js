@@ -1,6 +1,17 @@
 import querystring from "node:querystring";
 
 /**
+ * @param {unknown} val
+ * @returns {string | null | undefined}
+ */
+function stringOrUndefinedOrNullOrThrow(val) {
+  if (typeof val === "string" || val === undefined || val === null) {
+    return val;
+  }
+  throw new Error("value was not a string");
+}
+
+/**
  * https://github.com/expressjs/express/blob/f540c3b0195393974d4875a410f4c00a07a2ab60/lib/request.js#L292-L324
  *
  * @param {import("node:http").IncomingMessage} req
@@ -81,8 +92,12 @@ export class MyRequest {
     );
     this.#originalUrl = new URL(
       req.url,
-      `${req.headers["x-forwarded-proto"] ?? getProtocolFromRequest(req)}://${
-        req.headers["x-forwarded-host"] ?? hostHeader
+      `${
+        stringOrUndefinedOrNullOrThrow(req.headers["x-forwarded-proto"]) ??
+        getProtocolFromRequest(req)
+      }://${
+        stringOrUndefinedOrNullOrThrow(req.headers["x-forwarded-host"]) ??
+        hostHeader
       }`,
     );
 

@@ -24,8 +24,13 @@
  */
 
 /**
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/img-src
+ * @typedef {{"img-src": "'self'" | "'none'"}} ImgSrcDirective
+ */
+
+/**
  * https://content-security-policy.com/#directive
- * @typedef {Partial<DefaultSrcDirective & RequireTrustedTypesForDirective & StyleSrcDirective & ScriptSrcDirective & BaseUriDirective>} Directives
+ * @typedef {Partial<DefaultSrcDirective & RequireTrustedTypesForDirective & StyleSrcDirective & ScriptSrcDirective & BaseUriDirective & ImgSrcDirective>} Directives
  */
 
 /**
@@ -46,6 +51,7 @@ export class ContentSecurityPolicy {
       "style-src": "'self'",
       "require-trusted-types-for": "'script'",
       "base-uri": "'none'",
+      "img-src": "'self'",
     };
   }
 

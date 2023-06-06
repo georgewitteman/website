@@ -77,7 +77,7 @@ function getEscapedValue(value) {
     );
   }
   throw new Error(
-    `Unable to safely convert ${value} (${typeof value}) to a string`,
+    `Unable to safely convert value (${typeof value}) to a string`,
   );
 }
 

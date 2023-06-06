@@ -4,7 +4,7 @@ import path from "node:path";
 import { logger } from "./logger.js";
 
 /**
- * @param {fs.PathLike} file
+ * @param {string} file
  */
 async function runMigration(file) {
   logger.info(`Migration file: ${file}`);

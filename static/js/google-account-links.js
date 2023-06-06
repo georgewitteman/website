@@ -49,6 +49,9 @@ formElement.addEventListener("input", function () {
       email,
     )}`,
   );
+  if (!domain) {
+    throw new Error("Domain is unset");
+  }
   const calendarUrl = `https://www.google.com/calendar/a/${domain}`;
   setOutputUrl(
     googleCalendarOutputElement,

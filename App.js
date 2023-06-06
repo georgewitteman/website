@@ -68,7 +68,9 @@ export class App {
         // origin server SHOULD respond with the 405 (Method Not Allowed) status
         // code.
         nodeResponse.writeHead(501);
-        nodeResponse.end(`Unsupported method: ${nodeRequest.method}`);
+        nodeResponse.end(
+          `Unsupported method: ${nodeRequest.method ?? "undefined"}`,
+        );
         return;
       }
       const req = new MyRequest(nodeRequest.method, nodeRequest);

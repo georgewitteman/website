@@ -12,6 +12,7 @@ export function documentLayout(params) {
         <title>${params.title ?? "George Witteman"}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="author" content="George Witteman" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="stylesheet" href="/styles.css" />
         ${params.head}
       </head>

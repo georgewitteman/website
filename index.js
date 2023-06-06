@@ -138,8 +138,14 @@ function logResponse(req, res, startTimeNs) {
   const durationNs = process.hrtime.bigint() - startTimeNs;
   const durationMs = durationNs / 1_000_000n;
   logger.info(
-    `${req.method} ${req.originalUrl} ${res?.statusCode} ${res?.statusMessage} ${durationMs}ms`,
+    `${req.method} ${req.originalUrl.href} ${
+      res?.statusCode ?? "<no status code>"
+    } ${res?.statusMessage ?? "<no status message>"} ${durationMs}ms`,
     {
+      method: req.method,
+      statusCode: res?.statusCode,
+      statusMessage: res?.statusMessage,
+      durationMs,
       originalUrl: req.originalUrl,
       rawUrl: req.rawUrl,
       httpVersion: req.httpVersion,

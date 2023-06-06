@@ -73,7 +73,7 @@ class ZodDateString {
     // https://tc39.es/ecma262/#sec-date-time-string-format
     const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/g;
     if (typeof data !== "string") {
-      ctx.addIssue({ message: `${data} is not a string` });
+      ctx.addIssue({ message: `data is not a string` });
       return { ok: false, error: ctx.issues };
     }
     if (!dateRegex.test(data)) {
@@ -156,7 +156,7 @@ class ZodString {
     if (typeof data === "string") {
       return true;
     }
-    ctx.addIssue({ message: `${data} is not a string` });
+    ctx.addIssue({ message: `data is not a string` });
     return false;
   }
 
@@ -196,7 +196,7 @@ class ZodNumber {
    */
   isSatisfiedBy(data, ctx) {
     if (typeof data !== "number") {
-      ctx.addIssue({ message: `${data} is not a number` });
+      ctx.addIssue({ message: `data is not a number` });
       return false;
     }
     if (isNaN(data)) {
@@ -264,12 +264,12 @@ class ZodObject {
     const ctx = new ZodContextImpl();
 
     if (!isRecord(data)) {
-      ctx.addIssue({ message: `${data} is not a record` });
+      ctx.addIssue({ message: `data is not a record` });
       return { ok: false, error: ctx.issues };
     }
 
     if (!Object.keys(data).every((key) => key in this.schema)) {
-      ctx.addIssue({ message: `${data} had an unexpected key` });
+      ctx.addIssue({ message: `data had an unexpected key` });
       return { ok: false, error: ctx.issues };
     }
 
@@ -385,7 +385,7 @@ class ZodArray {
     const ctx = new ZodContextImpl();
     const result = [];
     if (!Array.isArray(data)) {
-      ctx.addIssue({ message: `${data} is not an array` });
+      ctx.addIssue({ message: `data is not an array` });
       return { ok: false, error: ctx.issues };
     }
     if (typeof this.#min === "number" && data.length < this.#min) {
@@ -448,7 +448,7 @@ class GenericSchema {
     if (this.guard(data)) {
       return true;
     }
-    ctx.addIssue({ message: `${data} was the wrong type` });
+    ctx.addIssue({ message: `data was the wrong type` });
     return false;
   }
 
