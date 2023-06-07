@@ -86,14 +86,17 @@ async function getECRAuthorizationToken() {
   return base64Decode(authorizationTokenBase64).substring(4);
 }
 
-task("check", [], async () => {
+task("lint", [], async () => {
   execSync("npx prettier --write .");
   execSync("npx eslint .");
   execSync("npx tsc");
+});
+
+task("test", [], async () => {
   execSync("node --test");
 });
 
-task("build", ["check"], async () => {
+task("build", ["lint", "test"], async () => {
   execSync("docker build -t website .");
   execSync(
     "docker tag website:latest 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest",
