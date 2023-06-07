@@ -1,0 +1,6 @@
+{
+  "id": "amazon-ecr-credential-helper",
+  "version": "1.0.0",
+  "name": "amazon-ecr-credential-helper",
+  "installsAfter": ["ghcr.io/devcontainers/features/docker-in-docker"]
+}
