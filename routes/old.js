@@ -39,6 +39,9 @@ router.get("/", async () => {
               <a href="/migrations">PostgreSQL Migrations</a>
             </li>
             <li>
+              <a href="/database/table">PostgreSQL Tables</a>
+            </li>
+            <li>
               Contact me:
               <a href="mailto:george@witteman.me">george@witteman.me</a>
             </li>

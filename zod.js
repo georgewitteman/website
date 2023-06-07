@@ -543,7 +543,16 @@ function undefinedGuard(data) {
   return data === undefined;
 }
 
+/**
+ * @param {unknown} data
+ * @return {data is boolean}
+ */
+function booleanGuard(data) {
+  return typeof data === "boolean";
+}
+
 export const z = {
+  boolean: () => new GenericSchema(booleanGuard),
   iso8601: () => new ZodDateString(),
   null: () => new GenericSchema(nullGuard),
   undefined: () => new GenericSchema(undefinedGuard),

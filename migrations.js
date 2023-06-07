@@ -21,15 +21,12 @@ function resolveMigrationPath(name) {
 }
 
 async function ensureMigrationTable() {
-  await typeSafeQuery(
-    sql`
-    CREATE TABLE IF NOT EXISTS migration (
-      name TEXT NOT NULL PRIMARY KEY,
-      completed_on TIMESTAMP
-    );
-  `,
-    z.array(z.object({})),
+  await getPool().query(sql`
+  CREATE TABLE IF NOT EXISTS migration (
+    name TEXT NOT NULL PRIMARY KEY,
+    completed_on TIMESTAMP
   );
+`);
 }
 
 /**
@@ -88,6 +85,7 @@ export async function getMigration(name) {
 }
 
 export async function listMigrations() {
+  await ensureMigrationTable();
   const filenames = await fs.promises.readdir("./migrations");
   filenames.sort();
   return Promise.all(
