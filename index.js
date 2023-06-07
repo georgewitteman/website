@@ -12,6 +12,7 @@ import { html } from "./html.js";
 import { router as usersRouter } from "./routes/users.js";
 import { router as echoRouter } from "./routes/echo.js";
 import { router as oldRouter } from "./routes/old.js";
+import { router as migrationsRouter } from "./routes/migrations.js";
 import { testRoutes } from "./Router.js";
 import { runMigrations } from "./migrations.js";
 import { logger } from "./logger.js";
@@ -181,6 +182,7 @@ app.use(usersRouter.middleware());
 app.use(testRoutes.middleware());
 app.use(oldRouter.middleware());
 app.use(echoRouter.middleware());
+app.use(migrationsRouter.middleware());
 app.use(notFound);
 
 logger.info("Environment", { env: process.env });

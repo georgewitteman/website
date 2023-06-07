@@ -45,3 +45,19 @@ export async function runMigrations() {
   }
   logger.info("All migrations finished!");
 }
+
+export async function listMigrations() {
+  const filenames = await fs.promises.readdir("./migrations");
+  filenames.sort();
+  return filenames;
+}
+
+/**
+ * @param {string} name
+ */
+export async function getMigration(name) {
+  const content = (await fs.promises.readFile(path.join("./migrations", name)))
+    .toString()
+    .trim();
+  return { name, content };
+}
