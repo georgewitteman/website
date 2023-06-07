@@ -155,6 +155,14 @@ export class MyResponse {
     );
   }
 
+  /**
+   * temporary redirect: found
+   * @param {string} url
+   */
+  static redirectFound(url) {
+    return new MyResponse(302, { Location: url }, "");
+  }
+
   get statusMessage() {
     return STATUS_MESSAGE[this.statusCode];
   }

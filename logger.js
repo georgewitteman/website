@@ -39,22 +39,24 @@ class CloudWatchTransport {
   }
 }
 
-class LocalTransport {
-  /**
-   * @param {LogRecord} data
-   */
-  write(data) {
-    if (
-      "level" in data &&
-      typeof data.level === "string" &&
-      ["warn", "error"].includes(data.level)
-    ) {
-      console.error(data);
-      return;
-    }
-    console.log(data);
-  }
-}
+const LocalTransport = CloudWatchTransport;
+
+// class LocalTransport {
+//   /**
+//    * @param {LogRecord} data
+//    */
+//   write(data) {
+//     if (
+//       "level" in data &&
+//       typeof data.level === "string" &&
+//       ["warn", "error"].includes(data.level)
+//     ) {
+//       console.error(data);
+//       return;
+//     }
+//     console.log(data);
+//   }
+// }
 
 class Logger {
   /** @type {{write: (data: LogRecord) => void}} */

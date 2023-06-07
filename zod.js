@@ -120,6 +120,33 @@ class ZodOptional {
 
 /**
  * @template T
+ * @implements {ZodSchema<T | null>}
+ */
+class ZodNullable {
+  /** @type {ZodSchema<T>} */
+  #schema;
+
+  /**
+   * @param {ZodSchema<T>} schema
+   */
+  constructor(schema) {
+    this.#schema = schema;
+  }
+
+  /**
+   * @param {unknown} data
+   * @returns {ParseResult<T | null>}
+   */
+  parse(data) {
+    if (data === null) {
+      return { ok: true, data };
+    }
+    return this.#schema.parse(data);
+  }
+}
+
+/**
+ * @template T
  * @implements {ZodSchema<T | null | undefined>}
  */
 class ZodNullish {
@@ -437,6 +464,10 @@ class GenericSchema {
   constructor(guard) {
     /** @type {TypeGuard<Output>} */
     this.guard = guard;
+  }
+
+  nullable() {
+    return new ZodNullable(this);
   }
 
   /**

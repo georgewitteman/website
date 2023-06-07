@@ -14,7 +14,6 @@ import { router as echoRouter } from "./routes/echo.js";
 import { router as oldRouter } from "./routes/old.js";
 import { router as migrationsRouter } from "./routes/migrations.js";
 import { testRoutes } from "./Router.js";
-import { runMigrations } from "./migrations.js";
 import { logger } from "./logger.js";
 import { documentLayout } from "./layout.js";
 import { requestIdMiddleware } from "./request-id-middleware.js";
@@ -128,7 +127,11 @@ async function now(req, next) {
  * @returns {Promise<MyResponse>}
  */
 async function notFound(req) {
-  return new MyResponse(404, {}, `Not found: ${req.originalUrl.href}\n`);
+  return new MyResponse(
+    404,
+    {},
+    `Not found: ${req.method} ${req.originalUrl.href}\n`,
+  );
 }
 
 /**
@@ -186,8 +189,6 @@ app.use(migrationsRouter.middleware());
 app.use(notFound);
 
 logger.info("Environment", { env: process.env });
-
-await runMigrations();
 
 const server = app.createServer().listen(PORT, "0.0.0.0", () => {
   logger.info("listening on", server.address());
