@@ -1,4 +1,6 @@
 import querystring from "node:querystring";
+import { ReadonlyHeaders } from "./Headers.js";
+import assert from "node:assert";
 
 /**
  * @param {unknown} val
@@ -9,6 +11,22 @@ function stringOrUndefinedOrNullOrThrow(val) {
     return val;
   }
   throw new Error("value was not a string");
+}
+
+/**
+ * @param {string | string[] | null | undefined} header
+ */
+function headerToDebugString(header) {
+  if (typeof header === "string") {
+    return header;
+  }
+  if (Array.isArray(header)) {
+    return header.join(", ");
+  }
+  if (header === null) {
+    return "<null>";
+  }
+  return "<undefined>";
 }
 
 /**
@@ -65,6 +83,9 @@ export class MyRequest {
   /** @type {string | undefined} */
   #rawBody;
 
+  /** @readonly @type {ReadonlyHeaders} */
+  headers;
+
   /**
    * @param {Method} method
    * @param {import("node:http").IncomingMessage} req
@@ -72,9 +93,11 @@ export class MyRequest {
   constructor(method, req) {
     this.#nodeRequest = req;
 
-    const hostHeader = req.headers.host;
+    this.headers = new ReadonlyHeaders(Object.entries(req.headers));
+
+    const hostHeader = this.headers.get("host");
     // https://github.com/nodejs/node/issues/3094#issue-108564685
-    if (!hostHeader) {
+    if (typeof hostHeader !== "string") {
       throw new Error("Missing required Host header");
     }
 
@@ -93,10 +116,10 @@ export class MyRequest {
     this.#originalUrl = new URL(
       req.url,
       `${
-        stringOrUndefinedOrNullOrThrow(req.headers["x-forwarded-proto"]) ??
+        stringOrUndefinedOrNullOrThrow(this.headers.get("x-forwarded-proto")) ??
         getProtocolFromRequest(req)
       }://${
-        stringOrUndefinedOrNullOrThrow(req.headers["x-forwarded-host"]) ??
+        stringOrUndefinedOrNullOrThrow(this.headers.get("x-forwarded-proto")) ??
         hostHeader
       }`,
     );
@@ -114,17 +137,24 @@ export class MyRequest {
       const chunks = [];
 
       for await (const chunk of this.#nodeRequest) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        chunks.push(Buffer.from(chunk));
+        assert(chunk instanceof Buffer);
+        chunks.push(chunk);
       }
 
       this.#rawBody = Buffer.concat(chunks).toString("utf-8");
     }
-    return querystring.parse(this.#rawBody);
-  }
 
-  get headers() {
-    return this.#nodeRequest.headers;
+    if (
+      this.headers.get("content-type") === "application/x-www-form-urlencoded"
+    ) {
+      return querystring.parse(this.#rawBody);
+    }
+
+    throw new Error(
+      `Unsupported content type: ${headerToDebugString(
+        this.headers.get("content-type"),
+      )}`,
+    );
   }
 
   get method() {

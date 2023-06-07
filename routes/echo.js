@@ -26,7 +26,7 @@ router.get("/echo", async (req) => {
     {},
     {
       method: req.method,
-      headers: cleanHeaders(req.headers),
+      headers: cleanHeaders(req.headers.toJSON()),
     },
   );
 });
