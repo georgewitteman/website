@@ -1,0 +1,4 @@
+#!/bin/sh
+
+node tasks.js lint
+node tasks.js test
