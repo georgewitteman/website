@@ -29,13 +29,9 @@ router.get("/database/table", async () => {
     {},
     documentLayout({
       title: "Tables",
-      body: html`
-      <header>
-        <nav><a href="/">&lsaquo; Home</a><br /></nav>
-      </header>
-      <main>
+      main: html`
         <h1>Tables</h1>
-        <table>
+        <table class="table">
           <thead>
             <tr>
             <th scope="col">schemaname</th>
@@ -88,7 +84,6 @@ router.get("/database/table", async () => {
             )}
           </tbody>
         </table>
-      </main>
     `,
     }),
   );
@@ -102,14 +97,7 @@ router.get("/database/table/:name", async (_, params) => {
       {},
       documentLayout({
         title: "No table name",
-        body: html`
-          <header>
-            <nav><a href="/">&lsaquo; Home</a><br /></nav>
-          </header>
-          <main>
-            <h1>Invalid table name: ${tableName}</h1>
-          </main>
-        `,
+        main: html` <h1>Invalid table name: ${tableName}</h1> `,
       }),
     );
   }
@@ -130,14 +118,10 @@ router.get("/database/table/:name", async (_, params) => {
     {},
     documentLayout({
       title: "Tables",
-      body: html`
-      <header>
-        <nav><a href="/">&lsaquo; Home</a><br /></nav>
-      </header>
-      <main>
+      main: html`
         <h1>Table: ${tableName}</h1>
         <a href="/database/table">&lsaquo; List tables</a>
-        <table>
+        <table class="table">
           <thead>
             <tr>
             <th scope="col">table_name</th>
@@ -164,7 +148,6 @@ router.get("/database/table/:name", async (_, params) => {
             )}
           </tbody>
         </table>
-      </main>
     `,
     }),
   );

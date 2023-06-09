@@ -2,10 +2,11 @@ import { html } from "./html.js";
 
 /**
  *
- * @param {{ title?: string, head?: import("./html.js").SafeHTML, body: import("./html.js").SafeHTML}} params
+ * @param {{ title?: string, head?: import("./html.js").SafeHTML, main: import("./html.js").SafeHTML, noHeader?: boolean }} params
  */
 export function documentLayout(params) {
-  return html`<!DOCTYPE html>
+  return html`
+    <!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="utf-8" />
@@ -17,7 +18,17 @@ export function documentLayout(params) {
         ${params.head}
       </head>
       <body>
-        ${params.body}
+        ${params.noHeader ? null : header()}
+        <main class="mw-60ch mx-auto">${params.main}</main>
       </body>
-    </html>`;
+    </html>
+  `;
+}
+
+export function header() {
+  return html`
+    <header class="mw-60ch mx-auto">
+      <nav><a href="/">&lsaquo; Home</a></nav>
+    </header>
+  `;
 }

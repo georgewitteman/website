@@ -14,13 +14,9 @@ router.get("/migrations", async () => {
     {},
     documentLayout({
       title: "Migrations",
-      body: html`
-      <header>
-        <nav><a href="/">&lsaquo; Home</a><br /></nav>
-      </header>
-      <main>
+      main: html`
         <h1>Migrations</h1>
-        <table>
+        <table class="table">
           <thead>
             <tr>
               <th scope="col">Name</th>
@@ -39,7 +35,6 @@ router.get("/migrations", async () => {
             )}
           </tbody>
         </table>
-      </main>
     `,
     }),
   );
@@ -54,14 +49,7 @@ function migrationNotFound(name) {
     {},
     documentLayout({
       title: name ?? "<missing>",
-      body: html`
-        <header>
-          <nav><a href="/">&lsaquo; Home</a><br /></nav>
-        </header>
-        <main>
-          <h1>Migration not found: ${name}</h1>
-        </main>
-      `,
+      main: html` <h1>Migration not found: ${name}</h1> `,
     }),
   );
 }
@@ -84,35 +72,30 @@ router.get("/migration/:name", async (req, params) => {
     {},
     documentLayout({
       title: "Migrations",
-      body: html`
-        <header>
-          <nav><a href="/">&lsaquo; Home</a><br /></nav>
-        </header>
-        <main>
-          <h1>Migration: ${migration.name}</h1>
-          <a href="/migrations">&lsaquo; List migrations</a>
-          <dl>
-            <dt>Name</dt>
-            <dd>${migration.name}</dd>
+      main: html`
+        <h1>Migration: ${migration.name}</h1>
+        <a href="/migrations">&lsaquo; List migrations</a>
+        <dl>
+          <dt>Name</dt>
+          <dd>${migration.name}</dd>
 
-            <dt>Completed on</dt>
-            <dd>
-              ${migration.completedOn
-                ? migration.completedOn.toLocaleString()
-                : html`<em>Not completed</em>`}
-            </dd>
+          <dt>Completed on</dt>
+          <dd>
+            ${migration.completedOn
+              ? migration.completedOn.toLocaleString()
+              : html`<em>Not completed</em>`}
+          </dd>
 
-            <dt>Content</dt>
-            <dd>
-              <pre><code>${migration.content}</code></pre>
-            </dd>
-          </dl>
-          <form method="POST">
-            <button type="submit" ${migration.completedOn ? "disabled" : null}>
-              Run migration
-            </button>
-          </form>
-        </main>
+          <dt>Content</dt>
+          <dd>
+            <pre><code>${migration.content}</code></pre>
+          </dd>
+        </dl>
+        <form method="POST">
+          <button type="submit" ${migration.completedOn ? "disabled" : null}>
+            Run migration
+          </button>
+        </form>
       `,
     }),
   );

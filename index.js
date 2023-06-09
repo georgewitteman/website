@@ -14,6 +14,8 @@ import { router as echoRouter } from "./routes/echo.js";
 import { router as oldRouter } from "./routes/old.js";
 import { router as databaseRouter } from "./routes/database.js";
 import { router as migrationsRouter } from "./routes/migrations.js";
+import { router as stuffRouter } from "./routes/stuff.js";
+import { router as cssRouter } from "./routes/css.js";
 import { testRoutes } from "./Router.js";
 import { logger } from "./logger.js";
 import { documentLayout } from "./layout.js";
@@ -101,24 +103,27 @@ async function now(req, next) {
     { "Content-Type": "text/html; charset=utf-8" },
     documentLayout({
       title: result[0].now.toLocaleString(),
-      body: html`<header>
-          <nav><a href="/">&lsaquo; Home</a><br /></nav>
-        </header>
-        <main>
-          <ul>
-            ${Object.entries(result[0]).map(
-              ([key, value]) =>
-                html`<li>
+      main: html`
+        <ul>
+          ${Object.entries(result[0]).map(
+            ([key, value]) =>
+              html`
+                <li>
                   <strong><code>${key}</code>:</strong>
                   <code
                     >${value instanceof Date ? value.toString() : value}</code
                   >
-                </li>`,
-            )}
-          </ul>
-          <pre><code>${JSON.stringify(result, null, 2)}</code></pre>
-          <code>${'<script>alert("unsafe html test")</script>'}</code>
-        </main>`,
+                </li>
+              `,
+          )}
+        </ul>
+        <pre class="overflow-x-auto"><code>${JSON.stringify(
+          result,
+          null,
+          2,
+        )}</code></pre>
+        <code>${'<script>alert("unsafe html test")</script>'}</code>
+      `,
     }),
   );
 }
@@ -188,6 +193,8 @@ app.use(oldRouter.middleware());
 app.use(echoRouter.middleware());
 app.use(migrationsRouter.middleware());
 app.use(databaseRouter.middleware());
+app.use(stuffRouter.middleware());
+app.use(cssRouter.middleware());
 app.use(notFound);
 
 logger.info("Environment", { env: process.env });
