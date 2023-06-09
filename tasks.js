@@ -87,7 +87,11 @@ async function getECRAuthorizationToken() {
 }
 
 task("lint", [], async () => {
-  execSync("npx prettier --write .");
+  if (process.env.CI) {
+    execSync("npx prettier --check .");
+  } else {
+    execSync("npx prettier --write .");
+  }
   execSync("npx eslint .");
   execSync("npx tsc");
 });

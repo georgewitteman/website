@@ -5,7 +5,10 @@ FROM node:20-alpine
 
 USER node
 
-WORKDIR /usr/src/app
+# https://github.com/nodejs/docker-node/issues/740
+RUN mkdir -p /home/node/app
+
+WORKDIR /home/node/app
 
 COPY package*.json ./
 
