@@ -2,3 +2,5 @@
 
 node tasks.js lint
 node tasks.js test
+
+git add --all

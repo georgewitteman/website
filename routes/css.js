@@ -22,21 +22,41 @@ router.get("/css", async () => {
         <body>
           Inspiration:
           <ul>
-            <li><a href="https://github.com/tachyons-css/tachyons/tree/main">Tachyons</a></li>
+            <li>
+              <a href="https://github.com/tachyons-css/tachyons/tree/main"
+                >Tachyons</a
+              >
+            </li>
             <li><a href="https://github.com/jenil/chota">Chota</a></li>
             <li><a href="https://khang-nd.github.io/7.css">7.css</a></li>
-            <li><a href="https://github.com/troxler/awesome-css-frameworks">troxler/awesome-css-frameworks</a></li>
+            <li>
+              <a href="https://github.com/troxler/awesome-css-frameworks"
+                >troxler/awesome-css-frameworks</a
+              >
+            </li>
           </ul>
           Hi! This is some regular, unstyled text.
           <p class="monospace">This is some monospace text</p>
           <table class="table">
             <thead>
-              <tr><th>Column 1</th><th>Column 2</th></tr>
+              <tr>
+                <th>Column 1</th>
+                <th>Column 2</th>
+              </tr>
             </thead>
             <tbody>
-              <tr><td>Row 1 Col 1</td><td>Row 1 Col 2</td></tr>
-              <tr><td>Row 2 Col 1</td><td>Row 2 Col 2</td></tr>
-              <tr><td>Row 3 Col 1</td><td>Row 3 Col 2</td></tr>
+              <tr>
+                <td>Row 1 Col 1</td>
+                <td>Row 1 Col 2</td>
+              </tr>
+              <tr>
+                <td>Row 2 Col 1</td>
+                <td>Row 2 Col 2</td>
+              </tr>
+              <tr>
+                <td>Row 3 Col 1</td>
+                <td>Row 3 Col 2</td>
+              </tr>
             </tbody>
           </table>
         </body>
