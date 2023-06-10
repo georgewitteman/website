@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import { test } from "node:test";
-import { render, h } from "./html2.js";
+import { render, h, html } from "./html2.js";
 
 test("handles basic html", () => {
-  assert.deepStrictEqual(render(h("p", null, "Hi there!")), "<p>Hi there!</p>");
+  assert.deepStrictEqual(render(h("p", null, ["Hi there!"])), "<p>Hi there!</p>");
   assert.deepStrictEqual(
-    render(h("div", null, h("p", null, "Hi there!"))),
+    render(h("div", null, [h("p", null, ["Hi there!"])])),
     "<div><p>Hi there!</p></div>",
   );
   assert.deepStrictEqual(
-    render(h("div", { className: "foo" }, h("p", null, "Hi there!"))),
+    render(h("div", { className: "foo" }, [h("p", null, ["Hi there!"])])),
     `<div class="foo"><p>Hi there!</p></div>`,
   );
 });
@@ -63,7 +63,7 @@ test("components", () => {
    * @param {{ name: string; }} props
    */
   function Component(props) {
-    return h("p", null, `Hi ${props.name}!`);
+    return h("p", null, [`Hi ${props.name}!`]);
   }
 
   function ComponentNoProps() {
@@ -77,8 +77,10 @@ test("components", () => {
     return h(
       "div",
       { className: props.className, "data-testid": "test-app" },
-      h(Component, { name: "there" }),
-      h(ComponentNoProps, null),
+      [
+        h(Component, { name: "there" }),
+        h(ComponentNoProps, null),
+      ]
     );
   }
 
@@ -93,7 +95,7 @@ test("components with children", () => {
    * @param {{ children: import("./html2.js").VNode[] }} props
    */
   function Component(props) {
-    return h("div", null, ...props.children);
+    return h("div", null, props.children);
   }
 
   /**
@@ -103,12 +105,14 @@ test("components with children", () => {
     return h(
       "div",
       { className: props.className, "data-testid": "test-app" },
-      h(
+      [h(
         Component,
         null,
+       [
         h("p", null, "p1"),
-        h("p", { className: "monospace" }, "p2a", "p2b"),
-      ),
+        h("p", { className: "monospace" }, ["p2a", "p2b"]),
+       ]
+      ),]
     );
   }
 
@@ -117,3 +121,7 @@ test("components with children", () => {
     `<div class="test-class" data-testid="test-app"><div><p>p1</p><p class="monospace">p2ap2b</p></div></div>`,
   );
 });
+
+test("html", () => {
+  assert.deepStrictEqual(html`<p>Hi there!</p>`, "asdf");
+})
