@@ -1,3 +1,11 @@
+/*
+Inspiration:
+- https://github.com/jorgebucaran/hyperapp
+- https://github.com/developit/htm
+- https://preactjs.com/
+- https://github.com/lukejacksonn/ijk
+*/
+
 class NormalElement {
   /**
    * @param {string} tag

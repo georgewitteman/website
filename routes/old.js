@@ -15,7 +15,7 @@ export const router = new Router();
 /**
  * @param {{href: string; title: string}[]} props
  */
-function ListOfLinks(props) {
+function Links(props) {
   return props.map(({ href, title }) => a({ href }, [title]));
 }
 
@@ -26,7 +26,7 @@ router.get("/", async () => {
     DefaultLayout({ noHeader: true }, [
       UnorderedList(
         {},
-        ListOfLinks([
+        Links([
           {
             href: "/microwave_time_calculator.html",
             title: "Microwave Time Calculator",
