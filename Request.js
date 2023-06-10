@@ -119,7 +119,7 @@ export class MyRequest {
         stringOrUndefinedOrNullOrThrow(this.headers.get("x-forwarded-proto")) ??
         getProtocolFromRequest(req)
       }://${
-        stringOrUndefinedOrNullOrThrow(this.headers.get("x-forwarded-proto")) ??
+        stringOrUndefinedOrNullOrThrow(this.headers.get("x-forwarded-host")) ??
         hostHeader
       }`,
     );
