@@ -161,11 +161,11 @@ export class MyResponse {
    * @param {Omit<Headers, "Content-Type">} headers
    * @param {import("./html4.js").Node} body
    */
-  static html4(statusCode, headers, body) {
+  static async html4(statusCode, headers, body) {
     return new MyResponse(
       statusCode,
       { ...headers, "Content-Type": "text/html; charset=utf-8" },
-      render(body),
+      await render(body),
     );
   }
 

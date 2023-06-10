@@ -13,6 +13,7 @@ import {
   li,
   safeText,
 } from "./html4.js";
+import { randomIntFromInterval } from "./random.js";
 
 /**
  * @param {{ title: string; }} props
@@ -58,4 +59,13 @@ export function UnorderedList(props, children) {
     props,
     children.map((child) => li([child])),
   );
+}
+
+export async function TestSlowComponent() {
+  const timeout = randomIntFromInterval(0, 1000);
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(`This text loaded after ${timeout}ms`);
+    }, timeout);
+  });
 }

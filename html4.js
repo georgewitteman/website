@@ -29,7 +29,10 @@ class SafeTextElement {
   }
 }
 
-/** @typedef {string | NormalElement | SelfClosingElement | SafeTextElement} Node */
+/**
+ * @typedef {string | NormalElement | SelfClosingElement | SafeTextElement} BaseNode
+ * @typedef {BaseNode | Promise<BaseNode>} Node
+ */
 
 /**
  * @param {string} text
@@ -168,9 +171,13 @@ function getStringProps(props) {
 
 /**
  * @param {Node} node
- * @returns {string}
+ * @returns {Promise<string>}
  */
-export function render(node) {
+export async function render(node) {
+  if (node instanceof Promise) {
+    return render(await node);
+  }
+
   if (typeof node === "string") {
     return escapeHtml(node);
   }
@@ -182,9 +189,10 @@ export function render(node) {
   const attrs = getStringProps(node.attrs);
 
   if (node instanceof NormalElement) {
+    const renderedChildren = await Promise.all(node.children.map(render));
     return `${node.tag === "html" ? "<!DOCTYPE html>" : ""}<${node.tag}${
       attrs ? ` ${attrs}` : ""
-    }>${node.children.map(render).join("")}</${node.tag}>`;
+    }>${renderedChildren.join("")}</${node.tag}>`;
   }
 
   if (node instanceof SelfClosingElement) {

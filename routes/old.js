@@ -3,7 +3,11 @@ import { MyResponse } from "../Response.js";
 import { Router } from "../Router.js";
 import { html } from "../html.js";
 import { documentLayout } from "../layout.js";
-import { DefaultLayout, UnorderedList } from "../components.js";
+import {
+  DefaultLayout,
+  TestSlowComponent,
+  UnorderedList,
+} from "../components.js";
 import { a } from "../html4.js";
 
 export const router = new Router();
@@ -53,6 +57,7 @@ router.get("/", async () => {
           { href: "http://github.com/georgewitteman", title: "GitHub" },
         ]),
       ),
+      TestSlowComponent(),
     ]),
   );
 });
