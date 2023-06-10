@@ -8,6 +8,7 @@
 
 import { ContentSecurityPolicy } from "./content-security-policy.js";
 import { SafeHTML } from "./html.js";
+import { render } from "./html4.js";
 
 const STATUS_MESSAGE = /** @type {const} */ ({
   100: "Continue", // RFC 7231 6.2.1
@@ -152,6 +153,19 @@ export class MyResponse {
       statusCode,
       { ...headers, "Content-Type": "text/html; charset=utf-8" },
       body,
+    );
+  }
+
+  /**
+   * @param {StatusCode} statusCode
+   * @param {Omit<Headers, "Content-Type">} headers
+   * @param {import("./html4.js").Node} body
+   */
+  static html4(statusCode, headers, body) {
+    return new MyResponse(
+      statusCode,
+      { ...headers, "Content-Type": "text/html; charset=utf-8" },
+      render(body),
     );
   }
 
