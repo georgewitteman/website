@@ -8,7 +8,7 @@ import {
   TestSlowComponent,
   UnorderedList,
 } from "../components.js";
-import { a } from "../html4.js";
+import { a, e, script } from "../html4.js";
 
 export const router = new Router();
 
@@ -49,6 +49,7 @@ router.get("/", async () => {
           { href: "/migrations", title: "PostgreSQL Migrations" },
           { href: "/database/table", title: "PostgreSQL Tables" },
           { href: "/css", title: "CSS" },
+          { href: "/duration-picker-test", title: "Duration Picker Test" },
           { href: "mailto:george@witteman.me", title: "Email me" },
           {
             href: "https://www.linkedin.com/in/georgewitteman",
@@ -64,27 +65,27 @@ router.get("/", async () => {
 
 router.get("/duration-picker-test", async () => {
   const nonce = randomBytes(16).toString("base64");
-  const res = MyResponse.html(
+  const res = await MyResponse.html4(
     200,
     {},
-    documentLayout({
-      title: "Duration Picker Test",
-      head: html`<script
-        nonce="${nonce}"
-        type="module"
-        src="/js/duration-picker.js"
-      ></script>`,
-      main: html`
-        <duration-picker data-seconds="115"></duration-picker>
-        <duration-picker data-seconds="0"></duration-picker>
-        <duration-picker data-seconds="-115"></duration-picker>
-        <duration-picker data-min="115"></duration-picker>
-        <duration-picker data-min="0"></duration-picker>
-        <duration-picker data-min="-59"></duration-picker>
-        <duration-picker data-min="-60"></duration-picker>
-        <duration-picker data-min="-115"></duration-picker>
-      `,
-    }),
+    DefaultLayout(
+      {
+        title: "Duration Picker Test",
+        head: [
+          script({ nonce, type: "module", src: "/js/duration-picker.js" }),
+        ],
+      },
+      [
+        e("duration-picker", { "data-seconds": "115" }, []),
+        e("duration-picker", { "data-seconds": "0" }, []),
+        e("duration-picker", { "data-seconds": "-115" }, []),
+        e("duration-picker", { "data-min": "115" }, []),
+        e("duration-picker", { "data-min": "0" }, []),
+        e("duration-picker", { "data-min": "-59" }, []),
+        e("duration-picker", { "data-min": "-60" }, []),
+        e("duration-picker", { "data-min": "-115" }, []),
+      ],
+    ),
   );
   res.contentSecurityPolicy.nonce = nonce;
   return res;

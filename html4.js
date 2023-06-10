@@ -43,6 +43,15 @@ class SafeTextElement {
  */
 
 /**
+ * @param {string} tag
+ * @param {Record<string, string>} attrs
+ * @param {Node[]} children
+ */
+export function e(tag, attrs, children) {
+  return new NormalElement(tag, attrs, children);
+}
+
+/**
  * @param {string} text
  */
 export function safeText(text) {
@@ -93,6 +102,15 @@ export function title(attrs, children) {
  */
 export function body(attrs, children) {
   return new NormalElement("body", attrs, children);
+}
+
+/**
+ *
+ * @param {{ nonce: string, type: string, src: string }} attrs
+ * @returns
+ */
+export function script(attrs) {
+  return new NormalElement("script", attrs, []);
 }
 
 /**

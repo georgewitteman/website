@@ -16,9 +16,14 @@ import {
 import { randomIntFromInterval } from "./random.js";
 
 /**
- * @param {{ title: string; }} props
+ * @typedef {import("./html4.js").Node} Node
  */
-export function DefaultHead(props) {
+
+/**
+ * @param {{ title: string; }} props
+ * @param {Node[]} [children]
+ */
+export function DefaultHead(props, children) {
   return head({}, [
     meta({ charset: "utf-8" }),
     title({}, [props.title]),
@@ -26,6 +31,7 @@ export function DefaultHead(props) {
     meta({ name: "author", content: "George Witteman" }),
     link({ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }),
     link({ rel: "stylesheet", href: "/styles.css" }),
+    ...(children ?? []),
   ]);
 }
 
@@ -36,12 +42,14 @@ export function Header() {
 }
 
 /**
- * @param {{ title?: string, noHeader?: boolean }} props
- * @param {import("./html4.js").Node[]} children
+ * @param {{ title?: string, noHeader?: boolean, head?: Node[] }} props
+ * @param {Node[]} children
  */
 export function DefaultLayout(props, children) {
   return html({ lang: "en" }, [
-    DefaultHead({ title: props.title ?? "George Witteman" }),
+    DefaultHead({ title: props.title ?? "George Witteman" }, [
+      ...(props.head ?? []),
+    ]),
     body({}, [
       ...(props.noHeader ? [] : [Header()]),
       main({ className: "mw-60ch mx-auto" }, children),
@@ -52,7 +60,7 @@ export function DefaultLayout(props, children) {
 /**
  *
  * @param {Record<string, never>} props
- * @param {import("./html4.js").Node[]} children
+ * @param {Node[]} children
  */
 export function UnorderedList(props, children) {
   return ul(
