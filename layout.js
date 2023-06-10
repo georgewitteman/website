@@ -19,7 +19,7 @@ export function documentLayout(params) {
       </head>
       <body>
         ${params.noHeader ? null : header()}
-        <main class="mw-60ch mx-auto">${params.main}</main>
+        <main class="mw-page mx-auto">${params.main}</main>
       </body>
     </html>
   `;
@@ -27,7 +27,7 @@ export function documentLayout(params) {
 
 export function header() {
   return html`
-    <header class="mw-60ch mx-auto">
+    <header class="mw-page mx-auto">
       <nav><a href="/">&lsaquo; Home</a></nav>
     </header>
   `;

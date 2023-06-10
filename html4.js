@@ -114,9 +114,9 @@ export function script(attrs) {
 }
 
 /**
- * @typedef {{ href: string }} A
- * @typedef {Record<string, never>} LI
- * @typedef {Record<string, never>} UL
+ * @typedef {{ className?: string; href: string }} A
+ * @typedef {{ className?: string }} LI
+ * @typedef {{ className?: string }} UL
  * @typedef {{ className?: string }} P
  * @typedef {{ className?: string }} Table
  * @typedef {{ className?: string }} THead
@@ -127,7 +127,9 @@ export function script(attrs) {
  * @typedef {{ className?: string }} Header
  * @typedef {{ className?: string }} Nav
  * @typedef {{ className?: string }} Main
- * @typedef {{ a: A; li: LI, ul: UL, p: P, table: Table, thead: THead, tbody: TBody, tr: TR, th: TH, td: TD, header: Header, nav: Nav, main: Main }} TagMap
+ * @typedef {{ className?: string }} Div
+ * @typedef {{ className?: string }} Heading
+ * @typedef {{ a: A; li: LI, ul: UL, p: P, table: Table, thead: THead, tbody: TBody, tr: TR, th: TH, td: TD, header: Header, nav: Nav, main: Main, div: Div, h1: Heading, h2: Heading, h3: Heading, h4: Heading, h5: Heading, h6: Heading }} TagMap
  */
 
 /**
@@ -155,6 +157,13 @@ export const td = normalTag("td");
 export const header = normalTag("header");
 export const nav = normalTag("nav");
 export const main = normalTag("main");
+export const div = normalTag("div");
+export const h1 = normalTag("h1");
+export const h2 = normalTag("h2");
+export const h3 = normalTag("h3");
+export const h4 = normalTag("h4");
+export const h5 = normalTag("h5");
+export const h6 = normalTag("h6");
 
 /**
  * @param {string} key

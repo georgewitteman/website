@@ -36,7 +36,7 @@ export function DefaultHead(props, children) {
 }
 
 export function Header() {
-  return header({ className: "mw-60ch mx-auto" }, [
+  return header({ className: "mw-page mx-auto" }, [
     nav([a({ href: "/" }, [safeText("&lsaquo; Home")])]),
   ]);
 }
@@ -52,7 +52,7 @@ export function DefaultLayout(props, children) {
     ]),
     body({}, [
       ...(props.noHeader ? [] : [Header()]),
-      main({ className: "mw-60ch mx-auto" }, children),
+      main({ className: "mw-page mx-auto" }, children),
     ]),
   ]);
 }

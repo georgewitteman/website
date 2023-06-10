@@ -93,8 +93,8 @@ body {
   font-family: monospace;
 }
 
-.mw-60ch {
-  max-width: 60ch;
+.mw-page {
+  max-width: 50rem;
 }
 
 .mx-auto {
