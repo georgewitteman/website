@@ -5,6 +5,7 @@ import { html } from "../html.js";
 import { documentLayout } from "../layout.js";
 import { DefaultLayout, UnorderedList } from "../components.js";
 import { a, e, script } from "../html4.js";
+import { getStaticPathWithHash } from "../static.js";
 
 export const router = new Router();
 
@@ -68,7 +69,11 @@ router.get("/duration-picker-test", async () => {
       {
         title: "Duration Picker Test",
         head: [
-          script({ nonce, type: "module", src: "/js/duration-picker.js" }),
+          script({
+            nonce,
+            type: "module",
+            src: await getStaticPathWithHash("js/duration-picker.js"),
+          }),
         ],
       },
       [
