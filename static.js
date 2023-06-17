@@ -16,8 +16,8 @@ const ONE_DAY_IN_SECONDS = "86400";
 /**
  * @param {Buffer} buffer
  */
-function md5Buffer(buffer) {
-  return createHash("md5").update(buffer).digest("hex");
+function hashBuffer(buffer) {
+  return createHash("sha512").update(buffer).digest("hex");
 }
 
 /**
@@ -53,7 +53,7 @@ export async function getStaticPathWithHash(staticFilename) {
   const buffer = await safeReadFile(filePath);
   assert(buffer);
 
-  const hash = md5Buffer(buffer);
+  const hash = hashBuffer(buffer);
   const query = querystring.stringify({ v: hash });
 
   return `/${staticFilename}?${query}`;
@@ -112,7 +112,7 @@ export async function staticHandler(req, next) {
   if (!isSupportedExtension(extension)) {
     return next();
   }
-  const etag = md5Buffer(fileInfo.contentsBuffer);
+  const etag = hashBuffer(fileInfo.contentsBuffer);
   const versionMatchesEtag = req.originalUrl.searchParams.get("v") === etag;
 
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#immutable
