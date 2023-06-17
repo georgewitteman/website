@@ -16,8 +16,8 @@ const ONE_DAY_IN_SECONDS = "86400";
 /**
  * @param {Buffer} buffer
  */
-function sha512Buffer(buffer) {
-  return createHash("sha512").update(buffer).digest("hex");
+function md5Buffer(buffer) {
+  return createHash("md5").update(buffer).digest("hex");
 }
 
 /**
@@ -27,7 +27,7 @@ export async function getStaticPathWithHash(staticFilename) {
   const fileInfo = await getStaticFile(staticFilename);
   assert(fileInfo);
 
-  const query = querystring.stringify({ v: fileInfo.sha512 });
+  const query = querystring.stringify({ v: fileInfo.md5 });
   return `/${staticFilename}?${query}`;
 }
 
@@ -47,7 +47,7 @@ async function getStaticFile(pathname) {
     return {
       contentsBuffer,
       stat: await fs.promises.stat(normalizedFullFilePath),
-      sha512: sha512Buffer(contentsBuffer),
+      md5: md5Buffer(contentsBuffer),
       filePath: normalizedFullFilePath,
     };
   } catch (err) {
@@ -87,7 +87,7 @@ export async function staticHandler(req, next) {
   if (!isSupportedExtension(extension)) {
     return next();
   }
-  const etag = sha512Buffer(fileInfo.contentsBuffer);
+  const etag = fileInfo.md5;
   const versionMatchesEtag = req.originalUrl.searchParams.get("v") === etag;
 
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#immutable
