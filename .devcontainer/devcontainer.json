@@ -4,7 +4,8 @@
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker": {
-      "dockerDashComposeVersion": "v2"
+      "dockerDashComposeVersion": "v2",
+      "moby": false
     }
   },
   "updateContentCommand": {
