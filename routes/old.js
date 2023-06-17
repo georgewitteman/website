@@ -58,7 +58,7 @@ router.get("/", async () => {
           { href: "http://github.com/georgewitteman", title: "GitHub" },
         ]),
       ),
-      TestSlowComponent(),
+      // TestSlowComponent(),
     ]),
   );
 });
