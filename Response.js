@@ -1,5 +1,5 @@
 /**
- * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Server?: "hi", Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: "no-cache"}} Headers
+ * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Server?: "hi", Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: string}} Headers
  */
 
 /**

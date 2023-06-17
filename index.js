@@ -1,10 +1,4 @@
-import path from "node:path";
-import fs from "node:fs";
 import { MyResponse } from "./Response.js";
-import {
-  getContentTypeFromExtension,
-  isSupportedExtension,
-} from "./content-type.js";
 import { App } from "./App.js";
 import { getPool, sql, typeSafeQuery } from "./db.js";
 import { z } from "./zod.js";
@@ -20,86 +14,9 @@ import { testRoutes } from "./Router.js";
 import { logger } from "./logger.js";
 import { documentLayout } from "./layout.js";
 import { requestIdMiddleware } from "./request-id-middleware.js";
-import { createHash } from "node:crypto";
+import { staticHandler } from "./static.js";
 
 const PORT = 8080;
-
-const STATIC_PATH = path.join(process.cwd(), "./static");
-
-/**
- * https://developer.mozilla.org/en-US/docs/Learn/Server-side/Node_server_without_framework
- * @param {string} pathname
- */
-async function serveStaticFile(pathname) {
-  const normalizedFullFilePath = path.join(STATIC_PATH, pathname);
-  if (!normalizedFullFilePath.startsWith(STATIC_PATH)) {
-    // Security: Don't allow path traversal. I don't think this is actually
-    // necessary based on my testing.
-    return undefined;
-  }
-  try {
-    return {
-      contentsBuffer: await fs.promises.readFile(normalizedFullFilePath),
-      filePath: normalizedFullFilePath,
-    };
-  } catch (err) {
-    // Common system errors
-    if (
-      typeof err === "object" &&
-      err &&
-      "code" in err &&
-      typeof err.code === "string" &&
-      (err.code === "ENOENT" || err.code === "EISDIR")
-    ) {
-      return undefined;
-    }
-    throw err;
-  }
-}
-
-/**
- * @param {import("./Request.js").MyRequest} req
- * @param {() => Promise<MyResponse>} next
- * @returns {Promise<MyResponse>}
- */
-async function staticHandler(req, next) {
-  if (req.method !== "GET") {
-    return next();
-  }
-  const pathname = req.pathname === "/" ? "/index.html" : req.pathname;
-
-  const fileInfo = await serveStaticFile(pathname);
-  if (!fileInfo) {
-    return next();
-  }
-
-  // https://github.com/jshttp/mime-types https://github.com/broofa/mime
-  // https://github.com/jshttp/mime-db
-  const extension = path.extname(fileInfo.filePath).substring(1).toLowerCase();
-  if (!isSupportedExtension(extension)) {
-    return next();
-  }
-  const etag = createHash("md5").update(fileInfo.contentsBuffer).digest("hex");
-
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match
-  if (req.headers.get("If-None-Match") === etag) {
-    return new MyResponse(304 /* Not Modified */, {
-      "Cache-Control": "no-cache",
-      ETag: etag,
-      "Content-Type": getContentTypeFromExtension(extension),
-    });
-  }
-
-  return new MyResponse(
-    200,
-    {
-      "Cache-Control": "no-cache",
-      ETag: etag,
-      "Content-Type": getContentTypeFromExtension(extension),
-    },
-    fileInfo.contentsBuffer,
-  );
-}
 
 /**
  * @param {import("./Request.js").MyRequest} req

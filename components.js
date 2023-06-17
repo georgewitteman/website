@@ -14,6 +14,7 @@ import {
   safeText,
 } from "./html4.js";
 import { randomIntFromInterval } from "./random.js";
+import { getStaticPathWithHash } from "./static.js";
 
 /**
  * @typedef {import("./html4.js").Node} Node
@@ -23,14 +24,21 @@ import { randomIntFromInterval } from "./random.js";
  * @param {{ title: string; }} props
  * @param {Node[]} [children]
  */
-export function DefaultHead(props, children) {
+export async function DefaultHead(props, children) {
   return head({}, [
     meta({ charset: "utf-8" }),
     title({}, [props.title]),
     meta({ name: "viewport", content: "width=device-width,initial-scale=1" }),
     meta({ name: "author", content: "George Witteman" }),
-    link({ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }),
-    link({ rel: "stylesheet", href: "/styles.css" }),
+    link({
+      rel: "icon",
+      type: "image/x-icon",
+      href: await getStaticPathWithHash("favicon.ico"),
+    }),
+    link({
+      rel: "stylesheet",
+      href: await getStaticPathWithHash("styles.css"),
+    }),
     ...(children ?? []),
   ]);
 }
