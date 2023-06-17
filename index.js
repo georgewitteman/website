@@ -20,6 +20,7 @@ import { testRoutes } from "./Router.js";
 import { logger } from "./logger.js";
 import { documentLayout } from "./layout.js";
 import { requestIdMiddleware } from "./request-id-middleware.js";
+import { createHash } from "node:crypto";
 
 const PORT = 8080;
 
@@ -78,9 +79,24 @@ async function staticHandler(req, next) {
   if (!isSupportedExtension(extension)) {
     return next();
   }
+  const etag = createHash("md5").update(fileInfo.contentsBuffer).digest("hex");
+
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match
+  if (req.headers.get("If-None-Match") === etag) {
+    return new MyResponse(304 /* Not Modified */, {
+      "Cache-Control": "no-cache",
+      ETag: etag,
+      "Content-Type": getContentTypeFromExtension(extension),
+    });
+  }
+
   return new MyResponse(
     200,
-    { "Content-Type": getContentTypeFromExtension(extension) },
+    {
+      "Cache-Control": "no-cache",
+      ETag: etag,
+      "Content-Type": getContentTypeFromExtension(extension),
+    },
     fileInfo.contentsBuffer,
   );
 }

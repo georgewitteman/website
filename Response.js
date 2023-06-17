@@ -1,5 +1,5 @@
 /**
- * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Server?: "hi", Location?: string, 'Content-Security-Policy'?: string}} Headers
+ * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Server?: "hi", Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: "no-cache"}} Headers
  */
 
 /**
@@ -96,7 +96,7 @@ export class MyResponse {
   /**
    * @param {StatusCode} statusCode
    * @param {Headers} headers
-   * @param {string | Buffer | SafeHTML} body
+   * @param {string | Buffer | SafeHTML | undefined} [body]
    */
   constructor(statusCode, headers, body) {
     /**
@@ -110,7 +110,7 @@ export class MyResponse {
     this.#headers = headers;
 
     /**
-     * @type {string | Buffer}
+     * @type {string | Buffer | undefined}
      */
     this.body = body instanceof SafeHTML ? body.value : body;
 
@@ -123,7 +123,8 @@ export class MyResponse {
   get headers() {
     return {
       ...this.#headers,
-      "Content-Length": Buffer.byteLength(this.body, "utf-8"),
+      "Content-Length":
+        this.body === undefined ? 0 : Buffer.byteLength(this.body, "utf-8"),
       ...(this.#headers["Content-Type"] === "text/html; charset=utf-8"
         ? { "Content-Security-Policy": this.contentSecurityPolicy.toString() }
         : {}),
