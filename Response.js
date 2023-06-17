@@ -1,9 +1,5 @@
 /**
- * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Server?: "hi", Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: string}} Headers
- */
-
-/**
- * @typedef {Headers & {"Content-Security-Policy"?: string, "Content-Length": number}} FinalHeaders
+ * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: string, "Last-Modified"?: Date}} Headers
  */
 
 import { ContentSecurityPolicy } from "./content-security-policy.js";
@@ -117,14 +113,32 @@ export class MyResponse {
     this.contentSecurityPolicy = new ContentSecurityPolicy();
   }
 
-  /**
-   * @returns {FinalHeaders}
-   */
   get headers() {
     return {
-      ...this.#headers,
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length
       "Content-Length":
         this.body === undefined ? 0 : Buffer.byteLength(this.body, "utf-8"),
+
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+      ...(this.#headers["Cache-Control"]
+        ? { "Cache-Control": this.#headers["Cache-Control"] }
+        : {}),
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location
+      ...(this.#headers["Location"]
+        ? { Location: this.#headers["Location"] }
+        : {}),
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+      ...(this.#headers["ETag"] ? { ETag: this.#headers["ETag"] } : {}),
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified
+      ...(this.#headers["Last-Modified"]
+        ? { "Last-Modified": this.#headers["Last-Modified"].toUTCString() }
+        : {}),
+
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
+      ...(this.#headers["Content-Type"]
+        ? { "Content-Type": this.#headers["Content-Type"] }
+        : {}),
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
       ...(this.#headers["Content-Type"] === "text/html; charset=utf-8"
         ? { "Content-Security-Policy": this.contentSecurityPolicy.toString() }
         : {}),

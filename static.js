@@ -16,46 +16,18 @@ const ONE_DAY_IN_SECONDS = "86400";
 /**
  * @param {Buffer} buffer
  */
-function hashBuffer(buffer) {
+function sha512Buffer(buffer) {
   return createHash("sha512").update(buffer).digest("hex");
-}
-
-/**
- * @param {string} path
- */
-async function safeReadFile(path) {
-  try {
-    return await fs.promises.readFile(path);
-  } catch (err) {
-    // Common system errors
-    if (
-      typeof err === "object" &&
-      err &&
-      "code" in err &&
-      typeof err.code === "string" &&
-      (err.code === "ENOENT" || err.code === "EISDIR")
-    ) {
-      return undefined;
-    }
-    throw err;
-  }
 }
 
 /**
  * @param {string} staticFilename
  */
 export async function getStaticPathWithHash(staticFilename) {
-  const filePath = path.join(STATIC_PATH, staticFilename);
-  // Security: Don't allow path traversal. I don't think this is actually
-  // necessary based on my testing.
-  assert(filePath.startsWith(STATIC_PATH));
+  const fileInfo = await getStaticFile(staticFilename);
+  assert(fileInfo);
 
-  const buffer = await safeReadFile(filePath);
-  assert(buffer);
-
-  const hash = hashBuffer(buffer);
-  const query = querystring.stringify({ v: hash });
-
+  const query = querystring.stringify({ v: fileInfo.sha512 });
   return `/${staticFilename}?${query}`;
 }
 
@@ -63,7 +35,7 @@ export async function getStaticPathWithHash(staticFilename) {
  * https://developer.mozilla.org/en-US/docs/Learn/Server-side/Node_server_without_framework
  * @param {string} pathname
  */
-async function serveStaticFile(pathname) {
+async function getStaticFile(pathname) {
   const normalizedFullFilePath = path.join(STATIC_PATH, pathname);
   if (!normalizedFullFilePath.startsWith(STATIC_PATH)) {
     // Security: Don't allow path traversal. I don't think this is actually
@@ -71,8 +43,11 @@ async function serveStaticFile(pathname) {
     return undefined;
   }
   try {
+    const contentsBuffer = await fs.promises.readFile(normalizedFullFilePath);
     return {
-      contentsBuffer: await fs.promises.readFile(normalizedFullFilePath),
+      contentsBuffer,
+      stat: await fs.promises.stat(normalizedFullFilePath),
+      sha512: sha512Buffer(contentsBuffer),
       filePath: normalizedFullFilePath,
     };
   } catch (err) {
@@ -101,7 +76,7 @@ export async function staticHandler(req, next) {
   }
   const pathname = req.pathname === "/" ? "/index.html" : req.pathname;
 
-  const fileInfo = await serveStaticFile(pathname);
+  const fileInfo = await getStaticFile(pathname);
   if (!fileInfo) {
     return next();
   }
@@ -112,7 +87,7 @@ export async function staticHandler(req, next) {
   if (!isSupportedExtension(extension)) {
     return next();
   }
-  const etag = hashBuffer(fileInfo.contentsBuffer);
+  const etag = sha512Buffer(fileInfo.contentsBuffer);
   const versionMatchesEtag = req.originalUrl.searchParams.get("v") === etag;
 
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#immutable
@@ -130,6 +105,7 @@ export async function staticHandler(req, next) {
   if (req.headers.get("If-None-Match") === etag) {
     return new MyResponse(304 /* Not Modified */, {
       "Cache-Control": cacheControl,
+      "Last-Modified": fileInfo.stat.mtime,
       ETag: etag,
       "Content-Type": getContentTypeFromExtension(extension),
     });
@@ -139,6 +115,7 @@ export async function staticHandler(req, next) {
     200,
     {
       "Cache-Control": cacheControl,
+      "Last-Modified": fileInfo.stat.mtime,
       ETag: etag,
       "Content-Type": getContentTypeFromExtension(extension),
     },

@@ -78,8 +78,8 @@ export class App {
         .then((res) => {
           nodeResponse.writeHead(res.statusCode, res.headers).end(res.body);
         })
-        .catch((e) => {
-          logger.error("Request error", nodeRequest.url, e);
+        .catch((/** @type {undefined} */ e) => {
+          logger.error(`Request error: ${nodeRequest.url ?? "<nullish>"}`, e);
           nodeResponse.writeHead(500).end("Internal Server Error");
         });
     });
