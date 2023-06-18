@@ -20,7 +20,7 @@ function castToString(data) {
   return stringify(data) ?? "";
 }
 
-class CloudWatchTransport {
+class Transport {
   /**
    * @param {LogRecord} data
    */
@@ -38,25 +38,6 @@ class CloudWatchTransport {
     process.stdout.write("\n");
   }
 }
-
-const LocalTransport = CloudWatchTransport;
-
-// class LocalTransport {
-//   /**
-//    * @param {LogRecord} data
-//    */
-//   write(data) {
-//     if (
-//       "level" in data &&
-//       typeof data.level === "string" &&
-//       ["warn", "error"].includes(data.level)
-//     ) {
-//       console.error(data);
-//       return;
-//     }
-//     console.log(data);
-//   }
-// }
 
 class Logger {
   /** @type {{write: (data: LogRecord) => void}} */
@@ -147,9 +128,4 @@ class Logger {
   }
 }
 
-export const logger = new Logger(
-  process.env.AWS_EXECUTION_ENV === "AWS_ECS_FARGATE" ||
-  process.env.LOGGER === "cloudwatch"
-    ? new CloudWatchTransport()
-    : new LocalTransport(),
-);
+export const logger = new Logger(new Transport());

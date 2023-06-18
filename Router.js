@@ -1,5 +1,3 @@
-import { MyResponse } from "./Response.js";
-
 /** @typedef {Record<string, string>} Params */
 
 /**
@@ -81,25 +79,3 @@ export class Router {
     };
   }
 }
-
-export const testRoutes = new Router();
-
-testRoutes.get("/router/test", async (req) => {
-  return new MyResponse().json({ test: req.rawUrl.href });
-});
-
-testRoutes.get("/router/test2", async (req) => {
-  return new MyResponse().json({ test2: req.rawUrl.href });
-});
-
-testRoutes.get("/router/error", async () => {
-  throw new Error("Test error");
-});
-
-testRoutes.get("/router/:id", async (req) => {
-  return new MyResponse().json({ testid: req.rawUrl.href });
-});
-
-testRoutes.get("/router/:id/foo", async (req) => {
-  return new MyResponse().json({ testidfoo: req.rawUrl.href });
-});

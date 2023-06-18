@@ -1,10 +1,8 @@
+import { SafeHTML } from "./html.js";
+
 /**
  * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: string, "Last-Modified"?: Date}} Headers
  */
-
-import { ContentSecurityPolicy } from "./content-security-policy.js";
-import { SafeHTML } from "./html.js";
-import { render } from "./html4.js";
 
 const STATUS_MESSAGE = /** @type {const} */ ({
   100: "Continue", // RFC 7231 6.2.1
@@ -73,16 +71,6 @@ const STATUS_MESSAGE = /** @type {const} */ ({
 });
 
 /**
- * https://github.com/microsoft/TypeScript/issues/46369
- * @typedef {null | boolean | number | string | JsonArray | {[Key in string]: JsonValue}} JsonValue
- */
-
-/**
- * https://github.com/microsoft/TypeScript/issues/46369
- * @typedef {JsonValue[]} JsonArray
- */
-
-/**
  * @typedef {keyof typeof STATUS_MESSAGE} StatusCode
  */
 
@@ -107,7 +95,6 @@ export class MyResponse {
     this.statusCode = statusCode;
     this.#headers = {};
     this.#body = undefined;
-    this.contentSecurityPolicy = new ContentSecurityPolicy();
   }
 
   /**
@@ -178,13 +165,16 @@ export class MyResponse {
         : {}),
       // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
       ...(this.#headers["Content-Type"] === "text/html; charset=utf-8"
-        ? { "Content-Security-Policy": this.contentSecurityPolicy.toString() }
+        ? {
+            "Content-Security-Policy":
+              "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'",
+          }
         : {}),
     };
   }
 
   /**
-   * @param {JsonValue} body
+   * @param {import("./utils.d.ts").JSONValue} body
    */
   json(body) {
     return this.header("Content-Type", "application/json; charset=utf-8").body(
@@ -197,15 +187,6 @@ export class MyResponse {
    */
   html(body) {
     return this.header("Content-Type", "text/html; charset=utf-8").body(body);
-  }
-
-  /**
-   * @param {import("./html4.js").Node} body
-   */
-  async html4(body) {
-    return this.header("Content-Type", "text/html; charset=utf-8").body(
-      await render(body),
-    );
   }
 
   /**
