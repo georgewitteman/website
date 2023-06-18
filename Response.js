@@ -87,37 +87,75 @@ const STATUS_MESSAGE = /** @type {const} */ ({
  */
 
 export class MyResponse {
+  /** @type {StatusCode} */
+  statusCode;
+
+  /**
+   * @type {Headers}
+   */
   #headers;
 
   /**
-   * @param {StatusCode} statusCode
-   * @param {Headers} headers
-   * @param {string | Buffer | SafeHTML | undefined} [body]
+   * @type {string | Buffer | undefined}
    */
-  constructor(statusCode, headers, body) {
-    /**
-     * @type {StatusCode}
-     */
+  #body;
+
+  /**
+   * @param {StatusCode} statusCode
+   */
+  constructor(statusCode = 200) {
     this.statusCode = statusCode;
-
-    /**
-     * @type {Headers}
-     */
-    this.#headers = headers;
-
-    /**
-     * @type {string | Buffer | undefined}
-     */
-    this.body = body instanceof SafeHTML ? body.value : body;
-
+    this.#headers = {};
+    this.#body = undefined;
     this.contentSecurityPolicy = new ContentSecurityPolicy();
   }
 
-  get headers() {
+  /**
+   * @template {keyof Headers} K
+   * @param {K} key
+   * @param {Headers[K]} value
+   */
+  header(key, value) {
+    this.#headers[key] = value;
+    return this;
+  }
+
+  /**
+   * @param {import("./utils.d.ts").Simplify<Partial<Headers>>} headers
+   */
+  headers(headers) {
+    this.#headers = {
+      ...this.#headers,
+      ...headers,
+    };
+    return this;
+  }
+
+  /**
+   * @param {StatusCode} code
+   */
+  status(code) {
+    this.statusCode = code;
+    return this;
+  }
+
+  /**
+   * @param {string | Buffer | SafeHTML} body
+   */
+  body(body) {
+    this.#body = body instanceof SafeHTML ? body.value : body;
+    return this;
+  }
+
+  finalBody() {
+    return this.#body;
+  }
+
+  finalHeaders() {
     return {
       // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length
       "Content-Length":
-        this.body === undefined ? 0 : Buffer.byteLength(this.body, "utf-8"),
+        this.#body === undefined ? 0 : Buffer.byteLength(this.#body, "utf-8"),
 
       // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
       ...(this.#headers["Cache-Control"]
@@ -146,40 +184,26 @@ export class MyResponse {
   }
 
   /**
-   * @param {StatusCode} statusCode
-   * @param {Omit<Headers, "Content-Type">} headers
    * @param {JsonValue} body
    */
-  static json(statusCode, headers, body) {
-    return new MyResponse(
-      statusCode,
-      { ...headers, "Content-Type": "application/json; charset=utf-8" },
+  json(body) {
+    return this.header("Content-Type", "application/json; charset=utf-8").body(
       JSON.stringify(body),
     );
   }
 
   /**
-   * @param {StatusCode} statusCode
-   * @param {Omit<Headers, "Content-Type">} headers
    * @param {SafeHTML} body
    */
-  static html(statusCode, headers, body) {
-    return new MyResponse(
-      statusCode,
-      { ...headers, "Content-Type": "text/html; charset=utf-8" },
-      body,
-    );
+  html(body) {
+    return this.header("Content-Type", "text/html; charset=utf-8").body(body);
   }
 
   /**
-   * @param {StatusCode} statusCode
-   * @param {Omit<Headers, "Content-Type">} headers
    * @param {import("./html4.js").Node} body
    */
-  static async html4(statusCode, headers, body) {
-    return new MyResponse(
-      statusCode,
-      { ...headers, "Content-Type": "text/html; charset=utf-8" },
+  async html4(body) {
+    return this.header("Content-Type", "text/html; charset=utf-8").body(
       await render(body),
     );
   }
@@ -189,7 +213,7 @@ export class MyResponse {
    * @param {string} url
    */
   static redirectFound(url) {
-    return new MyResponse(302, { Location: url }, "");
+    return new MyResponse().status(302).header("Location", url);
   }
 
   get statusMessage() {

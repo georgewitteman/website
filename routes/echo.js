@@ -21,12 +21,8 @@ function cleanHeaders(headers) {
 }
 
 router.get("/echo", async (req) => {
-  return MyResponse.json(
-    200,
-    {},
-    {
-      method: req.method,
-      headers: cleanHeaders(req.headers.toJSON()),
-    },
-  );
+  return new MyResponse().json({
+    method: req.method,
+    headers: cleanHeaders(req.headers.toJSON()),
+  });
 });

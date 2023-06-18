@@ -24,9 +24,7 @@ router.get("/database/table", async () => {
       }),
     ),
   );
-  return MyResponse.html(
-    200,
-    {},
+  return new MyResponse().html(
     documentLayout({
       title: "Tables",
       main: html`
@@ -92,9 +90,7 @@ router.get("/database/table", async () => {
 router.get("/database/table/:name", async (_, params) => {
   const tableName = params.name;
   if (!tableName) {
-    return MyResponse.html(
-      404,
-      {},
+    return new MyResponse().html(
       documentLayout({
         title: "No table name",
         main: html` <h1>Invalid table name: ${tableName}</h1> `,
@@ -113,9 +109,7 @@ router.get("/database/table/:name", async (_, params) => {
       }),
     ),
   );
-  return MyResponse.html(
-    200,
-    {},
+  return new MyResponse().html(
     documentLayout({
       title: "Tables",
       main: html`

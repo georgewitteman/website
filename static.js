@@ -103,7 +103,7 @@ export async function staticHandler(req, next) {
 
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match
   if (req.headers.get("If-None-Match") === etag) {
-    return new MyResponse(304 /* Not Modified */, {
+    return new MyResponse().status(304 /* Not Modified */).headers({
       "Cache-Control": cacheControl,
       "Last-Modified": fileInfo.stat.mtime,
       ETag: etag,
@@ -111,14 +111,12 @@ export async function staticHandler(req, next) {
     });
   }
 
-  return new MyResponse(
-    200,
-    {
+  return new MyResponse()
+    .headers({
       "Cache-Control": cacheControl,
       "Last-Modified": fileInfo.stat.mtime,
       ETag: etag,
       "Content-Type": getContentTypeFromExtension(extension),
-    },
-    fileInfo.contentsBuffer,
-  );
+    })
+    .body(fileInfo.contentsBuffer);
 }

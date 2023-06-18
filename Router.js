@@ -85,11 +85,11 @@ export class Router {
 export const testRoutes = new Router();
 
 testRoutes.get("/router/test", async (req) => {
-  return MyResponse.json(200, {}, { test: req.rawUrl.href });
+  return new MyResponse().json({ test: req.rawUrl.href });
 });
 
 testRoutes.get("/router/test2", async (req) => {
-  return MyResponse.json(200, {}, { test2: req.rawUrl.href });
+  return new MyResponse().json({ test2: req.rawUrl.href });
 });
 
 testRoutes.get("/router/error", async () => {
@@ -97,9 +97,9 @@ testRoutes.get("/router/error", async () => {
 });
 
 testRoutes.get("/router/:id", async (req) => {
-  return MyResponse.json(200, {}, { testid: req.rawUrl.href });
+  return new MyResponse().json({ testid: req.rawUrl.href });
 });
 
 testRoutes.get("/router/:id/foo", async (req) => {
-  return MyResponse.json(200, {}, { testidfoo: req.rawUrl.href });
+  return new MyResponse().json({ testidfoo: req.rawUrl.href });
 });

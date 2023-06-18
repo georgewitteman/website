@@ -33,7 +33,7 @@ export class App {
       }
       index = i;
       if (i >= this.middleware.length) {
-        return new MyResponse(500, {}, "");
+        return new MyResponse().status(500);
       }
       const fn = this.middleware[i];
       if (!fn) {
@@ -76,7 +76,9 @@ export class App {
       const req = new MyRequest(nodeRequest.method, nodeRequest);
       this.handleRequest(req)
         .then((res) => {
-          nodeResponse.writeHead(res.statusCode, res.headers).end(res.body);
+          nodeResponse
+            .writeHead(res.statusCode, res.finalHeaders())
+            .end(res.finalBody());
         })
         .catch((/** @type {undefined} */ e) => {
           logger.error(`Request error: ${nodeRequest.url ?? "<nullish>"}`, e);

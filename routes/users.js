@@ -7,9 +7,7 @@ import { z } from "../zod.js";
 export const router = new Router();
 
 router.get("/signup", async () => {
-  return new MyResponse(
-    200,
-    { "Content-Type": "text/html; charset=utf-8" },
+  return new MyResponse().html(
     html`<!DOCTYPE html>
       <html lang="en">
         <head>
@@ -32,28 +30,27 @@ router.post("/signup", async (req) => {
     sql`INSERT INTO app_user (email) VALUES (${parsedBody.email}) RETURNING *`,
     z.array(z.object({ id: z.number(), email: z.string() })).length(1),
   );
-  return new MyResponse(302, { Location: `/user/${result[0].id}` }, "");
+  return MyResponse.redirectFound(`/user/${result[0].id}`);
 });
 
 router.get("/user/:userId", async (_, params) => {
   const userIdString = params.userId;
   if (!userIdString) {
-    return MyResponse.json(
-      404,
-      {},
-      { code: "NOT_FOUND", id: userIdString ?? null },
-    );
+    return new MyResponse(404).json({
+      code: "NOT_FOUND",
+      id: userIdString ?? null,
+    });
   }
   const userId = parseInt(userIdString, 10);
   if (!Number.isInteger(userId)) {
-    return MyResponse.json(404, {}, { code: "NOT_FOUND", id: userIdString });
+    return new MyResponse(404).json({ code: "NOT_FOUND", id: userIdString });
   }
   const result = await typeSafeQuery(
     sql`SELECT id, email FROM app_user WHERE id = ${userId}`,
     z.array(z.object({ id: z.number(), email: z.string() })).max(1),
   );
   if (!result[0]) {
-    return MyResponse.json(404, {}, { code: "NOT_FOUND", id: userId });
+    return new MyResponse(404).json({ code: "NOT_FOUND", id: userId });
   }
-  return MyResponse.json(200, {}, result[0]);
+  return new MyResponse().json(result[0]);
 });

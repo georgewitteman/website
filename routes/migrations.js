@@ -9,9 +9,7 @@ export const router = new Router();
 
 router.get("/migrations", async () => {
   const migrations = await listMigrations();
-  return MyResponse.html(
-    200,
-    {},
+  return new MyResponse().html(
     documentLayout({
       title: "Migrations",
       main: html`
@@ -44,9 +42,7 @@ router.get("/migrations", async () => {
  * @param {string | undefined} name
  */
 function migrationNotFound(name) {
-  return MyResponse.html(
-    404,
-    {},
+  return new MyResponse(404).html(
     documentLayout({
       title: name ?? "<missing>",
       main: html` <h1>Migration not found: ${name}</h1> `,
@@ -67,9 +63,7 @@ router.get("/migration/:name", async (req, params) => {
     return migrationNotFound(name);
   }
 
-  return MyResponse.html(
-    200,
-    {},
+  return new MyResponse().html(
     documentLayout({
       title: "Migrations",
       main: html`
@@ -115,12 +109,8 @@ router.post("/migration/:name", async (req, params) => {
   }
 
   if (migration.completedOn) {
-    return MyResponse.html(
-      400,
-      {},
-      html`Migration already completed on
-      ${migration.completedOn.toLocaleString()}`,
-    );
+    return new MyResponse(404).html(html`Migration already completed on
+    ${migration.completedOn.toLocaleString()}`);
   }
 
   await runMigration(name);

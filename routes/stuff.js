@@ -6,9 +6,7 @@ import { documentLayout } from "../layout.js";
 export const router = new Router();
 
 router.get("/stuff.html", async () => {
-  return MyResponse.html(
-    200,
-    {},
+  return new MyResponse().html(
     documentLayout({
       main: html`
         <details>

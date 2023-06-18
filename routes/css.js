@@ -21,9 +21,7 @@ import {
 export const router = new Router();
 
 router.get("/css", async () => {
-  return MyResponse.html4(
-    200,
-    {},
+  return new MyResponse().html4(
     html({ lang: "en" }, [
       DefaultHead({ title: "CSS" }),
       body({}, [

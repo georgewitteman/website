@@ -17,9 +17,7 @@ function Links(props) {
 }
 
 router.get("/", async () => {
-  return MyResponse.html4(
-    200,
-    {},
+  return new MyResponse().html4(
     DefaultLayout({ noHeader: true }, [
       UnorderedList(
         {},
@@ -62,9 +60,7 @@ router.get("/", async () => {
 
 router.get("/duration-picker-test", async () => {
   const nonce = randomBytes(16).toString("base64");
-  const res = await MyResponse.html4(
-    200,
-    {},
+  const res = await new MyResponse().html4(
     DefaultLayout(
       {
         title: "Duration Picker Test",
@@ -94,9 +90,7 @@ router.get("/duration-picker-test", async () => {
 
 router.get("/amazon-short-link.html", async () => {
   const nonce = randomBytes(16).toString("base64");
-  const res = MyResponse.html(
-    200,
-    {},
+  const res = new MyResponse().html(
     documentLayout({
       title: "Amazon Short Link Generator",
       main: html`
@@ -138,9 +132,7 @@ router.get("/amazon-short-link.html", async () => {
 
 router.get("/microwave_time_calculator.html", async () => {
   const nonce = randomBytes(16).toString("base64");
-  const res = MyResponse.html(
-    200,
-    {},
+  const res = new MyResponse().html(
     documentLayout({
       title: "Microwave Time Calculator",
       head: html`
@@ -274,9 +266,7 @@ router.get("/microwave_time_calculator.html", async () => {
 
 router.get("/google-short-link.html", async () => {
   const nonce = randomBytes(16).toString("base64");
-  const res = MyResponse.html(
-    200,
-    {},
+  const res = new MyResponse().html(
     documentLayout({
       title: "Google Short Links",
       main: html`
@@ -313,9 +303,7 @@ router.get("/google-short-link.html", async () => {
 
 router.get("/google-account-links.html", async () => {
   const nonce = randomBytes(16).toString("base64");
-  const res = MyResponse.html(
-    200,
-    {},
+  const res = new MyResponse().html(
     documentLayout({
       title: "Microwave Time Calculator",
       main: html`
@@ -352,9 +340,7 @@ router.get("/google-account-links.html", async () => {
 
 router.get("/username.html", async () => {
   const nonce = randomBytes(16).toString("base64");
-  const res = MyResponse.html(
-    200,
-    {},
+  const res = new MyResponse().html(
     documentLayout({
       title: "Random Username Generator",
       main: html`

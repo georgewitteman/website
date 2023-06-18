@@ -31,9 +31,7 @@ async function now(req, next) {
     sql`SELECT NOW(), VERSION()`,
     z.array(z.object({ now: z.date(), version: z.string() })).length(1),
   );
-  return new MyResponse(
-    200,
-    { "Content-Type": "text/html; charset=utf-8" },
+  return new MyResponse().html(
     documentLayout({
       title: result[0].now.toLocaleString(),
       main: html`
@@ -66,9 +64,7 @@ async function now(req, next) {
  * @returns {Promise<MyResponse>}
  */
 async function notFound(req) {
-  return new MyResponse(
-    404,
-    {},
+  return new MyResponse(404).body(
     `Not found: ${req.method} ${req.originalUrl.href}\n`,
   );
 }
