@@ -6,8 +6,6 @@ Inspiration:
 - https://github.com/lukejacksonn/ijk
 */
 
-import { getStaticPathWithHash } from "./static.js";
-
 class NormalElement {
   /**
    * @param {string} tag
@@ -124,22 +122,6 @@ export function body(attrs, children) {
  */
 export function script(attrs) {
   return new NormalElement("script", attrs, []);
-}
-
-/**
- * @param {string} source
- * @param {{ async?: boolean }} [options]
- */
-export async function ESMScript(source, options) {
-  const resolvedOptions = {};
-  if (options?.async) {
-    resolvedOptions.async = true;
-  }
-  return script({
-    type: "module",
-    src: await getStaticPathWithHash(source),
-    async: options?.async ?? false,
-  });
 }
 
 /**

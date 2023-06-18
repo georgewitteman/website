@@ -12,6 +12,7 @@ import {
   ul,
   li,
   safeText,
+  script,
 } from "./html4.js";
 import { randomIntFromInterval } from "./random.js";
 import { getStaticPathWithHash } from "./static.js";
@@ -83,5 +84,21 @@ export async function TestSlowComponent() {
     setTimeout(() => {
       resolve(`This text loaded after ${timeout}ms`);
     }, timeout);
+  });
+}
+
+/**
+ * @param {string} source
+ * @param {{ async?: boolean }} [options]
+ */
+export async function ESMScript(source, options) {
+  const resolvedOptions = {};
+  if (options?.async) {
+    resolvedOptions.async = true;
+  }
+  return script({
+    type: "module",
+    src: await getStaticPathWithHash(source),
+    async: options?.async ?? false,
   });
 }
