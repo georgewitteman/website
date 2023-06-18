@@ -7,16 +7,7 @@ describe(ContentSecurityPolicy.name, () => {
     const policy = new ContentSecurityPolicy();
     assert.strictEqual(
       policy.toString(),
-      "default-src 'none'; style-src 'self'; require-trusted-types-for 'script'; base-uri 'none'; img-src 'self'",
-    );
-  });
-
-  test("with nonce", () => {
-    const policy = new ContentSecurityPolicy();
-    policy.nonce = "QXWaqIbUdswjho9oh6LBnw==";
-    assert.strictEqual(
-      policy.toString(),
-      "default-src 'none'; style-src 'self' 'nonce-QXWaqIbUdswjho9oh6LBnw=='; require-trusted-types-for 'script'; base-uri 'none'; img-src 'self'; script-src 'nonce-QXWaqIbUdswjho9oh6LBnw=='",
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'",
     );
   });
 });

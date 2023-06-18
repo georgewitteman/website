@@ -1,10 +1,21 @@
-import { randomBytes } from "node:crypto";
 import { MyResponse } from "../Response.js";
 import { Router } from "../Router.js";
 import { html } from "../html.js";
 import { documentLayout } from "../layout.js";
 import { DefaultLayout, UnorderedList } from "../components.js";
-import { a, e, script } from "../html4.js";
+import {
+  ESMScript,
+  a,
+  br,
+  button,
+  e,
+  form,
+  input,
+  label,
+  output,
+  p,
+  script,
+} from "../html4.js";
 import { getStaticPathWithHash } from "../static.js";
 
 export const router = new Router();
@@ -59,14 +70,12 @@ router.get("/", async () => {
 });
 
 router.get("/duration-picker-test", async () => {
-  const nonce = randomBytes(16).toString("base64");
-  const res = await new MyResponse().html4(
+  return new MyResponse().html4(
     DefaultLayout(
       {
         title: "Duration Picker Test",
         head: [
           script({
-            nonce,
             type: "module",
             src: await getStaticPathWithHash("js/duration-picker.js"),
           }),
@@ -84,13 +93,10 @@ router.get("/duration-picker-test", async () => {
       ],
     ),
   );
-  res.contentSecurityPolicy.nonce = nonce;
-  return res;
 });
 
 router.get("/amazon-short-link.html", async () => {
-  const nonce = randomBytes(16).toString("base64");
-  const res = new MyResponse().html(
+  return new MyResponse().html(
     documentLayout({
       title: "Amazon Short Link Generator",
       main: html`
@@ -118,35 +124,16 @@ router.get("/amazon-short-link.html", async () => {
             <button id="copy_shortish_url" type="button">Copy</button>
           </p>
         </form>
-        <script
-          nonce="${nonce}"
-          type="module"
-          src="/js/amazon-short-link.js"
-        ></script>
+        <script type="module" src="/js/amazon-short-link.js"></script>
       `,
     }),
   );
-  res.contentSecurityPolicy.nonce = nonce;
-  return res;
 });
 
 router.get("/microwave_time_calculator.html", async () => {
-  const nonce = randomBytes(16).toString("base64");
-  const res = new MyResponse().html(
+  return new MyResponse().html(
     documentLayout({
       title: "Microwave Time Calculator",
-      head: html`
-        <style nonce="${nonce}">
-          body {
-            touch-action: manipulation;
-          }
-
-          #result_time,
-          #result_power {
-            font-weight: bold;
-          }
-        </style>
-      `,
       main: html`
         <p>
           I microwave a lot of food, so this is handy to calculate the best
@@ -252,21 +239,14 @@ router.get("/microwave_time_calculator.html", async () => {
 
           <a href="/microwave_time_calculator.html">Reset</a>
         </form>
-        <script
-          nonce="${nonce}"
-          type="module"
-          src="/js/microwave-time-calculator.js"
-        ></script>
+        <script type="module" src="/js/microwave-time-calculator.js"></script>
       `,
     }),
   );
-  res.contentSecurityPolicy.nonce = nonce;
-  return res;
 });
 
 router.get("/google-short-link.html", async () => {
-  const nonce = randomBytes(16).toString("base64");
-  const res = new MyResponse().html(
+  return new MyResponse().html(
     documentLayout({
       title: "Google Short Links",
       main: html`
@@ -289,21 +269,14 @@ router.get("/google-short-link.html", async () => {
             <button id="copy_short_url" type="button">Copy</button>
           </p>
         </form>
-        <script
-          nonce="${nonce}"
-          type="module"
-          src="/js/google-short-link.js"
-        ></script>
+        <script type="module" src="/js/google-short-link.js"></script>
       `,
     }),
   );
-  res.contentSecurityPolicy.nonce = nonce;
-  return res;
 });
 
 router.get("/google-account-links.html", async () => {
-  const nonce = randomBytes(16).toString("base64");
-  const res = new MyResponse().html(
+  return new MyResponse().html(
     documentLayout({
       title: "Microwave Time Calculator",
       main: html`
@@ -326,51 +299,45 @@ router.get("/google-account-links.html", async () => {
             <output form="form" for="email" id="google_calendar"></output>
           </p>
         </form>
-        <script
-          nonce="${nonce}"
-          type="module"
-          src="/js/google-account-links.js"
-        ></script>
+        <script type="module" src="/js/google-account-links.js"></script>
       `,
     }),
   );
-  res.contentSecurityPolicy.nonce = nonce;
-  return res;
 });
 
 router.get("/username.html", async () => {
-  const nonce = randomBytes(16).toString("base64");
-  const res = new MyResponse().html(
-    documentLayout({
-      title: "Random Username Generator",
-      main: html`
-        <form id="form">
-          <label>
-            Length<br />
-            <input
-              type="number"
-              name="length"
-              id="length"
-              autofocus
-              value="8"
-            />
-            <button id="generate" type="submit">Generate</button>
-          </label>
-          <p>
-            Username<br />
-            <output
-              for="form"
-              for="number"
-              id="username"
-              class="monospace"
-            ></output>
-            <button id="copy_username" type="button">Copy</button>
-          </p>
-        </form>
-        <script nonce="${nonce}" type="module" src="/js/username.js"></script>
-      `,
-    }),
+  return new MyResponse().html4(
+    DefaultLayout(
+      {
+        title: "Random Username Generator",
+        head: [ESMScript("js/username.js")],
+      },
+      [
+        form({ id: "form" }, [
+          label([
+            "Length",
+            br(),
+            input({
+              type: "number",
+              name: "length",
+              id: "length",
+              autofocus: true,
+              value: "8",
+            }),
+            button({ id: "generate", type: "submit" }, ["Generate"]),
+          ]),
+          p([
+            "Username",
+            br(),
+            output(
+              { for: "number", id: "username", className: "monospace" },
+              [],
+            ),
+            " ",
+            button({ id: "copy_username", type: "button" }, ["Copy"]),
+          ]),
+        ]),
+      ],
+    ),
   );
-  res.contentSecurityPolicy.nonce = nonce;
-  return res;
 });

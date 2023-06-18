@@ -6,10 +6,12 @@ Inspiration:
 - https://github.com/lukejacksonn/ijk
 */
 
+import { getStaticPathWithHash } from "./static.js";
+
 class NormalElement {
   /**
    * @param {string} tag
-   * @param {Record<string, string>} attrs
+   * @param {Record<string, string | boolean>} attrs
    * @param {Node[]} children
    */
   constructor(tag, attrs, children) {
@@ -22,7 +24,7 @@ class NormalElement {
 class SelfClosingElement {
   /**
    * @param {string} tag
-   * @param {Record<string, string>} attrs
+   * @param {Record<string, string | boolean>} attrs
    */
   constructor(tag, attrs) {
     this.tag = tag;
@@ -82,6 +84,17 @@ export function meta(attrs) {
 }
 
 /**
+ * @param {{ type: "number", name: string, id: string, autofocus: boolean, value: string }} attrs
+ */
+export function input(attrs) {
+  return new SelfClosingElement("input", attrs);
+}
+
+export function br() {
+  return new SelfClosingElement("br", {});
+}
+
+/**
  * @param {{ rel: string; type?: string; href: string }} attrs
  */
 export function link(attrs) {
@@ -106,11 +119,27 @@ export function body(attrs, children) {
 
 /**
  *
- * @param {{ nonce: string, type: string, src: string }} attrs
+ * @param {{ type: "module", src: string, async?: boolean }} attrs
  * @returns
  */
 export function script(attrs) {
   return new NormalElement("script", attrs, []);
+}
+
+/**
+ * @param {string} source
+ * @param {{ async?: boolean }} [options]
+ */
+export async function ESMScript(source, options) {
+  const resolvedOptions = {};
+  if (options?.async) {
+    resolvedOptions.async = true;
+  }
+  return script({
+    type: "module",
+    src: await getStaticPathWithHash(source),
+    async: options?.async ?? false,
+  });
 }
 
 /**
@@ -129,7 +158,11 @@ export function script(attrs) {
  * @typedef {{ className?: string }} Main
  * @typedef {{ className?: string }} Div
  * @typedef {{ className?: string }} Heading
- * @typedef {{ a: A; li: LI, ul: UL, p: P, table: Table, thead: THead, tbody: TBody, tr: TR, th: TH, td: TD, header: Header, nav: Nav, main: Main, div: Div, h1: Heading, h2: Heading, h3: Heading, h4: Heading, h5: Heading, h6: Heading }} TagMap
+ * @typedef {{ className?: string, id?: string }} Form
+ * @typedef {{ className?: string, for?: string }} Label
+ * @typedef {{ className?: string, for?: string, id?: string}} Output
+ * @typedef {{ className?: string, id?: string, type: "button" | "submit" }} Button
+ * @typedef {{ a: A; li: LI, ul: UL, p: P, table: Table, thead: THead, tbody: TBody, tr: TR, th: TH, td: TD, header: Header, nav: Nav, main: Main, div: Div, h1: Heading, h2: Heading, h3: Heading, h4: Heading, h5: Heading, h6: Heading, form: Form, label: Label, button: Button, output: Output }} TagMap
  */
 
 /**
@@ -164,6 +197,10 @@ export const h3 = normalTag("h3");
 export const h4 = normalTag("h4");
 export const h5 = normalTag("h5");
 export const h6 = normalTag("h6");
+export const form = normalTag("form");
+export const label = normalTag("label");
+export const button = normalTag("button");
+export const output = normalTag("output");
 
 /**
  * @param {string} key
@@ -196,11 +233,20 @@ function escapeHtml(unsafe) {
 }
 
 /**
- * @param {Record<string, string>} props
+ * @param {Record<string, string | boolean>} props
  */
 function getStringProps(props) {
   return Object.entries(props)
-    .map(([key, value]) => `${getPropKey(key)}="${escapeHtml(value)}"`)
+    .map(([key, value]) => {
+      if (typeof value === "string") {
+        return `${getPropKey(key)}="${escapeHtml(value)}"`;
+      }
+      if (typeof value === "boolean") {
+        return value ? getPropKey(key) : undefined;
+      }
+      throw new Error("Invalid prop type");
+    })
+    .filter((prop) => typeof prop === "string")
     .join(" ");
 }
 
