@@ -25,7 +25,7 @@ router.get("/database/table", async () => {
     ),
   );
   return new MyResponse().html(
-    documentLayout({
+    await documentLayout({
       title: "Tables",
       main: html`
         <h1>Tables</h1>
@@ -91,7 +91,7 @@ router.get("/database/table/:name", async (_, params) => {
   const tableName = params.name;
   if (!tableName) {
     return new MyResponse().html(
-      documentLayout({
+      await documentLayout({
         title: "No table name",
         main: html` <h1>Invalid table name: ${tableName}</h1> `,
       }),
@@ -110,7 +110,7 @@ router.get("/database/table/:name", async (_, params) => {
     ),
   );
   return new MyResponse().html(
-    documentLayout({
+    await documentLayout({
       title: "Tables",
       main: html`
         <h1>Table: ${tableName}</h1>

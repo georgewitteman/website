@@ -1,10 +1,11 @@
 import { html } from "./html.js";
+import { getStaticPathWithHash } from "./middleware/static.js";
 
 /**
  *
  * @param {{ title?: string, head?: import("./html.js").SafeHTML, main: import("./html.js").SafeHTML, noHeader?: boolean }} params
  */
-export function documentLayout(params) {
+export async function documentLayout(params) {
   return html`
     <!DOCTYPE html>
     <html lang="en">
@@ -13,8 +14,15 @@ export function documentLayout(params) {
         <title>${params.title ?? "George Witteman"}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="author" content="George Witteman" />
-        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        <link rel="stylesheet" href="/styles.css" />
+        <link
+          rel="icon"
+          type="image/x-icon"
+          href=${await getStaticPathWithHash("favicon.ico")}
+        />
+        <link
+          rel="stylesheet"
+          href=${await getStaticPathWithHash("styles.css")}
+        />
         ${params.head}
       </head>
       <body>

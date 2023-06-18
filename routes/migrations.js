@@ -10,7 +10,7 @@ export const router = new Router();
 router.get("/migrations", async () => {
   const migrations = await listMigrations();
   return new MyResponse().html(
-    documentLayout({
+    await documentLayout({
       title: "Migrations",
       main: html`
         <h1>Migrations</h1>
@@ -41,9 +41,9 @@ router.get("/migrations", async () => {
 /**
  * @param {string | undefined} name
  */
-function migrationNotFound(name) {
+async function migrationNotFound(name) {
   return new MyResponse(404).html(
-    documentLayout({
+    await documentLayout({
       title: name ?? "<missing>",
       main: html` <h1>Migration not found: ${name}</h1> `,
     }),
@@ -64,7 +64,7 @@ router.get("/migration/:name", async (req, params) => {
   }
 
   return new MyResponse().html(
-    documentLayout({
+    await documentLayout({
       title: "Migrations",
       main: html`
         <h1>Migration: ${migration.name}</h1>
