@@ -9,9 +9,9 @@ export function getRequestId() {
 }
 
 /**
- * @param {import("./Request.js").MyRequest} req
- * @param {() => Promise<import("./Response.js").MyResponse>} next
- * @returns {Promise<import("./Response.js").MyResponse>}
+ * @param {import("../Request.js").MyRequest} req
+ * @param {() => Promise<import("../Response.js").MyResponse>} next
+ * @returns {Promise<import("../Response.js").MyResponse>}
  */
 export async function requestIdMiddleware(req, next) {
   const maybeRequestId = req.headers.get("x-amzn-trace-id");

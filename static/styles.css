@@ -171,12 +171,3 @@ a:visited {
 .table tr:nth-child(even) {
   background-color: #118bee15;
 }
-
-body {
-  touch-action: manipulation;
-}
-
-#result_time,
-#result_power {
-  font-weight: bold;
-}
