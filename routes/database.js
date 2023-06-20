@@ -3,7 +3,7 @@ import { Router } from "../Router.js";
 import { sql, typeSafeQuery } from "../db.js";
 import { html } from "../html.js";
 import { documentLayout } from "../layout.js";
-import { z } from "../zod.js";
+import { z } from "zod";
 
 export const router = new Router();
 

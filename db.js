@@ -47,12 +47,12 @@ export function getPool() {
  * @template {unknown[]} T
  * @template {unknown[]} V
  * @param {string | import("pg").QueryConfig<V>} query
- * @param {import("./zod.js").ZodSchema<T>} schema
+ * @param {import("zod").ZodType<T>} schema
  */
 export async function typeSafeQuery(query, schema) {
   const result = await getPool().query(query);
-  const parseResult = schema.parse(result.rows);
-  if (parseResult.ok) {
+  const parseResult = schema.safeParse(result.rows);
+  if (parseResult.success) {
     return parseResult.data;
   }
   logger.error(parseResult.error);

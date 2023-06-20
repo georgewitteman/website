@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { getPool, sql, typeSafeQuery } from "./db.js";
 import path from "node:path";
 import { logger } from "./logger.js";
-import { z } from "./zod.js";
+import { z } from "zod";
 
 /**
  * Inspiration:

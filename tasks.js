@@ -1,5 +1,5 @@
 import { ECRClient, GetAuthorizationTokenCommand } from "@aws-sdk/client-ecr";
-import { z } from "./zod.js";
+import { z } from "zod";
 import { ECSClient, UpdateServiceCommand } from "@aws-sdk/client-ecs";
 import child_process from "node:child_process";
 
@@ -70,17 +70,15 @@ async function getECRAuthorizationToken() {
   const command = new GetAuthorizationTokenCommand({});
   const response = await client.send(command);
   const authorizationDataSchema = z.object({
-    authorizationData: z
-      .array(
-        z.object({
-          authorizationToken: z.string(),
-          expiresAt: z.date(),
-          proxyEndpoint: z.string(),
-        }),
-      )
-      .length(1),
+    authorizationData: z.tuple([
+      z.object({
+        authorizationToken: z.string(),
+        expiresAt: z.date(),
+        proxyEndpoint: z.string(),
+      }),
+    ]),
   });
-  const authorizationTokenBase64 = authorizationDataSchema.unsafeParse({
+  const authorizationTokenBase64 = authorizationDataSchema.parse({
     authorizationData: response.authorizationData,
   }).authorizationData[0].authorizationToken;
   return base64Decode(authorizationTokenBase64).substring(4);
