@@ -5,6 +5,7 @@
 
 const config = {
   trailingComma: "all",
+  htmlWhitespaceSensitivity: "strict",
 };
 
 module.exports = config;
