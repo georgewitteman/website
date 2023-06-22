@@ -1,6 +1,6 @@
 import { MyResponse } from "../Response.js";
 import { Router } from "../Router.js";
-import { html } from "../html.js";
+import { h, render } from "../html.js";
 import { documentLayout } from "../layout.js";
 import { logger } from "../logger.js";
 import { getMigration, listMigrations, runMigration } from "../migrations.js";
@@ -10,31 +10,32 @@ export const router = new Router();
 router.get("/migrations", async () => {
   const migrations = await listMigrations();
   return new MyResponse().html(
-    await documentLayout({
-      title: "Migrations",
-      main: html`
-        <h1>Migrations</h1>
-        <table class="table">
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Completed On</th>
-            </td>
-          </thead>
-          <tbody>
-            ${migrations.map(
-              ({ name, completedOn }) =>
-                html`
-                  <tr>
-                    <td><a href="/migration/${name}">${name}</a></td>
-                    <td>${completedOn?.toLocaleString()}</td>
-                  </tr>
-                `,
-            )}
-          </tbody>
-        </table>
-    `,
-    }),
+    render(
+      await documentLayout({
+        title: "Migrations",
+        main: [
+          h("h1", {}, ["Migrations"]),
+          h("table", { class: "table" }, [
+            h("thread", {}, [
+              h("tr", {}, [
+                h("th", { scope: "col" }, ["Name"]),
+                h("th", { scope: "col" }, ["Completed On"]),
+              ]),
+            ]),
+            h(
+              "tbody",
+              {},
+              migrations.map(({ name, completedOn }) =>
+                h("tr", {}, [
+                  h("td", {}, [h("a", { href: `/migration/${name}` }, [name])]),
+                  h("td", {}, [completedOn?.toLocaleString() ?? ""]),
+                ]),
+              ),
+            ),
+          ]),
+        ],
+      }),
+    ),
   );
 });
 
@@ -43,10 +44,12 @@ router.get("/migrations", async () => {
  */
 async function migrationNotFound(name) {
   return new MyResponse(404).html(
-    await documentLayout({
-      title: name ?? "<missing>",
-      main: html` <h1>Migration not found: ${name}</h1> `,
-    }),
+    render(
+      await documentLayout({
+        title: name ?? "<missing>",
+        main: [h("h1", {}, [`Migration not found: ${name ?? "<undefined>"}`])],
+      }),
+    ),
   );
 }
 
@@ -64,34 +67,34 @@ router.get("/migration/:name", async (req, params) => {
   }
 
   return new MyResponse().html(
-    await documentLayout({
-      title: "Migrations",
-      main: html`
-        <h1>Migration: ${migration.name}</h1>
-        <a href="/migrations">&lsaquo; List migrations</a>
-        <dl>
-          <dt>Name</dt>
-          <dd>${migration.name}</dd>
+    render(
+      await documentLayout({
+        title: "Migrations",
+        main: [
+          h("h1", {}, [`Migration: ${migration.name}`]),
+          h("a", { href: "/migrations" }, ["\u2039 List migrations"]),
+          h("dl", {}, [
+            h("dt", {}, ["Name"]),
+            h("dd", {}, [migration.name]),
 
-          <dt>Completed on</dt>
-          <dd>
-            ${migration.completedOn
-              ? migration.completedOn.toLocaleString()
-              : html`<em>Not completed</em>`}
-          </dd>
+            h("dt", {}, ["Completed On"]),
+            h("dd", {}, [
+              migration.completedOn?.toLocaleString() ?? "Not completed",
+            ]),
 
-          <dt>Content</dt>
-          <dd>
-            <pre><code>${migration.content}</code></pre>
-          </dd>
-        </dl>
-        <form method="POST">
-          <button type="submit" ${migration.completedOn ? "disabled" : null}>
-            Run migration
-          </button>
-        </form>
-      `,
-    }),
+            h("dt", {}, ["Content"]),
+            h("dd", {}, [h("pre", {}, [h("code", {}, [migration.content])])]),
+          ]),
+          h("form", { method: "POST" }, [
+            h(
+              "button",
+              { type: "submit", disabled: Boolean(migration.completedOn) },
+              ["Run migration"],
+            ),
+          ]),
+        ],
+      }),
+    ),
   );
 });
 
@@ -109,7 +112,7 @@ router.post("/migration/:name", async (req, params) => {
   }
 
   if (migration.completedOn) {
-    return new MyResponse(404).html(html`Migration already completed on
+    return new MyResponse(404).html(`Migration already completed on
     ${migration.completedOn.toLocaleString()}`);
   }
 

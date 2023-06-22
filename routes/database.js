@@ -1,7 +1,7 @@
 import { MyResponse } from "../Response.js";
 import { Router } from "../Router.js";
 import { sql, typeSafeQuery } from "../db.js";
-import { html } from "../html.js";
+import { h, render } from "../html.js";
 import { documentLayout } from "../layout.js";
 import { z } from "zod";
 
@@ -25,76 +25,87 @@ router.get("/database/table", async () => {
     ),
   );
   return new MyResponse().html(
-    await documentLayout({
-      title: "Tables",
-      main: html`
-        <h1>Tables</h1>
-        <table class="table">
-          <thead>
-            <tr>
-            <th scope="col">schemaname</th>
-            <th scope="col">tablename</th>
-            <th scope="col">tableowner</th>
-            <th scope="col">tablespace</th>
-            <th scope="col">hasindexes</th>
-            <th scope="col">hasrules</th>
-            <th scope="col">hastriggers</th>
-            <th scope="col">rowsecurity</th>
-            </td>
-          </thead>
-          <tbody>
-            ${tables.map(
-              (row) =>
-                html`
-                  <tr>
-                    <td>
-                      <pre><code>${row.schemaname}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code><a href="/database/table/${row.tablename}">${row.tablename}</a></code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.tableowner}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.tablespace ?? "<null>"}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.hasindexes
-                        ? "true"
-                        : "false"}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.hasrules ? "true" : "false"}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.hastriggers
-                        ? "true"
-                        : "false"}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.rowsecurity
-                        ? "true"
-                        : "false"}</code></pre>
-                    </td>
-                  </tr>
-                `,
-            )}
-          </tbody>
-        </table>
-    `,
-    }),
+    render(
+      await documentLayout({
+        title: "Tables",
+        main: [
+          h("h1", {}, ["Tables"]),
+          h("table", { class: "table" }, [
+            h("thread", {}, [
+              h("tr", {}, [
+                h("th", { scope: "col" }, ["schemaname"]),
+                h("th", { scope: "col" }, ["tablename"]),
+                h("th", { scope: "col" }, ["tableowner"]),
+                h("th", { scope: "col" }, ["tablespace"]),
+                h("th", { scope: "col" }, ["hasindexes"]),
+                h("th", { scope: "col" }, ["hasrules"]),
+                h("th", { scope: "col" }, ["hastriggers"]),
+                h("th", { scope: "col" }, ["rowsecurity"]),
+              ]),
+            ]),
+            h(
+              "tbody",
+              {},
+              tables.map((row) =>
+                h("tr", {}, [
+                  h("td", {}, [
+                    h("pre", {}, [h("code", {}, [row.schemaname])]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [
+                      h("code", {}, [
+                        h("a", { href: `/database/table/${row.tablename}` }, [
+                          row.tablename,
+                        ]),
+                      ]),
+                    ]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [h("code", {}, [row.tableowner])]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [h("code", {}, [row.tablespace ?? "<null>"])]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [
+                      h("code", {}, [row.hasindexes ? "true" : "false"]),
+                    ]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [
+                      h("code", {}, [row.hasrules ? "true" : "false"]),
+                    ]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [
+                      h("code", {}, [row.hastriggers ? "true" : "false"]),
+                    ]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [
+                      h("code", {}, [row.rowsecurity ? "true" : "false"]),
+                    ]),
+                  ]),
+                ]),
+              ),
+            ),
+          ]),
+        ],
+      }),
+    ),
   );
 });
 
 router.get("/database/table/:name", async (_, params) => {
   const tableName = params.name;
-  if (!tableName) {
+  if (typeof tableName !== "string") {
     return new MyResponse().html(
-      await documentLayout({
-        title: "No table name",
-        main: html` <h1>Invalid table name: ${tableName}</h1> `,
-      }),
+      render(
+        await documentLayout({
+          title: "No table name",
+          main: [h("h1", {}, [`Invalid table name type: ${typeof tableName}`])],
+        }),
+      ),
     );
   }
 
@@ -110,39 +121,38 @@ router.get("/database/table/:name", async (_, params) => {
     ),
   );
   return new MyResponse().html(
-    await documentLayout({
-      title: "Tables",
-      main: html`
-        <h1>Table: ${tableName}</h1>
-        <a href="/database/table">&lsaquo; List tables</a>
-        <table class="table">
-          <thead>
-            <tr>
-            <th scope="col">table_name</th>
-            <th scope="col">column_name</th>
-            <th scope="col">data_type</th>
-            </td>
-          </thead>
-          <tbody>
-            ${tables.map(
-              (row) =>
-                html`
-                  <tr>
-                    <td>
-                      <pre><code>${row.table_name}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.column_name}</code></pre>
-                    </td>
-                    <td>
-                      <pre><code>${row.data_type}</code></pre>
-                    </td>
-                  </tr>
-                `,
-            )}
-          </tbody>
-        </table>
-    `,
-    }),
+    render(
+      await documentLayout({
+        title: "Tables",
+        main: [
+          h("h1", {}, [`Table: ${tableName}`]),
+          h("a", { href: "/database/table" }, ["\u2039 List tables"]),
+          h("table", { class: "table" }, [
+            h("thead", {}, [
+              h("tr", {}, [
+                h("th", { scope: "col" }, ["table_name"]),
+                h("th", { scope: "col" }, ["column_name"]),
+                h("th", { scope: "col" }, ["data_type"]),
+              ]),
+            ]),
+            h(
+              "tbody",
+              {},
+              tables.map((row) =>
+                h("tr", {}, [
+                  h("td", {}, [
+                    h("pre", {}, [h("code", {}, [row.table_name])]),
+                  ]),
+                  h("td", {}, [
+                    h("pre", {}, [h("code", {}, [row.column_name])]),
+                  ]),
+                  h("td", {}, [h("pre", {}, [h("code", {}, [row.data_type])])]),
+                ]),
+              ),
+            ),
+          ]),
+        ],
+      }),
+    ),
   );
 });

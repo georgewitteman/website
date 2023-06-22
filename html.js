@@ -1,103 +1,167 @@
-export class SafeHTML {
-  /** @readonly */
-  value;
+import assert from "node:assert";
 
-  /**
-   * @param {string} value
-   */
-  constructor(value) {
-    this.value = value;
-  }
-}
+/** @typedef {import("./html-types.js").Node} Node */
+/** @typedef {import("./html-types.js").HTMLElement} HTMLElement */
+/** @typedef {import("./html-types.js").SafeText} SafeText */
+/** @typedef {import("./html-types.js").VoidTagName} VoidTagName */
+
+// https://developer.mozilla.org/en-US/docs/Glossary/Void_element
+const VOID_TAG_NAME_REGEX =
+  /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/g;
+
+export const NBSP = /** @type {const} */ ("\u00a0");
 
 /**
- * Allows passing unsafe HTML as a value.
- *
- * ```js
- * const safeQueryResult = "<script>alert('hi')</script>";
- * console.log(html`this is safe: ${unescaped(safeQueryResult)}`)
- * ```
- *
- * @param {string} value
- * @returns {SafeHTML}
+ * @param {string} char
+ * @return {`&${string};`}
  */
-export function unescaped(value) {
-  return new SafeHTML(value);
+function getHtmlEntity(char) {
+  assert.strictEqual(char.length, 1);
+
+  // https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
+  switch (char) {
+    case "&":
+      return "&amp;";
+    case "<":
+      return "&lt;";
+    case ">":
+      return "&gt;";
+    case '"':
+      return "&quot;";
+    case "'":
+      return "&apos;";
+    case "`":
+      return "&grave;";
+    case NBSP:
+      return "&nbsp;";
+    case "\u2039":
+      return "&lsaquo;";
+    default:
+      return `&#${char.charCodeAt(0)};`;
+  }
 }
 
 /**
  * https://github.com/zspecza/common-tags/blob/master/src/safeHtml/safeHtml.js
- * @param {string | SafeHTML} unsafe
+ * @param {string} unsafe
  */
 function escapeHtml(unsafe) {
-  if (unsafe instanceof SafeHTML) {
-    return unsafe;
+  // return unsafe.replaceAll(/[^A-Za-z0-9 _-]/g, getHtmlEntity);
+  return unsafe.replaceAll(/[&<>"'`]/g, getHtmlEntity);
+}
+
+/**
+ * @param {string} attributeName
+ */
+function formatAttributeName(attributeName) {
+  // https://stackoverflow.com/questions/925994/what-characters-are-allowed-in-an-html-attribute-name#comment33673269_926136
+  if (!/^([^\t\n\f />"'=]+)$/g.test(attributeName)) {
+    throw new Error(`Invalid property name: ${attributeName}`);
   }
-  return new SafeHTML(
-    unsafe
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;")
-      .replaceAll("`", "&#x60;"),
+  switch (attributeName) {
+    case "className":
+      return "class";
+    default:
+      return attributeName;
+  }
+}
+
+// Using a whitelist here for safety
+// https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(double-quoted)-state
+const DOUBLE_QUOTED_ATTRIBUTE_UNSAFE = /[^A-Za-z0-9 -_/-=]/g;
+
+/**
+ * https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(double-quoted)-state
+ * @param {string} unsafe
+ * @returns {string}
+ */
+function escapeDoubleQuotedAttribute(unsafe) {
+  return unsafe.replaceAll(DOUBLE_QUOTED_ATTRIBUTE_UNSAFE, getHtmlEntity);
+}
+
+/**
+ * @param {Record<string, string | boolean>} props
+ */
+function getAttributesAsString(props) {
+  const entries = Object.entries(props);
+  if (entries.length === 0) {
+    return "";
+  }
+  return (
+    " " +
+    entries
+      .map(([key, value]) => {
+        if (typeof value === "string") {
+          return `${formatAttributeName(key)}="${escapeDoubleQuotedAttribute(
+            value,
+          )}"`;
+        }
+        if (typeof value === "boolean") {
+          return value ? formatAttributeName(key) : undefined;
+        }
+        throw new Error("Invalid prop type");
+      })
+      .filter((prop) => typeof prop === "string")
+      .join(" ")
   );
 }
 
 /**
- * @param {unknown} value
- * @returns {SafeHTML}
+ * @template {string} TagName
+ * @param {TagName} tagName
+ * @param {Record<string, string | boolean>} [attributes]
+ * @param {TagName extends VoidTagName ? undefined : Node[]} [children]
+ * @returns {import("./html.d.ts").HTMLElement}
  */
-function getEscapedValue(value) {
-  if (value instanceof SafeHTML) {
-    return value;
-  }
-  if (typeof value === "string") {
-    return escapeHtml(value);
-  }
-  if (value === null || value === undefined) {
-    return escapeHtml("");
-  }
-  if (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    !isNaN(value) &&
-    value <= Number.MAX_SAFE_INTEGER &&
-    value >= Number.MIN_SAFE_INTEGER
-  ) {
-    return escapeHtml(value.toString());
-  }
-  if (Array.isArray(value)) {
-    return /** @type {typeof value.reduce<SafeHTML>} */ (value.reduce)(
-      (result, value) => {
-        const safeValue = getEscapedValue(value);
-        return new SafeHTML("".concat(result.value, safeValue.value));
-      },
-      new SafeHTML(""),
-    );
-  }
-  throw new Error(
-    `Unable to safely convert value (${typeof value}) to a string`,
-  );
+export function h(tagName, attributes, children) {
+  return {
+    type: "html",
+    tagName,
+    attributes: attributes ?? {},
+    children: children ?? [],
+  };
 }
 
 /**
- * @typedef {string | number | SafeHTML | null | undefined} AllowedValues
+ * @param {string} value
+ * @returns {import("./html.d.ts").SafeText}
  */
+export function UNSAFE_escaped(value) {
+  return { type: "safe-text", value };
+}
 
 /**
- * https://github.com/zspecza/common-tags
- * @param {TemplateStringsArray} strings
- * @param {(AllowedValues | AllowedValues[])[]} values
+ * @param {Node} node
+ * @returns {string}
  */
-export function html(strings, ...values) {
-  return new SafeHTML(
-    strings.reduce((previousValue, currentValue, currentIndex) => {
-      return "".concat(
-        previousValue,
-        getEscapedValue(values[currentIndex - 1]).value,
-        currentValue,
-      );
-    }),
-  );
+function renderNode(node) {
+  if (typeof node === "string") {
+    return escapeHtml(node);
+  }
+
+  if (node.type === "safe-text") {
+    return node.value;
+  }
+
+  const attributes = getAttributesAsString(node.attributes);
+
+  if (VOID_TAG_NAME_REGEX.test(node.tagName)) {
+    assert.strictEqual(node.children.length, 0);
+
+    return `<${node.tagName}${attributes}>`;
+  }
+
+  const renderedChildren = node.children.map(renderNode);
+  return `<${node.tagName}${attributes}>${renderedChildren.join("")}</${
+    node.tagName
+  }>`;
+}
+
+/**
+ * @param {import("./html.d.ts").HTMLElement} rootNode
+ * @returns {string}
+ */
+export function render(rootNode) {
+  assert(rootNode.tagName === "html");
+  return `<!DOCTYPE html>${renderNode(rootNode)}`;
 }

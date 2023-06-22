@@ -1,42 +1,39 @@
-import { html } from "./html.js";
+import { h } from "./html.js";
 import { getStaticPathWithHash } from "./middleware/static.js";
+
+export function header() {
+  return h("header", { class: "mw-page mx-auto" }, [
+    h("nav", {}, [h("a", { href: "/" }, ["\u2039 Home"])]),
+  ]);
+}
 
 /**
  *
- * @param {{ title?: string, head?: import("./html.js").SafeHTML, main: import("./html.js").SafeHTML, noHeader?: boolean }} params
+ * @param {{ title?: string, head?: import("./html.js").Node[], main: import("./html.js").Node[], noHeader?: boolean }} params
  */
 export async function documentLayout(params) {
-  return html`
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <title>${params.title ?? "George Witteman"}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="author" content="George Witteman" />
-        <link
-          rel="icon"
-          type="image/x-icon"
-          href=${await getStaticPathWithHash("favicon.ico")}
-        />
-        <link
-          rel="stylesheet"
-          href=${await getStaticPathWithHash("styles.css")}
-        />
-        ${params.head}
-      </head>
-      <body>
-        ${params.noHeader ? null : header()}
-        <main class="mw-page mx-auto">${params.main}</main>
-      </body>
-    </html>
-  `;
-}
-
-export function header() {
-  return html`
-    <header class="mw-page mx-auto">
-      <nav><a href="/">&lsaquo; Home</a></nav>
-    </header>
-  `;
+  return h("html", { lang: "en" }, [
+    h("head", {}, [
+      h("meta", { charset: "utf-8" }),
+      h("title", {}, [params.title ?? "George Witteman"]),
+      h("meta", {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
+      }),
+      h("link", {
+        rel: "icon",
+        type: "image/x-icon",
+        href: await getStaticPathWithHash("favicon.ico"),
+      }),
+      h("link", {
+        rel: "stylesheet",
+        href: await getStaticPathWithHash("styles.css"),
+      }),
+      ...(params.head ?? []),
+    ]),
+    h("body", {}, [
+      ...(params.noHeader ? [] : [header()]),
+      h("main", { class: "mw-page mx-auto" }, params.main ?? []),
+    ]),
+  ]);
 }

@@ -1,5 +1,3 @@
-import { SafeHTML } from "./html.js";
-
 /**
  * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: string, "Last-Modified"?: Date}} Headers
  */
@@ -127,10 +125,10 @@ export class MyResponse {
   }
 
   /**
-   * @param {string | Buffer | SafeHTML} body
+   * @param {string | Buffer} body
    */
   body(body) {
-    this.#body = body instanceof SafeHTML ? body.value : body;
+    this.#body = body;
     return this;
   }
 
@@ -183,7 +181,7 @@ export class MyResponse {
   }
 
   /**
-   * @param {SafeHTML} body
+   * @param {string} body
    */
   html(body) {
     return this.header("Content-Type", "text/html; charset=utf-8").body(body);
