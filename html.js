@@ -169,14 +169,19 @@ export function h(tagName, attributes, children) {
 
 /**
  * @template {string | ComponentHelper<PropsType>} NodeType
- * @template {NodeType extends string ? Record<string, string | boolean> : unknown} PropsType
+ * @template {NodeType extends string ? Record<string, string | boolean> | undefined : unknown} PropsType
  * @param {NodeType} type
- * @param {PropsType} props
+ * @param {PropsType} [props]
  * @param {NodeType extends VoidTagName ? undefined : Node[]} [children]
  */
 export function e(type, props, children) {
   if (typeof type === "string") {
-    if (g.record(g.string().or(g.boolean())).isSatisfiedBy(props)) {
+    if (
+      g
+        .record(g.string().or(g.boolean()))
+        .or(g.undefined())
+        .isSatisfiedBy(props)
+    ) {
       return h(type, props, children);
     }
     console.log(type, props);
@@ -247,7 +252,7 @@ const TestComponent = createComponent(
 );
 
 const NoPropsComponent = createComponent(g.object({}), () => {
-  return e("br", {});
+  return e("br");
 });
 
 console.log(
@@ -257,7 +262,7 @@ console.log(
 console.log(
   render(
     e("html", {}, [
-      e("meta", {}),
+      e("meta"),
       e(TestComponent, { href: "the-href" }),
       e(NoPropsComponent, {}),
     ]),
