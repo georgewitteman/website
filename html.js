@@ -152,29 +152,14 @@ export function c(component, props, children) {
 }
 
 /**
- * @template {string} TagName
- * @param {TagName} tagName
- * @param {Record<string, string | boolean>} [attributes]
- * @param {TagName extends VoidTagName ? undefined : Node[]} [children]
- * @returns {HTMLElement}
- */
-export function h(tagName, attributes, children) {
-  return {
-    type: "html",
-    tagName,
-    attributes: attributes ?? {},
-    children: children ?? [],
-  };
-}
-
-/**
  * @template {string | ComponentHelper<PropsType>} NodeType
  * @template {NodeType extends string ? Record<string, string | boolean> | undefined : unknown} PropsType
  * @param {NodeType} type
  * @param {PropsType} [props]
  * @param {NodeType extends VoidTagName ? undefined : Node[]} [children]
+ * @returns {Node}
  */
-export function e(type, props, children) {
+export function h(type, props, children) {
   if (typeof type === "string") {
     if (
       g
@@ -182,7 +167,12 @@ export function e(type, props, children) {
         .or(g.undefined())
         .isSatisfiedBy(props)
     ) {
-      return h(type, props, children);
+      return {
+        type: "html",
+        tagName: type,
+        attributes: props ?? {},
+        children: children ?? [],
+      };
     }
     console.log(type, props);
     throw new Error("Invalid prop types passed to e()");
@@ -243,28 +233,3 @@ function renderNode(node) {
 export function render(rootNode) {
   return `<!DOCTYPE html>${renderNode(rootNode)}`;
 }
-
-const TestComponent = createComponent(
-  g.object({ href: g.string() }),
-  (props, children) => {
-    return e("a", { href: props.href }, children);
-  },
-);
-
-const NoPropsComponent = createComponent(g.object({}), () => {
-  return e("br");
-});
-
-console.log(
-  render(e("html", {}, [e(TestComponent, { href: "the-href" }, ["foo"])])),
-);
-
-console.log(
-  render(
-    e("html", {}, [
-      e("meta"),
-      e(TestComponent, { href: "the-href" }),
-      e(NoPropsComponent, {}),
-    ]),
-  ),
-);
