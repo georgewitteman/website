@@ -163,6 +163,25 @@ export function h(tagName, attributes, children) {
 }
 
 /**
+ * @template {Record<string, unknown>} T
+ * @param {string | { guard: import("./lib/guard/types.js").Guard<T, false>, component: (props: T, children: Node[]) => Node}} type
+ * @param {T} props
+ * @param {Node[]} children
+ */
+export function e(type, props, children) {
+  if (typeof type === "string") {
+    if (g.record(g.string().or(g.boolean())).isSatisfiedBy(props)) {
+      return h(type, props, children);
+    }
+    throw new Error("Invalid prop types passed to e()");
+  }
+  if (typeof type === "object") {
+    return c(type, props, children);
+  }
+  throw new Error("invalid type");
+}
+
+/**
  * @param {string} value
  * @returns {import("./html.d.ts").SafeText}
  */
@@ -203,11 +222,10 @@ function renderNode(node) {
 }
 
 /**
- * @param {import("./html.d.ts").HTMLElement} rootNode
+ * @param {Node} rootNode
  * @returns {string}
  */
 export function render(rootNode) {
-  assert(rootNode.tagName === "html");
   return `<!DOCTYPE html>${renderNode(rootNode)}`;
 }
 
@@ -220,4 +238,12 @@ const TestComponent = createComponent(
 
 console.log(
   render(h("html", {}, [c(TestComponent, { href: "the-href" }, ["foo"])])),
+);
+
+console.log(
+  render(
+    e("html", { foo: new Date() }, [
+      e(TestComponent, { href: "the-href" }, ["foo"]),
+    ]),
+  ),
 );
