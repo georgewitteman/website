@@ -1,13 +1,13 @@
 import { Simplify } from "../../utils.js";
 
 export type Guard<T, O extends boolean> = {
-  isSatisfiedBy: (v: unknown) => v is T;
-  isOptional: () => O;
-  undefined: () => Guard<T | undefined, O>;
-  null: () => Guard<T | null, O>;
-  nullish: () => Guard<T | null | undefined, O>;
-  optional: () => Guard<T, true>;
-  required: () => Guard<T, false>;
+  readonly isSatisfiedBy: (v: unknown) => v is T;
+  readonly isOptional: () => O;
+  readonly undefined: () => Guard<T | undefined, O>;
+  readonly null: () => Guard<T | null, O>;
+  readonly nullish: () => Guard<T | null | undefined, O>;
+  readonly optional: () => Guard<T, true>;
+  readonly required: () => Guard<T, false>;
 };
 
 export type TypeOf<T> = T extends Guard<infer R, boolean> ? R : never;
@@ -24,7 +24,3 @@ export type UnShape<T extends Record<PropertyKey, Guard<unknown, boolean>>> =
       >;
     }
   >;
-
-export type Constructor<T, Arguments extends unknown[] = unknown[]> = new (
-  ...arguments_: Arguments
-) => T;

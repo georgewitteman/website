@@ -1,21 +1,21 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/Element
 export type HTMLElement = {
-  type: "html";
-  tagName: string;
-  attributes: Record<string, string | boolean>;
-  children: Node[];
+  readonly type: "html";
+  readonly tagName: string;
+  readonly attributes: Record<string, string | boolean>;
+  readonly children: Node[];
 };
 
-export type SafeText = { type: "safe-text"; value: string };
+export type SafeText = { readonly type: "safe-text"; readonly value: string };
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Text
 export type Text = string;
 
 export type Component = {
-  type: "component";
-  component: (props: unknown, children: Node[]) => Node;
-  props: unknown;
-  children: Node[];
+  readonly type: "component";
+  readonly component: (props: unknown, children: Node[]) => Node;
+  readonly props: unknown;
+  readonly children: Node[];
 };
 
 export type Node = HTMLElement | SafeText | Text | Component;

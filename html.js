@@ -109,23 +109,21 @@ function getAttributesAsString(props) {
 }
 
 /**
- * @template {import("./lib/guard/types.js").Guard<unknown, boolean>} G
- * @template {(props: import("./lib/guard/types.js").TypeOf<G>, children: Node[]) => Node} C
- * @param {G} guard
- * @param {C} component
+ * @template {Record<string, unknown>} P
+ * @param {import("./lib/guard/types.js").Guard<P, false>} guard
+ * @param {(props: P, children: Node[]) => Node} component
  */
 export function createComponent(guard, component) {
   return { guard, component };
 }
 
 /**
- * @template T
- * @template {import("./lib/guard/types.js").Guard<T, boolean>} G
- * @template {{ guard: G, component: (props: T, children: Node[]) => Node}} C
+ * @template {Record<string, unknown>} T
+ * @template {{ guard: import("./lib/guard/types.js").Guard<T, false>, component: (props: T, children: Node[]) => Node}} C
  * @param {C} component
  * @param {T} props
  * @param {Node[]} [children]
- * @returns {Node}
+ * @returns {Component}
  */
 export function c(component, props, children) {
   const { guard, component: originalComponent } = component;
@@ -153,7 +151,7 @@ export function c(component, props, children) {
  * @param {TagName} tagName
  * @param {Record<string, string | boolean>} [attributes]
  * @param {TagName extends VoidTagName ? undefined : Node[]} [children]
- * @returns {import("./html.d.ts").HTMLElement}
+ * @returns {HTMLElement}
  */
 export function h(tagName, attributes, children) {
   return {
