@@ -1,9 +1,11 @@
 import assert from "node:assert";
+import { g } from "./lib/guard/externals.js";
 
 /** @typedef {import("./html-types.js").Node} Node */
 /** @typedef {import("./html-types.js").HTMLElement} HTMLElement */
 /** @typedef {import("./html-types.js").SafeText} SafeText */
 /** @typedef {import("./html-types.js").VoidTagName} VoidTagName */
+/** @typedef {import("./html-types.js").Component} Component */
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Void_element
 const VOID_TAG_NAME_REGEX =
@@ -107,6 +109,46 @@ function getAttributesAsString(props) {
 }
 
 /**
+ * @template {import("./lib/guard/types.js").Guard<unknown, boolean>} G
+ * @template {(props: import("./lib/guard/types.js").TypeOf<G>, children: Node[]) => Node} C
+ * @param {G} guard
+ * @param {C} component
+ */
+export function createComponent(guard, component) {
+  return { guard, component };
+}
+
+/**
+ * @template T
+ * @template {import("./lib/guard/types.js").Guard<T, boolean>} G
+ * @template {{ guard: G, component: (props: T, children: Node[]) => Node}} C
+ * @param {C} component
+ * @param {T} props
+ * @param {Node[]} [children]
+ * @returns {Node}
+ */
+export function c(component, props, children) {
+  const { guard, component: originalComponent } = component;
+
+  /**
+   * @param {unknown} props
+   * @param {Node[]} children
+   */
+  const finalComponent = (props, children) => {
+    console.log(props);
+    assert(guard.isSatisfiedBy(props));
+    return originalComponent(props, children);
+  };
+
+  return {
+    type: "component",
+    component: finalComponent,
+    props,
+    children: children ?? [],
+  };
+}
+
+/**
  * @template {string} TagName
  * @param {TagName} tagName
  * @param {Record<string, string | boolean>} [attributes]
@@ -143,6 +185,11 @@ function renderNode(node) {
     return node.value;
   }
 
+  if (node.type === "component") {
+    const { component, props, children } = node;
+    return renderNode(component(props, children));
+  }
+
   const attributes = getAttributesAsString(node.attributes);
 
   if (VOID_TAG_NAME_REGEX.test(node.tagName)) {
@@ -165,3 +212,14 @@ export function render(rootNode) {
   assert(rootNode.tagName === "html");
   return `<!DOCTYPE html>${renderNode(rootNode)}`;
 }
+
+const TestComponent = createComponent(
+  g.object({ href: g.string() }),
+  (props, children) => {
+    return h("a", { href: props.href }, children);
+  },
+);
+
+console.log(
+  render(h("html", {}, [c(TestComponent, { href: "the-href" }, ["foo"])])),
+);
