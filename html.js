@@ -109,17 +109,23 @@ function getAttributesAsString(props) {
 }
 
 /**
- * @template {Record<string, unknown>} P
+ * @template {unknown} P
+ * @typedef {{ guard: import("./lib/guard/types.js").Guard<P, false>, component: (props: P, children: Node[]) => Node }} ComponentHelper
+ */
+
+/**
+ * @template {unknown} P
  * @param {import("./lib/guard/types.js").Guard<P, false>} guard
  * @param {(props: P, children: Node[]) => Node} component
+ * @returns {ComponentHelper<P>}
  */
 export function createComponent(guard, component) {
   return { guard, component };
 }
 
 /**
- * @template {Record<string, unknown>} T
- * @template {{ guard: import("./lib/guard/types.js").Guard<T, false>, component: (props: T, children: Node[]) => Node}} C
+ * @template {unknown} T
+ * @template {ComponentHelper<T>} C
  * @param {C} component
  * @param {T} props
  * @param {Node[]} [children]
@@ -133,7 +139,6 @@ export function c(component, props, children) {
    * @param {Node[]} children
    */
   const finalComponent = (props, children) => {
-    console.log(props);
     assert(guard.isSatisfiedBy(props));
     return originalComponent(props, children);
   };
@@ -163,19 +168,24 @@ export function h(tagName, attributes, children) {
 }
 
 /**
- * @template {Record<string, unknown>} T
- * @param {string | { guard: import("./lib/guard/types.js").Guard<T, false>, component: (props: T, children: Node[]) => Node}} type
- * @param {T} props
- * @param {Node[]} children
+ * @template {string | ComponentHelper<PropsType>} NodeType
+ * @template {NodeType extends string ? Record<string, string | boolean> : unknown} PropsType
+ * @param {NodeType} type
+ * @param {PropsType} props
+ * @param {NodeType extends VoidTagName ? undefined : Node[]} [children]
  */
 export function e(type, props, children) {
   if (typeof type === "string") {
     if (g.record(g.string().or(g.boolean())).isSatisfiedBy(props)) {
       return h(type, props, children);
     }
+    console.log(type, props);
     throw new Error("Invalid prop types passed to e()");
   }
   if (typeof type === "object") {
+    if (!type.guard.isSatisfiedBy(props)) {
+      throw new Error("Invalid props passed to component");
+    }
     return c(type, props, children);
   }
   throw new Error("invalid type");
@@ -232,18 +242,24 @@ export function render(rootNode) {
 const TestComponent = createComponent(
   g.object({ href: g.string() }),
   (props, children) => {
-    return h("a", { href: props.href }, children);
+    return e("a", { href: props.href }, children);
   },
 );
 
+const NoPropsComponent = createComponent(g.object({}), () => {
+  return e("br", {});
+});
+
 console.log(
-  render(h("html", {}, [c(TestComponent, { href: "the-href" }, ["foo"])])),
+  render(e("html", {}, [e(TestComponent, { href: "the-href" }, ["foo"])])),
 );
 
 console.log(
   render(
-    e("html", { foo: new Date() }, [
-      e(TestComponent, { href: "the-href" }, ["foo"]),
+    e("html", {}, [
+      e("meta", {}),
+      e(TestComponent, { href: "the-href" }),
+      e(NoPropsComponent, {}),
     ]),
   ),
 );
