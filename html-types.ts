@@ -11,14 +11,7 @@ export type SafeText = { readonly type: "safe-text"; readonly value: string };
 // https://developer.mozilla.org/en-US/docs/Web/API/Text
 export type Text = string;
 
-export type Component = {
-  readonly type: "component";
-  readonly component: (props: unknown, children: Node[]) => Node;
-  readonly props: unknown;
-  readonly children: Node[];
-};
-
-export type Node = HTMLElement | SafeText | Text | Component;
+export type Node = HTMLElement | SafeText | Text;
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Void_element
 export type VoidTagName =

@@ -1,11 +1,8 @@
 import assert from "node:assert";
-import { g } from "./lib/guard/externals.js";
-
 /** @typedef {import("./html-types.js").Node} Node */
 /** @typedef {import("./html-types.js").HTMLElement} HTMLElement */
 /** @typedef {import("./html-types.js").SafeText} SafeText */
 /** @typedef {import("./html-types.js").VoidTagName} VoidTagName */
-/** @typedef {import("./html-types.js").Component} Component */
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Void_element
 const VOID_TAG_NAME_REGEX =
@@ -109,81 +106,19 @@ function getAttributesAsString(props) {
 }
 
 /**
- * @template {unknown} P
- * @typedef {{ guard: import("./lib/guard/types.js").Guard<P, false>, component: (props: P, children: Node[]) => Node }} ComponentHelper
+ * @template {string} TagName
+ * @param {TagName} tagName
+ * @param {Record<string, string | boolean>} [attributes]
+ * @param {TagName extends VoidTagName ? undefined : Node[]} [children]
+ * @returns {HTMLElement}
  */
-
-/**
- * @template {unknown} P
- * @param {import("./lib/guard/types.js").Guard<P, false>} guard
- * @param {(props: P, children: Node[]) => Node} component
- * @returns {ComponentHelper<P>}
- */
-export function createComponent(guard, component) {
-  return { guard, component };
-}
-
-/**
- * @template {unknown} T
- * @template {ComponentHelper<T>} C
- * @param {C} component
- * @param {T} props
- * @param {Node[]} [children]
- * @returns {Component}
- */
-export function c(component, props, children) {
-  const { guard, component: originalComponent } = component;
-
-  /**
-   * @param {unknown} props
-   * @param {Node[]} children
-   */
-  const finalComponent = (props, children) => {
-    assert(guard.isSatisfiedBy(props));
-    return originalComponent(props, children);
-  };
-
+export function h(tagName, attributes, children) {
   return {
-    type: "component",
-    component: finalComponent,
-    props,
+    type: "html",
+    tagName,
+    attributes: attributes ?? {},
     children: children ?? [],
   };
-}
-
-/**
- * @template {string | ComponentHelper<PropsType>} NodeType
- * @template {NodeType extends string ? Record<string, string | boolean> | undefined : unknown} PropsType
- * @param {NodeType} type
- * @param {PropsType} [props]
- * @param {NodeType extends VoidTagName ? undefined : Node[]} [children]
- * @returns {Node}
- */
-export function h(type, props, children) {
-  if (typeof type === "string") {
-    if (
-      g
-        .record(g.string().or(g.boolean()))
-        .or(g.undefined())
-        .isSatisfiedBy(props)
-    ) {
-      return {
-        type: "html",
-        tagName: type,
-        attributes: props ?? {},
-        children: children ?? [],
-      };
-    }
-    console.log(type, props);
-    throw new Error("Invalid prop types passed to e()");
-  }
-  if (typeof type === "object") {
-    if (!type.guard.isSatisfiedBy(props)) {
-      throw new Error("Invalid props passed to component");
-    }
-    return c(type, props, children);
-  }
-  throw new Error("invalid type");
 }
 
 /**
@@ -205,11 +140,6 @@ function renderNode(node) {
 
   if (node.type === "safe-text") {
     return node.value;
-  }
-
-  if (node.type === "component") {
-    const { component, props, children } = node;
-    return renderNode(component(props, children));
   }
 
   const attributes = getAttributesAsString(node.attributes);
