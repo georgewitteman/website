@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { UnionGuard } from "./UnionGuard.js";
 import { isNull, isUndefined } from "./guards.js";
 
@@ -38,7 +37,9 @@ export class ObjectGuard {
 
     return Object.keys(this.#shape).every((key) => {
       const guard = this.#shape[key];
-      assert(guard !== undefined);
+      if (guard === undefined) {
+        throw new Error("Expected guard to be defined");
+      }
 
       if (!(key in v)) {
         return guard.isOptional();

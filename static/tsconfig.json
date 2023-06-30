@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "include": [
+    "**/*.js",
+    "**/*.cjs",
+    "**/*.mjs",
+    "**/*.ts",
+    "**/.*js",
+    "**/.*.cjs",
+    "**/.*.mjs"
+  ],
+  "exclude": [],
+  "compilerOptions": {
+    "lib": ["DOM"]
+  }
+}

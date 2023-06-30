@@ -165,7 +165,7 @@ export class MyResponse {
       ...(this.#headers["Content-Type"] === "text/html; charset=utf-8"
         ? {
             "Content-Security-Policy":
-              "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'",
+              "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://get.geojs.io",
           }
         : {}),
     };

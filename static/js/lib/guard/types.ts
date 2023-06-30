@@ -1,4 +1,4 @@
-import { Simplify } from "../../utils.js";
+import { Simplify } from "../../../../utils.js";
 
 export type Guard<T, O extends boolean> = {
   readonly isSatisfiedBy: (v: unknown) => v is T;

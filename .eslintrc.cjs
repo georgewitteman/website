@@ -35,7 +35,7 @@ module.exports = {
         browser: true,
       },
       parserOptions: {
-        project: "tsconfig-browser.json",
+        project: "static/tsconfig.json",
       },
     },
     {
