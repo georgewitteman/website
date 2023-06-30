@@ -3,6 +3,7 @@ import { getPool } from "./db.js";
 import { router as echoRouter } from "./routes/echo.js";
 import { router as databaseRouter } from "./routes/database.js";
 import { router as migrationsRouter } from "./routes/migrations.js";
+import { router as authRouter } from "./routes/auth.js";
 import { logger } from "./logger.js";
 import { requestIdMiddleware } from "./middleware/request-id-middleware.js";
 import { staticHandler } from "./middleware/static.js";
@@ -18,6 +19,7 @@ app.use(staticHandler);
 app.use(echoRouter.middleware());
 app.use(migrationsRouter.middleware());
 app.use(databaseRouter.middleware());
+app.use(authRouter.middleware());
 app.use(notFound);
 
 logger.info("Environment", { env: process.env });

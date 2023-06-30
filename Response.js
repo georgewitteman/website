@@ -1,5 +1,5 @@
 /**
- * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: string, "Last-Modified"?: Date}} Headers
+ * @typedef {{"Content-Type"?: import("./content-type.js").ContentTypeHeaderValues, Location?: string, 'Content-Security-Policy'?: string, ETag?: string, "Cache-Control"?: string, "Last-Modified"?: Date, "Set-Cookie"?: string}} Headers
  */
 
 const STATUS_MESSAGE = /** @type {const} */ ({
@@ -155,6 +155,10 @@ export class MyResponse {
       // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified
       ...(this.#headers["Last-Modified"]
         ? { "Last-Modified": this.#headers["Last-Modified"].toUTCString() }
+        : {}),
+
+      ...(this.#headers["Set-Cookie"]
+        ? { "Set-Cookie": this.#headers["Set-Cookie"] }
         : {}),
 
       // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type

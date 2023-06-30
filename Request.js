@@ -1,6 +1,7 @@
 import querystring from "node:querystring";
 import { ReadonlyHeaders } from "./Headers.js";
 import assert from "node:assert";
+import cookie from "cookie";
 
 /**
  * @param {unknown} val
@@ -131,6 +132,9 @@ export class MyRequest {
     };
   }
 
+  /**
+   * @returns {Promise<import("./utils.js").Simplify<import("node:querystring").ParsedUrlQuery>>}
+   */
   async body() {
     if (typeof this.#rawBody !== "string") {
       /** @type {Buffer[]} */
@@ -155,6 +159,13 @@ export class MyRequest {
         this.headers.get("content-type"),
       )}`,
     );
+  }
+
+  get cookies() {
+    if (typeof this.#nodeRequest.headers.cookie !== "string") {
+      return {};
+    }
+    return cookie.parse(this.#nodeRequest.headers.cookie);
   }
 
   get method() {
