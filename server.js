@@ -1,6 +1,5 @@
 import { App } from "./lib/App.js";
 import { getPool } from "./lib/db.js";
-import { router as databaseRouter } from "./routes/database.js";
 import { router as migrationsRouter } from "./routes/migrations.js";
 import { router as authRouter } from "./routes/auth.js";
 import { logger } from "./lib/logger.js";
@@ -16,7 +15,6 @@ app.use(requestIdMiddleware);
 app.use(requestLogger);
 app.use(staticHandler);
 app.use(migrationsRouter.middleware());
-app.use(databaseRouter.middleware());
 app.use(authRouter.middleware());
 app.use(notFound);
 
