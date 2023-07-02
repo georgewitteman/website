@@ -8,10 +8,25 @@ import {
   listMigrations,
   runMigration,
 } from "../lib/migrations.js";
+import { route } from "../lib/route.js";
 
 export const router = new Router();
 
-router.get("/migrations", async () => {
+/**
+ * @param {string | undefined} name
+ */
+async function migrationNotFound(name) {
+  return new MyResponse(404).html(
+    render(
+      await documentLayout({
+        title: name ?? "<missing>",
+        main: [h("h1", {}, [`Migration not found: ${name ?? "<undefined>"}`])],
+      }),
+    ),
+  );
+}
+
+async function getMigrations() {
   const migrations = await listMigrations();
   return new MyResponse().html(
     render(
@@ -41,24 +56,12 @@ router.get("/migrations", async () => {
       }),
     ),
   );
-});
+}
 
 /**
  * @param {string | undefined} name
  */
-async function migrationNotFound(name) {
-  return new MyResponse(404).html(
-    render(
-      await documentLayout({
-        title: name ?? "<missing>",
-        main: [h("h1", {}, [`Migration not found: ${name ?? "<undefined>"}`])],
-      }),
-    ),
-  );
-}
-
-router.get("/migration/:name", async (req, params) => {
-  const name = params.name;
+async function getOneMigration(name) {
   if (!name) {
     logger.warn(`Migration name is empty or nullish: ${name ?? "<nullish>"}`);
     return migrationNotFound(name);
@@ -100,19 +103,21 @@ router.get("/migration/:name", async (req, params) => {
       }),
     ),
   );
-});
+}
 
-router.post("/migration/:name", async (req, params) => {
-  const name = params.name;
+/**
+ * @param {string | undefined} name
+ */
+async function postOneMigration(name) {
   if (!name) {
     logger.warn(`Migration empty or not a string: ${name ?? "<nullish>"}`);
-    return MyResponse.redirectFound(req.pathname);
+    return MyResponse.redirectFound(route("migrations"));
   }
 
   const migration = await getMigration(name);
   if (!migration) {
     logger.warn(`Migration not found (is string): ${name}`);
-    return MyResponse.redirectFound(req.pathname);
+    return MyResponse.redirectFound(route("migration", name));
   }
 
   if (migration.completedOn) {
@@ -122,5 +127,17 @@ router.post("/migration/:name", async (req, params) => {
 
   await runMigration(name);
 
-  return MyResponse.redirectFound(req.pathname);
-});
+  return MyResponse.redirectFound(route("migration", name));
+}
+
+router.get("/migrations", async () => await getMigrations());
+
+router.get(
+  "/migration/:name",
+  async (_, params) => await getOneMigration(params.name),
+);
+
+router.post(
+  "/migration/:name",
+  async (_, params) => await postOneMigration(params.name),
+);

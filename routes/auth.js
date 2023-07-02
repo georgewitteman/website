@@ -147,7 +147,7 @@ async function getUserProfile(sessionId, userId) {
   );
 }
 
-router.get("/auth/signup", async () => getSignup());
+router.get("/auth/signup", async () => await getSignup());
 
 router.post("/auth/signup", async (req) => {
   const body = z
@@ -157,10 +157,10 @@ router.post("/auth/signup", async (req) => {
     })
     .parse(await req.body());
 
-  return postSignup(body.email, body.password);
+  return await postSignup(body.email, body.password);
 });
 
-router.get("/auth/signin", async () => getSignIn());
+router.get("/auth/signin", async () => await getSignIn());
 
 router.post("/auth/signin", async (req) => {
   const body = z
@@ -170,12 +170,12 @@ router.post("/auth/signin", async (req) => {
     })
     .parse(await req.body());
 
-  return postSignIn(body.email, body.password);
+  return await postSignIn(body.email, body.password);
 });
 
 router.get("/auth/profile/:id", async (req, params) => {
   const sessionId = req.cookies.id;
   const { id: userId } = z.object({ id: z.string() }).parse(params);
 
-  return getUserProfile(sessionId, userId);
+  return await getUserProfile(sessionId, userId);
 });

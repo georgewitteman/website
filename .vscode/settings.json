@@ -8,7 +8,8 @@
       "driver": "PostgreSQL",
       "name": "Local Database",
       "database": "postgres",
-      "username": "postgres"
+      "username": "postgres",
+      "password": "postgres"
     }
   ]
 }
