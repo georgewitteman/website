@@ -97,7 +97,7 @@ export async function postSignIn(email, password) {
     cookie.serialize("id", session.id, {
       expires: session.expiresAt,
       httpOnly: true,
-      path: "/auth",
+      path: "/",
       sameSite: "strict",
       secure: config.session.secure,
     }),
@@ -154,14 +154,14 @@ export async function getLogOut(sessionId, redirectUrl) {
   await expireSession(sessionId);
 
   const newExpiration = new Date();
-  newExpiration.setHours(newExpiration.getHours() + 1);
+  newExpiration.setHours(newExpiration.getHours() - 1);
 
   return MyResponse.redirectFound(redirectUrl).header(
     "Set-Cookie",
     cookie.serialize("id", "", {
       expires: newExpiration,
       httpOnly: true,
-      path: "/auth",
+      path: "/",
       sameSite: "strict",
       secure: config.session.secure,
     }),
