@@ -1,4 +1,9 @@
-import { Simplify } from "../../../../utils.js";
+/**
+ * https://github.com/sindresorhus/type-fest/blob/main/source/simplify.d.ts
+ */
+export type Simplify<T> = {
+  [KeyType in keyof T]: T[KeyType];
+} & NonNullable<unknown>;
 
 export type Guard<T, O extends boolean> = {
   readonly isSatisfiedBy: (v: unknown) => v is T;

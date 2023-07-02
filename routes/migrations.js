@@ -1,9 +1,13 @@
-import { MyResponse } from "../Response.js";
-import { Router } from "../Router.js";
-import { h, render } from "../html.js";
-import { documentLayout } from "../layout.js";
-import { logger } from "../logger.js";
-import { getMigration, listMigrations, runMigration } from "../migrations.js";
+import { MyResponse } from "../lib/Response.js";
+import { Router } from "../lib/Router.js";
+import { h, render } from "../lib/html.js";
+import { documentLayout } from "../lib/layout.js";
+import { logger } from "../lib/logger.js";
+import {
+  getMigration,
+  listMigrations,
+  runMigration,
+} from "../lib/migrations.js";
 
 export const router = new Router();
 

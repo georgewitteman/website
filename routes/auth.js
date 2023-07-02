@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { MyResponse } from "../Response.js";
-import { Router } from "../Router.js";
-import { h, render } from "../html.js";
-import { documentLayout } from "../layout.js";
-import { sql, typeSafeQuery } from "../db.js";
+import { MyResponse } from "../lib/Response.js";
+import { Router } from "../lib/Router.js";
+import { h, render } from "../lib/html.js";
+import { documentLayout } from "../lib/layout.js";
+import { sql, typeSafeQuery } from "../lib/db.js";
 import crypto, { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import cookie from "cookie";

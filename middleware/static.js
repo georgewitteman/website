@@ -1,14 +1,14 @@
 import path from "node:path";
 import fs from "node:fs";
-import { MyResponse } from "../Response.js";
+import { MyResponse } from "../lib/Response.js";
 import {
   getContentTypeFromExtension,
   isSupportedExtension,
-} from "../content-type.js";
+} from "../lib/content-type.js";
 import { createHash } from "node:crypto";
 import assert from "node:assert";
 import querystring from "node:querystring";
-import { logger } from "../logger.js";
+import { logger } from "../lib/logger.js";
 
 const STATIC_PATH = path.join(process.cwd(), "./static");
 const ONE_DAY_IN_SECONDS = "86400";
@@ -66,7 +66,7 @@ async function getStaticFile(pathname) {
 }
 
 /**
- * @param {import("../Request.js").MyRequest} req
+ * @param {import("../lib/Request.js").MyRequest} req
  * @param {() => Promise<MyResponse>} next
  * @returns {Promise<MyResponse>}
  */

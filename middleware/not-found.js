@@ -1,7 +1,7 @@
-import { MyResponse } from "../Response.js";
+import { MyResponse } from "../lib/Response.js";
 
 /**
- * @param {import("../Request.js").MyRequest} req
+ * @param {import("../lib/Request.js").MyRequest} req
  * @returns {Promise<MyResponse>}
  */
 export async function notFound(req) {

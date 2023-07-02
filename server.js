@@ -1,10 +1,10 @@
-import { App } from "./App.js";
-import { getPool } from "./db.js";
+import { App } from "./lib/App.js";
+import { getPool } from "./lib/db.js";
 import { router as echoRouter } from "./routes/echo.js";
 import { router as databaseRouter } from "./routes/database.js";
 import { router as migrationsRouter } from "./routes/migrations.js";
 import { router as authRouter } from "./routes/auth.js";
-import { logger } from "./logger.js";
+import { logger } from "./lib/logger.js";
 import { requestIdMiddleware } from "./middleware/request-id-middleware.js";
 import { staticHandler } from "./middleware/static.js";
 import { requestLogger } from "./middleware/request-logger.js";

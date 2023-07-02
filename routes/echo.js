@@ -1,5 +1,5 @@
-import { MyResponse } from "../Response.js";
-import { Router } from "../Router.js";
+import { MyResponse } from "../lib/Response.js";
+import { Router } from "../lib/Router.js";
 
 export const router = new Router();
 

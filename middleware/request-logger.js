@@ -1,8 +1,8 @@
-import { logger } from "../logger.js";
+import { logger } from "../lib/logger.js";
 
 /**
- * @param {import("../Request.js").MyRequest} req
- * @param {import("../Response.js").MyResponse | undefined} res
+ * @param {import("../lib/Request.js").MyRequest} req
+ * @param {import("../lib/Response.js").MyResponse | undefined} res
  * @param {bigint} startTimeNs
  */
 function logResponse(req, res, startTimeNs) {
@@ -26,8 +26,8 @@ function logResponse(req, res, startTimeNs) {
 }
 
 /**
- * @param {import("../Request.js").MyRequest} req
- * @param {() => Promise<import("../Response.js").MyResponse>} next
+ * @param {import("../lib/Request.js").MyRequest} req
+ * @param {() => Promise<import("../lib/Response.js").MyResponse>} next
  */
 export async function requestLogger(req, next) {
   const startNs = process.hrtime.bigint();

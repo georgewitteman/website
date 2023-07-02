@@ -1,8 +1,8 @@
-import { MyResponse } from "../Response.js";
-import { Router } from "../Router.js";
-import { sql, typeSafeQuery } from "../db.js";
-import { h, render } from "../html.js";
-import { documentLayout } from "../layout.js";
+import { MyResponse } from "../lib/Response.js";
+import { Router } from "../lib/Router.js";
+import { sql, typeSafeQuery } from "../lib/db.js";
+import { h, render } from "../lib/html.js";
+import { documentLayout } from "../lib/layout.js";
 import { z } from "zod";
 
 export const router = new Router();
