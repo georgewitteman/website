@@ -5,6 +5,9 @@ FROM node:20-alpine
 
 USER node
 
+# https://snyk.io/blog/10-best-practices-to-containerize-nodejs-web-applications-with-docker/#
+ENV NODE_ENV production
+
 # https://github.com/nodejs/docker-node/issues/740
 RUN mkdir -p /home/node/app
 
@@ -12,7 +15,8 @@ WORKDIR /home/node/app
 
 COPY package*.json ./
 
-RUN npm ci --omit=dev
+# https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/clean-cache.md
+RUN npm ci --only=production && npm cache clean --force
 
 COPY . .
 
