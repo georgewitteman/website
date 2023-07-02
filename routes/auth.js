@@ -1,6 +1,4 @@
-import { z } from "zod";
 import { MyResponse } from "../lib/Response.js";
-import { Router } from "../lib/Router.js";
 import { h, render } from "../lib/html.js";
 import { documentLayout } from "../lib/layout.js";
 import cookie from "cookie";
@@ -13,9 +11,7 @@ import {
 } from "../lib/user.js";
 import { config } from "../lib/config.js";
 
-export const router = new Router();
-
-async function getSignup() {
+export async function getSignup() {
   return new MyResponse().html(
     render(
       await documentLayout({
@@ -43,7 +39,7 @@ async function getSignup() {
  * @param {string} email
  * @param {string} password
  */
-async function postSignup(email, password) {
+export async function postSignup(email, password) {
   const result = await createUser({ email, password });
   if (!result.created) {
     return new MyResponse().status(400).body(result.reason);
@@ -52,7 +48,7 @@ async function postSignup(email, password) {
   return MyResponse.redirectFound("/auth/signin");
 }
 
-async function getSignIn() {
+export async function getSignIn() {
   return new MyResponse().html(
     render(
       await documentLayout({
@@ -80,7 +76,7 @@ async function getSignIn() {
  * @param {string} email
  * @param {string} password
  */
-async function postSignIn(email, password) {
+export async function postSignIn(email, password) {
   const user = await getUserByEmail(email);
 
   if (!user) {
@@ -112,7 +108,7 @@ async function postSignIn(email, password) {
  * @param {string | null | undefined} sessionId
  * @param {string} userId
  */
-async function getUserProfile(sessionId, userId) {
+export async function getUserProfile(sessionId, userId) {
   if (!(await checkSession(sessionId, userId))) {
     return new MyResponse()
       .status(401)
@@ -146,36 +142,3 @@ async function getUserProfile(sessionId, userId) {
     ),
   );
 }
-
-router.get("/auth/signup", async () => await getSignup());
-
-router.post("/auth/signup", async (req) => {
-  const body = z
-    .object({
-      email: z.string().email(),
-      password: z.string(),
-    })
-    .parse(await req.body());
-
-  return await postSignup(body.email, body.password);
-});
-
-router.get("/auth/signin", async () => await getSignIn());
-
-router.post("/auth/signin", async (req) => {
-  const body = z
-    .object({
-      email: z.string().email(),
-      password: z.string(),
-    })
-    .parse(await req.body());
-
-  return await postSignIn(body.email, body.password);
-});
-
-router.get("/auth/profile/:id", async (req, params) => {
-  const sessionId = req.cookies.id;
-  const { id: userId } = z.object({ id: z.string() }).parse(params);
-
-  return await getUserProfile(sessionId, userId);
-});

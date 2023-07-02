@@ -1,5 +1,4 @@
 import { MyResponse } from "../lib/Response.js";
-import { Router } from "../lib/Router.js";
 import { h, render } from "../lib/html.js";
 import { documentLayout } from "../lib/layout.js";
 import { logger } from "../lib/logger.js";
@@ -9,8 +8,6 @@ import {
   runMigration,
 } from "../lib/migrations.js";
 import { route } from "../lib/route.js";
-
-export const router = new Router();
 
 /**
  * @param {string | undefined} name
@@ -26,7 +23,7 @@ async function migrationNotFound(name) {
   );
 }
 
-async function getMigrations() {
+export async function getMigrations() {
   const migrations = await listMigrations();
   return new MyResponse().html(
     render(
@@ -61,7 +58,7 @@ async function getMigrations() {
 /**
  * @param {string | undefined} name
  */
-async function getOneMigration(name) {
+export async function getOneMigration(name) {
   if (!name) {
     logger.warn(`Migration name is empty or nullish: ${name ?? "<nullish>"}`);
     return migrationNotFound(name);
@@ -108,7 +105,7 @@ async function getOneMigration(name) {
 /**
  * @param {string | undefined} name
  */
-async function postOneMigration(name) {
+export async function postOneMigration(name) {
   if (!name) {
     logger.warn(`Migration empty or not a string: ${name ?? "<nullish>"}`);
     return MyResponse.redirectFound(route("migrations"));
@@ -129,15 +126,3 @@ async function postOneMigration(name) {
 
   return MyResponse.redirectFound(route("migration", name));
 }
-
-router.get("/migrations", async () => await getMigrations());
-
-router.get(
-  "/migration/:name",
-  async (_, params) => await getOneMigration(params.name),
-);
-
-router.post(
-  "/migration/:name",
-  async (_, params) => await postOneMigration(params.name),
-);

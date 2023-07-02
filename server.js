@@ -1,26 +1,13 @@
-import { App } from "./lib/App.js";
 import { getPool } from "./lib/db.js";
-import { router as migrationsRouter } from "./routes/migrations.js";
-import { router as authRouter } from "./routes/auth.js";
 import { logger } from "./lib/logger.js";
-import { requestIdMiddleware } from "./middleware/request-id-middleware.js";
-import { staticHandler } from "./middleware/static.js";
-import { requestLogger } from "./middleware/request-logger.js";
-import { notFound } from "./middleware/not-found.js";
+import { requestListener } from "./lib/app.js";
+import { createServer } from "node:http";
 
 const PORT = 8080;
 
-const app = new App();
-app.use(requestIdMiddleware);
-app.use(requestLogger);
-app.use(staticHandler);
-app.use(migrationsRouter.middleware());
-app.use(authRouter.middleware());
-app.use(notFound);
-
 logger.info("Environment", { env: process.env });
 
-const server = app.createServer().listen(PORT, "0.0.0.0", () => {
+const server = createServer(requestListener).listen(PORT, "0.0.0.0", () => {
   logger.info("listening on", server.address());
 });
 
