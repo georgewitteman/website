@@ -7,6 +7,6 @@ CREATE TABLE IF NOT EXISTS app_user (
 
 CREATE TABLE IF NOT EXISTS session (
   id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES app_user(id),
   expires_at TIMESTAMP NOT NULL
 );
