@@ -1,4 +1,8 @@
+import { assert } from "./lib/assert.js";
+
 const formElement = document.getElementById("form");
+
+assert(formElement instanceof HTMLFormElement);
 
 const boxWattageInput = document.getElementById("box_wattage");
 const boxMinutesInput = document.getElementById("box_minutes");
@@ -16,18 +20,26 @@ const minusBoxWattageBtn = document.getElementById("minus_box_wattage");
 const plusYourWattageBtn = document.getElementById("plus_your_wattage");
 const minusYourWattageBtn = document.getElementById("minus_your_wattage");
 
-if (!(boxMinutesInput instanceof HTMLInputElement)) {
-  throw new Error("Invalid type");
-}
+assert(boxWattageInput instanceof HTMLInputElement);
+assert(boxMinutesInput instanceof HTMLInputElement);
+assert(boxSecondsInput instanceof HTMLInputElement);
+assert(boxPowerInput instanceof HTMLInputElement);
+assert(yourWattageInput instanceof HTMLInputElement);
 
-if (!(boxSecondsInput instanceof HTMLInputElement)) {
-  throw new Error("Invalid type");
-}
+assert(plus15Btn instanceof HTMLButtonElement);
+assert(minus15Btn instanceof HTMLButtonElement);
+assert(plus1Btn instanceof HTMLButtonElement);
+assert(minus1Btn instanceof HTMLButtonElement);
+assert(plus1PowerBtn instanceof HTMLButtonElement);
+assert(minus1PowerBtn instanceof HTMLButtonElement);
+assert(plusBoxWattageBtn instanceof HTMLButtonElement);
+assert(minusBoxWattageBtn instanceof HTMLButtonElement);
+assert(plusYourWattageBtn instanceof HTMLButtonElement);
+assert(minusYourWattageBtn instanceof HTMLButtonElement);
 
-if (!(boxPowerInput instanceof HTMLInputElement)) {
-  throw new Error("Invalid type");
-}
-
+/**
+ * @param {number} seconds
+ */
 function secondsToMinsSecs(seconds) {
   return {
     minutes: Math.floor(seconds / 60),
@@ -53,8 +65,8 @@ const getBoxSeconds = () =>
 const timeBtnClickHandler = (delta) => () => {
   const newSeconds = Math.max(1, getBoxSeconds() + delta);
   const { minutes, seconds } = secondsToMinsSecs(newSeconds);
-  boxMinutesInput.value = minutes;
-  boxSecondsInput.value = seconds;
+  boxMinutesInput.value = minutes.toString();
+  boxSecondsInput.value = seconds.toString();
   computeTime();
 };
 
@@ -70,7 +82,7 @@ const powerBtnClickHandler = (delta) => () => {
   boxPowerInput.value = Math.max(
     1,
     Math.min(10, parseInt(boxPowerInput.value, 10) + delta),
-  );
+  ).toString();
   computeTime();
 };
 
@@ -84,7 +96,7 @@ minus1PowerBtn.addEventListener("click", powerBtnClickHandler(-1));
  * @returns
  */
 const wattageBtnClickHandler = (delta, element) => () => {
-  element.value = Math.max(1, parseInt(element.value, 10) + delta);
+  element.value = Math.max(1, parseInt(element.value, 10) + delta).toString();
   computeTime();
 };
 
@@ -108,7 +120,7 @@ minusYourWattageBtn.addEventListener(
 const urlParams = new URLSearchParams(window.location.search);
 urlParams.forEach((value, key) => {
   const element = document.getElementById(key);
-  if (element) {
+  if (element && element instanceof HTMLInputElement) {
     element.value = value;
   }
 });
@@ -116,24 +128,18 @@ urlParams.forEach((value, key) => {
 const resultTimeElement = document.getElementById("result_time");
 const resultPowerElement = document.getElementById("result_power");
 
-function computeTime() {
-  if (!(boxWattageInput instanceof HTMLInputElement)) {
-    throw new Error("Invalid type");
-  }
-  if (!(yourWattageInput instanceof HTMLInputElement)) {
-    throw new Error("Invalid type");
-  }
-  if (!(boxPowerInput instanceof HTMLInputElement)) {
-    throw new Error("Invalid type");
-  }
+assert(resultTimeElement instanceof HTMLOutputElement);
+assert(resultPowerElement instanceof HTMLOutputElement);
+
+const computeTime = () => {
   const boxWattage = valueOrDefault(parseInt(boxWattageInput.value, 10), 1100);
   const boxSeconds = getBoxSeconds();
   const boxPower = valueOrDefault(parseInt(boxPowerInput.value, 10), 10);
   const yourWattage = valueOrDefault(parseInt(yourWattageInput.value, 10), 975);
 
   const newUrl = new URL(window.location.href);
-  newUrl.searchParams.set("box_wattage", boxWattage);
-  newUrl.searchParams.set("your_wattage", yourWattage);
+  newUrl.searchParams.set("box_wattage", boxWattage.toString());
+  newUrl.searchParams.set("your_wattage", yourWattage.toString());
   window.history.replaceState({}, "", newUrl.pathname + newUrl.search);
 
   // We want the desired power to be as close to the power of the microwave
@@ -157,8 +163,8 @@ function computeTime() {
   resultTimeElement.innerText = `${Math.floor(
     resultSeconds / 60,
   )} min ${Math.round(resultSeconds % 60)} sec`;
-  resultPowerElement.innerText = resultPower;
-}
+  resultPowerElement.innerText = resultPower.toString();
+};
 
 formElement.addEventListener("input", computeTime);
 

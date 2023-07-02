@@ -1,5 +1,11 @@
+import { assert } from "./lib/assert.js";
+
 const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
 const default_length = 8;
+
+/**
+ * @param {number} length
+ */
 function generate(length) {
   let result = "";
   for (var i = 0; i < length; i++) {
@@ -12,6 +18,11 @@ const formElement = document.getElementById("form");
 const lengthInputElement = document.getElementById("length");
 const outputElement = document.getElementById("username");
 const copyButton = document.getElementById("copy_username");
+
+assert(formElement instanceof HTMLFormElement);
+assert(lengthInputElement instanceof HTMLInputElement);
+assert(outputElement instanceof HTMLOutputElement);
+assert(copyButton instanceof HTMLButtonElement);
 
 /**
  * @param {Event} e

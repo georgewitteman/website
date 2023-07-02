@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "../tsconfig.base.json",
   "include": [
     "**/*.js",
     "**/*.cjs",
@@ -11,6 +11,9 @@
   ],
   "exclude": [],
   "compilerOptions": {
+    "module": "ES2022",
+    "moduleDetection": "force",
+    "moduleResolution": "node16",
     "lib": ["DOM"]
   }
 }

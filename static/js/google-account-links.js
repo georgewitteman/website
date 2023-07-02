@@ -1,3 +1,5 @@
+import { assert } from "./lib/assert.js";
+
 const formElement = document.getElementById("form");
 const emailInputElement = document.getElementById("email");
 const gmailOutputElement = document.getElementById("gmail");
@@ -5,6 +7,14 @@ const googleDriveOutputElement = document.getElementById("google_drive");
 const gmail2OutputElement = document.getElementById("gmail2");
 const googleDrive2OutputElement = document.getElementById("google_drive2");
 const googleCalendarOutputElement = document.getElementById("google_calendar");
+
+assert(formElement instanceof HTMLFormElement);
+assert(emailInputElement instanceof HTMLInputElement);
+assert(gmailOutputElement instanceof HTMLOutputElement);
+assert(googleDriveOutputElement instanceof HTMLOutputElement);
+assert(gmail2OutputElement instanceof HTMLOutputElement);
+assert(googleDrive2OutputElement instanceof HTMLOutputElement);
+assert(googleCalendarOutputElement instanceof HTMLOutputElement);
 
 /**
  *

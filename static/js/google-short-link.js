@@ -1,3 +1,5 @@
+import { assert } from "./lib/assert.js";
+
 const formElement = document.getElementById("form");
 const longUrlElement = document.getElementById("long_url");
 const pasteUrlElement = document.getElementById("paste_url");
@@ -5,6 +7,14 @@ const pasteCopyUrlElement = document.getElementById("paste_copy_url");
 const shortUrlElement = document.getElementById("short_url");
 
 const copyShortUrl = document.getElementById("copy_short_url");
+
+assert(formElement instanceof HTMLFormElement);
+assert(longUrlElement instanceof HTMLInputElement);
+assert(pasteUrlElement instanceof HTMLButtonElement);
+assert(pasteCopyUrlElement instanceof HTMLButtonElement);
+assert(shortUrlElement instanceof HTMLOutputElement);
+assert(copyShortUrl instanceof HTMLButtonElement);
+
 copyShortUrl.style.display = "none";
 
 pasteUrlElement.addEventListener("click", () => {
@@ -60,7 +70,7 @@ function getShortUrl(longUrl) {
   return new URL(`https://google.com/search?${searchParams.toString()}`);
 }
 
-formElement.addEventListener("input", function () {
+formElement.addEventListener("input", () => {
   if (!(longUrlElement instanceof HTMLInputElement)) {
     throw new Error("invaid type");
   }
@@ -71,8 +81,8 @@ formElement.addEventListener("input", function () {
     return;
   }
   const link = document.createElement("a");
-  link.href = shortUrl;
-  link.innerText = shortUrl;
+  link.href = shortUrl.toString();
+  link.innerText = shortUrl.toString();
   shortUrlElement.replaceChildren(link);
   copyShortUrl.style.display = "initial";
 });

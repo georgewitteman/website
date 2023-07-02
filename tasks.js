@@ -92,6 +92,7 @@ task("lint", [], async () => {
   }
   execSync("npx eslint .");
   execSync("npx tsc");
+  execSync("npx tsc --project ./static/tsconfig.json");
 });
 
 task("test", [], async () => {

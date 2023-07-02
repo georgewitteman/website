@@ -1,3 +1,5 @@
+import { assert } from "./lib/assert.js";
+
 const ASIN_REGEX = /\W([A-Z0-9]{10})/;
 const AMAZON_URL = "https://amzn.com/dp/";
 const AMAZON_LONG_URL = "https://www.amazon.com/dp/";
@@ -23,6 +25,15 @@ const shortishUrlElement = document.getElementById("shortish_url");
 
 const copyShortUrl = document.getElementById("copy_short_url");
 const copyShortishUrl = document.getElementById("copy_shortish_url");
+
+assert(formElement instanceof HTMLFormElement);
+assert(longUrlElement instanceof HTMLInputElement);
+assert(pasteUrlElement instanceof HTMLButtonElement);
+assert(pasteCopyUrlElement instanceof HTMLButtonElement);
+assert(shortUrlElement instanceof HTMLOutputElement);
+assert(shortishUrlElement instanceof HTMLOutputElement);
+assert(copyShortUrl instanceof HTMLButtonElement);
+assert(copyShortishUrl instanceof HTMLButtonElement);
 
 copyShortUrl.style.display = "none";
 copyShortishUrl.style.display = "none";
@@ -92,7 +103,10 @@ formElement.addEventListener("input", () => {
 });
 
 formElement.addEventListener("submit", function (e) {
-  navigator.clipboard.writeText(shortishUrlElement.textContent);
+  const content = shortishUrlElement.textContent;
+  if (typeof content === "string") {
+    navigator.clipboard.writeText(content);
+  }
   e.preventDefault();
 });
 
