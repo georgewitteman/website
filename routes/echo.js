@@ -23,6 +23,6 @@ function cleanHeaders(headers) {
 router.get("/echo", async (req) => {
   return new MyResponse().json({
     method: req.method,
-    headers: cleanHeaders(req.headers.toJSON()),
+    headers: cleanHeaders(req.headers),
   });
 });

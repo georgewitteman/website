@@ -1,5 +1,4 @@
 import querystring from "node:querystring";
-import { ReadonlyHeaders } from "./Headers.js";
 import assert from "node:assert";
 import cookie from "cookie";
 
@@ -84,7 +83,7 @@ export class MyRequest {
   /** @type {string | undefined} */
   #rawBody;
 
-  /** @readonly @type {ReadonlyHeaders} */
+  /** @readonly @type {import("node:http").IncomingHttpHeaders} */
   headers;
 
   /**
@@ -94,9 +93,9 @@ export class MyRequest {
   constructor(method, req) {
     this.#nodeRequest = req;
 
-    this.headers = new ReadonlyHeaders(Object.entries(req.headers));
+    this.headers = req.headers;
 
-    const hostHeader = this.headers.get("host");
+    const hostHeader = this.headers["host"];
     // https://github.com/nodejs/node/issues/3094#issue-108564685
     if (typeof hostHeader !== "string") {
       throw new Error("Missing required Host header");
@@ -117,10 +116,10 @@ export class MyRequest {
     this.#originalUrl = new URL(
       req.url,
       `${
-        stringOrUndefinedOrNullOrThrow(this.headers.get("x-forwarded-proto")) ??
+        stringOrUndefinedOrNullOrThrow(this.headers["x-forwarded-proto"]) ??
         getProtocolFromRequest(req)
       }://${
-        stringOrUndefinedOrNullOrThrow(this.headers.get("x-forwarded-host")) ??
+        stringOrUndefinedOrNullOrThrow(this.headers["x-forwarded-host"]) ??
         hostHeader
       }`,
     );
@@ -148,15 +147,13 @@ export class MyRequest {
       this.#rawBody = Buffer.concat(chunks).toString("utf-8");
     }
 
-    if (
-      this.headers.get("content-type") === "application/x-www-form-urlencoded"
-    ) {
+    if (this.headers["content-type"] === "application/x-www-form-urlencoded") {
       return querystring.parse(this.#rawBody);
     }
 
     throw new Error(
       `Unsupported content type: ${headerToDebugString(
-        this.headers.get("content-type"),
+        this.headers["content-type"],
       )}`,
     );
   }

@@ -102,7 +102,7 @@ export async function staticHandler(req, next) {
   }
 
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match
-  if (req.headers.get("If-None-Match") === etag) {
+  if (req.headers["If-None-Match"] === etag) {
     return new MyResponse().status(304 /* Not Modified */).headers({
       "Cache-Control": cacheControl,
       "Last-Modified": fileInfo.stat.mtime,

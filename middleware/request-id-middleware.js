@@ -14,7 +14,7 @@ export function getRequestId() {
  * @returns {Promise<import("../Response.js").MyResponse>}
  */
 export async function requestIdMiddleware(req, next) {
-  const maybeRequestId = req.headers.get("x-amzn-trace-id");
+  const maybeRequestId = req.headers["x-amzn-trace-id"];
   const requestId =
     typeof maybeRequestId === "string" ? maybeRequestId : randomUUID();
   return requestIdAsyncLocalStorage.run({ requestId }, () => {
