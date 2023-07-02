@@ -2,7 +2,7 @@ import { MyResponse } from "../lib/Response.js";
 import { h, render } from "../lib/html.js";
 import { documentLayout } from "../lib/layout.js";
 import cookie from "cookie";
-import { checkSession, createSession } from "../lib/session.js";
+import { checkSession, createSession, expireSession } from "../lib/session.js";
 import {
   createUser,
   getUserByEmail,
@@ -140,5 +140,30 @@ export async function getUserProfile(sessionId, userId) {
         ],
       }),
     ),
+  );
+}
+
+/**
+ * @param {string | undefined} sessionId
+ * @param {string} redirectUrl
+ */
+export async function getLogOut(sessionId, redirectUrl) {
+  if (!sessionId) {
+    return MyResponse.redirectFound(redirectUrl);
+  }
+  await expireSession(sessionId);
+
+  const newExpiration = new Date();
+  newExpiration.setHours(newExpiration.getHours() + 1);
+
+  return MyResponse.redirectFound(redirectUrl).header(
+    "Set-Cookie",
+    cookie.serialize("id", "", {
+      expires: newExpiration,
+      httpOnly: true,
+      path: "/auth",
+      sameSite: "strict",
+      secure: config.session.secure,
+    }),
   );
 }
