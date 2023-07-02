@@ -1,4 +1,12 @@
 CREATE TABLE IF NOT EXISTS app_user (
-  id SERIAL PRIMARY KEY,
-  email TEXT
+  id TEXT PRIMARY KEY NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password_hash BYTEA NOT NULL,
+  password_salt BYTEA NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS session (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  expires_at TIMESTAMP NOT NULL
 );

@@ -1,3 +1,0 @@
-ALTER TABLE session DROP COLUMN user_id;
-
-ALTER TABLE session ADD COLUMN user_id INT NOT NULL;

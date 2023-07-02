@@ -1,5 +1,0 @@
-CREATE TABLE IF NOT EXISTS session (
-  id UUID PRIMARY KEY,
-  user_id UUID,
-  expires_at TIMESTAMP NOT NULL
-);

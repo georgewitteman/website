@@ -1,3 +1,14 @@
 {
-  "editor.tabSize": 2
+  "editor.tabSize": 2,
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "Local Database",
+      "database": "postgres",
+      "username": "postgres"
+    }
+  ]
 }
