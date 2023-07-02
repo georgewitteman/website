@@ -96,17 +96,15 @@ async function postSignIn(email, password) {
 
   const session = await createSession(user.id);
 
-  const sessionCookie = cookie.serialize("id", session.id, {
-    expires: session.expiresAt,
-    httpOnly: true,
-    path: "/auth",
-    sameSite: "strict",
-    secure: config.session.secure,
-  });
-  console.log(sessionCookie);
   return MyResponse.redirectFound(`/auth/profile/${user.id}`).header(
     "Set-Cookie",
-    sessionCookie,
+    cookie.serialize("id", session.id, {
+      expires: session.expiresAt,
+      httpOnly: true,
+      path: "/auth",
+      sameSite: "strict",
+      secure: config.session.secure,
+    }),
   );
 }
 
