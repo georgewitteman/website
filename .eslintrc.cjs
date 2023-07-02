@@ -23,11 +23,10 @@ module.exports = {
     sourceType: "module",
     project: "tsconfig.json",
   },
-  plugins: ["@typescript-eslint", "unicorn"],
+  plugins: ["@typescript-eslint"],
   rules: {
     "@typescript-eslint/require-await": "off",
     "@typescript-eslint/no-floating-promises": "off",
-    "unicorn/prefer-node-protocol": "error",
   },
   overrides: [
     {
