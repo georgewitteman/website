@@ -10,160 +10,180 @@ import {
   validateUserPassword,
 } from "../lib/user.js";
 import { config } from "../lib/config.js";
+import { createRoute } from "../lib/route.js";
+import { z } from "zod";
 
-export async function getSignup() {
-  return new MyResponse().html(
-    render(
-      await documentLayout({
-        title: "Sign up",
-        main: [
-          h("h1", {}, ["Sign Up"]),
-          h("form", { method: "POST", action: "/auth/signup" }, [
-            h("label", {}, [
-              "Email",
-              h("input", { name: "email", type: "email" }),
+/**
+ * @type {import("../lib/route.js").Route[]}
+ */
+export const routes = [];
+
+routes.push(
+  createRoute("GET", "/auth/signup", async () => {
+    return new MyResponse().html(
+      render(
+        await documentLayout({
+          title: "Sign up",
+          main: [
+            h("h1", {}, ["Sign Up"]),
+            h("form", { method: "POST", action: "/auth/signup" }, [
+              h("label", {}, [
+                "Email",
+                h("input", { name: "email", type: "email" }),
+              ]),
+              h("label", {}, [
+                "Password",
+                h("input", { name: "password", type: "password" }),
+              ]),
+              h("button", { type: "submit" }, ["Sign Up"]),
             ]),
-            h("label", {}, [
-              "Password",
-              h("input", { name: "password", type: "password" }),
+          ],
+        }),
+      ),
+    );
+  }),
+);
+
+routes.push(
+  createRoute("POST", "/auth/signup", async (req) => {
+    const { email, password } = z
+      .object({
+        email: z.string().email(),
+        password: z.string(),
+      })
+      .parse(await req.body());
+    const result = await createUser({ email, password });
+    if (!result.created) {
+      return new MyResponse().status(400).body(result.reason);
+    }
+
+    return MyResponse.redirectFound("/auth/signin");
+  }),
+);
+
+routes.push(
+  createRoute("GET", "/auth/signin", async () => {
+    return new MyResponse().html(
+      render(
+        await documentLayout({
+          title: "Sign in",
+          main: [
+            h("h1", {}, ["Sign in"]),
+            h("form", { method: "POST", action: "/auth/signin" }, [
+              h("label", {}, [
+                "Email",
+                h("input", { name: "email", type: "email" }),
+              ]),
+              h("label", {}, [
+                "Password",
+                h("input", { name: "password", type: "password" }),
+              ]),
+              h("button", { type: "submit" }, ["Sign in"]),
             ]),
-            h("button", { type: "submit" }, ["Sign Up"]),
-          ]),
-        ],
+          ],
+        }),
+      ),
+    );
+  }),
+);
+
+routes.push(
+  createRoute("POST", "/auth/signin", async (req) => {
+    const { email, password } = z
+      .object({
+        email: z.string().email(),
+        password: z.string(),
+      })
+      .parse(await req.body());
+    const user = await getUserByEmail(email);
+
+    if (!user) {
+      return new MyResponse()
+        .status(404)
+        .body("Unable to find a user for this email");
+    }
+
+    const isValid = await validateUserPassword(user, password);
+    if (!isValid) {
+      return new MyResponse().status(401).body("Invalid password");
+    }
+
+    const session = await createSession(user.id);
+
+    return MyResponse.redirectFound(`/auth/profile/${user.id}`).header(
+      "Set-Cookie",
+      cookie.serialize("id", session.id, {
+        expires: session.expiresAt,
+        httpOnly: true,
+        path: "/",
+        sameSite: "strict",
+        secure: config.session.secure,
       }),
-    ),
-  );
-}
+    );
+  }),
+);
 
-/**
- * @param {string} email
- * @param {string} password
- */
-export async function postSignup(email, password) {
-  const result = await createUser({ email, password });
-  if (!result.created) {
-    return new MyResponse().status(400).body(result.reason);
-  }
+routes.push(
+  createRoute("GET", "/auth/profile/:id", async (req) => {
+    const sessionId = req.cookies.id;
+    const { id: userId } = z.object({ id: z.string() }).parse(req.params);
 
-  return MyResponse.redirectFound("/auth/signin");
-}
+    if (!(await checkSession(sessionId, userId))) {
+      return new MyResponse()
+        .status(401)
+        .body(`Invalid session: ${sessionId ?? typeof sessionId}`);
+    }
 
-export async function getSignIn() {
-  return new MyResponse().html(
-    render(
-      await documentLayout({
-        title: "Sign in",
-        main: [
-          h("h1", {}, ["Sign in"]),
-          h("form", { method: "POST", action: "/auth/signin" }, [
-            h("label", {}, [
-              "Email",
-              h("input", { name: "email", type: "email" }),
+    const user = await getUserById(userId);
+
+    if (!user) {
+      return new MyResponse().status(404).body("Invalid user");
+    }
+
+    return new MyResponse().html(
+      render(
+        await documentLayout({
+          title: `Profile: ${user.email}`,
+          main: [
+            h("h1", {}, [user.email]),
+            h("dl", {}, [
+              h("dt", {}, ["id"]),
+              h("dd", {}, [user.id.toString()]),
+              h("dt", {}, ["email"]),
+              h("dd", {}, [user.email]),
+              h("dt", {}, ["password_salt"]),
+              h("dd", {}, [user.password.salt.toString("hex")]),
+              h("dt", {}, ["password_hash"]),
+              h("dd", {}, [user.password.hash.toString("hex")]),
             ]),
-            h("label", {}, [
-              "Password",
-              h("input", { name: "password", type: "password" }),
-            ]),
-            h("button", { type: "submit" }, ["Sign in"]),
-          ]),
-        ],
+          ],
+        }),
+      ),
+    );
+  }),
+);
+
+routes.push(
+  createRoute("GET", "/auth/logout", async (req) => {
+    const redirectUrl = "/auth/signin";
+    const sessionId = req.cookies.id;
+    if (!sessionId) {
+      return MyResponse.redirectFound(redirectUrl);
+    }
+    await expireSession(sessionId);
+
+    const newExpiration = new Date();
+    newExpiration.setHours(newExpiration.getHours() - 1);
+
+    return MyResponse.redirectFound(redirectUrl).header(
+      "Set-Cookie",
+      cookie.serialize("id", "", {
+        expires: newExpiration,
+        httpOnly: true,
+        path: "/",
+        sameSite: "strict",
+        secure: config.session.secure,
       }),
-    ),
-  );
-}
-
-/**
- * @param {string} email
- * @param {string} password
- */
-export async function postSignIn(email, password) {
-  const user = await getUserByEmail(email);
-
-  if (!user) {
-    return new MyResponse()
-      .status(404)
-      .body("Unable to find a user for this email");
-  }
-
-  const isValid = await validateUserPassword(user, password);
-  if (!isValid) {
-    return new MyResponse().status(401).body("Invalid password");
-  }
-
-  const session = await createSession(user.id);
-
-  return MyResponse.redirectFound(`/auth/profile/${user.id}`).header(
-    "Set-Cookie",
-    cookie.serialize("id", session.id, {
-      expires: session.expiresAt,
-      httpOnly: true,
-      path: "/",
-      sameSite: "strict",
-      secure: config.session.secure,
-    }),
-  );
-}
-
-/**
- * @param {string | null | undefined} sessionId
- * @param {string} userId
- */
-export async function getUserProfile(sessionId, userId) {
-  if (!(await checkSession(sessionId, userId))) {
-    return new MyResponse()
-      .status(401)
-      .body(`Invalid session: ${sessionId ?? typeof sessionId}`);
-  }
-
-  const user = await getUserById(userId);
-
-  if (!user) {
-    return new MyResponse().status(404).body("Invalid user");
-  }
-
-  return new MyResponse().html(
-    render(
-      await documentLayout({
-        title: `Profile: ${user.email}`,
-        main: [
-          h("h1", {}, [user.email]),
-          h("dl", {}, [
-            h("dt", {}, ["id"]),
-            h("dd", {}, [user.id.toString()]),
-            h("dt", {}, ["email"]),
-            h("dd", {}, [user.email]),
-            h("dt", {}, ["password_salt"]),
-            h("dd", {}, [user.password.salt.toString("hex")]),
-            h("dt", {}, ["password_hash"]),
-            h("dd", {}, [user.password.hash.toString("hex")]),
-          ]),
-        ],
-      }),
-    ),
-  );
-}
-
-/**
- * @param {string | undefined} sessionId
- * @param {string} redirectUrl
- */
-export async function getLogOut(sessionId, redirectUrl) {
-  if (!sessionId) {
-    return MyResponse.redirectFound(redirectUrl);
-  }
-  await expireSession(sessionId);
-
-  const newExpiration = new Date();
-  newExpiration.setHours(newExpiration.getHours() - 1);
-
-  return MyResponse.redirectFound(redirectUrl).header(
-    "Set-Cookie",
-    cookie.serialize("id", "", {
-      expires: newExpiration,
-      httpOnly: true,
-      path: "/",
-      sameSite: "strict",
-      secure: config.session.secure,
-    }),
-  );
-}
+    );
+  }),
+);
