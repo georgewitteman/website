@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "exports": "./server.js",
   "scripts": {
     "test": "node --test --throw-deprecation"
   },
