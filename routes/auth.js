@@ -10,7 +10,6 @@ import {
 } from "../lib/user.js";
 import { config } from "../lib/config.js";
 import { z } from "zod";
-import { getCurrentUser } from "../middleware/user.js";
 import { Router } from "../lib/Router.js";
 
 export const router = new Router();
@@ -112,8 +111,8 @@ router.post("/auth/signin", async (req) => {
   );
 });
 
-router.get("/auth/profile", async () => {
-  const user = getCurrentUser();
+router.get("/auth/profile", async (req) => {
+  const user = req.user;
   if (!user) {
     return new MyResponse().status(401).body("Not signed in");
   }
@@ -130,9 +129,9 @@ router.get("/auth/profile", async () => {
             h("dt", {}, ["email"]),
             h("dd", {}, [user.email]),
             h("dt", {}, ["password_salt"]),
-            h("dd", {}, [user.password.salt.toString("hex")]),
+            h("dd", {}, [user.password_salt.toString("hex")]),
             h("dt", {}, ["password_hash"]),
-            h("dd", {}, [user.password.hash.toString("hex")]),
+            h("dd", {}, [user.password_hash.toString("hex")]),
           ]),
         ],
       }),

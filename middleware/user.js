@@ -1,13 +1,5 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { getSession } from "../lib/session.js";
 import { getUserById } from "../lib/user.js";
-
-/** @type {AsyncLocalStorage<{ id: string; email: string; password: { hash: Buffer; salt: Buffer } }>} */
-const asyncLocalStorage = new AsyncLocalStorage();
-
-export function getCurrentUser() {
-  return asyncLocalStorage.getStore();
-}
 
 /**
  * @param {string} sessionId
@@ -31,6 +23,10 @@ async function safeGetSession(sessionId) {
  * @returns {Promise<import("../lib/Response.js").MyResponse>}
  */
 export async function runWithUser(req, next) {
+  if (req.user) {
+    return await next();
+  }
+
   const sessionId = req.cookies.id;
   if (!sessionId) {
     return await next();
@@ -45,7 +41,7 @@ export async function runWithUser(req, next) {
     return await next();
   }
 
-  return asyncLocalStorage.run(user, async () => {
-    return await next();
-  });
+  req.user = user;
+
+  return await next();
 }
