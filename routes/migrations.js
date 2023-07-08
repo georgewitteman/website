@@ -9,6 +9,7 @@ import {
   runMigration,
 } from "../lib/migrations.js";
 import { createRoute, route } from "../lib/route.js";
+import { getCurrentUser } from "../middleware/user.js";
 
 /**
  * @type {import("../lib/route.js").Route[]}
@@ -116,6 +117,11 @@ routes.push(
 
 routes.push(
   createRoute("POST", "/migration/:name", async (req) => {
+    const user = getCurrentUser();
+    if (!user) {
+      return new MyResponse().status(401).body("Not signed in");
+    }
+
     const name = z
       .object({ name: z.string().optional() })
       .parse(req.params).name;

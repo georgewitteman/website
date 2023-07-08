@@ -2,16 +2,16 @@ import { MyResponse } from "../lib/Response.js";
 import { h, render } from "../lib/html.js";
 import { documentLayout } from "../lib/layout.js";
 import cookie from "cookie";
-import { checkSession, createSession, expireSession } from "../lib/session.js";
+import { createSession, expireSession } from "../lib/session.js";
 import {
   createUser,
   getUserByEmail,
-  getUserById,
   validateUserPassword,
 } from "../lib/user.js";
 import { config } from "../lib/config.js";
 import { createRoute } from "../lib/route.js";
 import { z } from "zod";
+import { getCurrentUser } from "../middleware/user.js";
 
 /**
  * @type {import("../lib/route.js").Route[]}
@@ -110,7 +110,7 @@ routes.push(
 
     const session = await createSession(user.id);
 
-    return MyResponse.redirectFound(`/auth/profile/${user.id}`).header(
+    return MyResponse.redirectFound(`/auth/profile`).header(
       "Set-Cookie",
       cookie.serialize("id", session.id, {
         expires: session.expiresAt,
@@ -124,20 +124,10 @@ routes.push(
 );
 
 routes.push(
-  createRoute("GET", "/auth/profile/:id", async (req) => {
-    const sessionId = req.cookies.id;
-    const { id: userId } = z.object({ id: z.string() }).parse(req.params);
-
-    if (!(await checkSession(sessionId, userId))) {
-      return new MyResponse()
-        .status(401)
-        .body(`Invalid session: ${sessionId ?? typeof sessionId}`);
-    }
-
-    const user = await getUserById(userId);
-
+  createRoute("GET", "/auth/profile", async () => {
+    const user = getCurrentUser();
     if (!user) {
-      return new MyResponse().status(404).body("Invalid user");
+      return new MyResponse().status(401).body("Not signed in");
     }
 
     return new MyResponse().html(
