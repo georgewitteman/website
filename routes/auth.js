@@ -141,11 +141,12 @@ router.get("/auth/profile", async (req) => {
 
 router.get("/auth/logout", async (req) => {
   const redirectUrl = "/auth/signin";
-  const sessionId = req.cookies.id;
-  if (!sessionId) {
+  if (!req.session) {
     return MyResponse.redirectFound(redirectUrl);
   }
-  await expireSession(sessionId);
+  await expireSession(req.session.id);
+
+  req.session = undefined;
 
   const newExpiration = new Date();
   newExpiration.setHours(newExpiration.getHours() - 1);

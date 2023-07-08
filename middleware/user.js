@@ -36,6 +36,8 @@ export async function runWithUser(req, next) {
     return await next();
   }
 
+  req.session = session;
+
   const user = await getUserById(session.userId);
   if (!user) {
     return await next();
