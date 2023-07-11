@@ -2,7 +2,7 @@ import { getPool } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
 import { requestListener } from "./lib/app.js";
 import { createServer } from "node:http";
-import { createHttpTerminator } from "http-terminator";
+import { createHttpTerminator } from "./lib/http-terminator.js";
 
 const PORT = 8080;
 
@@ -12,7 +12,7 @@ const server = createServer(requestListener).listen(PORT, "0.0.0.0", () => {
   logger.info("listening on", server.address());
 });
 
-const httpTerminator = createHttpTerminator({ server });
+const httpTerminator = createHttpTerminator(server);
 
 let forceClose = false;
 

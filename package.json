@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "lint": "node tasks.js lint",
     "test": "node --test --throw-deprecation"
   },
   "repository": {
@@ -34,7 +35,6 @@
   "dependencies": {
     "@aws-sdk/rds-signer": "^3.363.0",
     "cookie": "^0.5.0",
-    "http-terminator": "^3.2.0",
     "path-to-regexp": "^6.2.1",
     "pg": "^8.11.1",
     "safe-stable-stringify": "^2.4.3",
