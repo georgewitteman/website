@@ -16,7 +16,7 @@ WORKDIR /home/node/app
 COPY package*.json ./
 
 # https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/clean-cache.md
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
 
