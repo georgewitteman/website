@@ -18,8 +18,8 @@
   },
   "homepage": "https://github.com/georgewitteman/website#readme",
   "devDependencies": {
-    "@aws-sdk/client-ecr": "^3.377.0",
-    "@aws-sdk/client-ecs": "^3.377.0",
+    "@aws-sdk/client-ecr": "^3.378.0",
+    "@aws-sdk/client-ecs": "^3.378.0",
     "@total-typescript/ts-reset": "^0.4.2",
     "@types/cookie": "^0.5.1",
     "@types/node": "^20.4.5",
@@ -33,7 +33,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "@aws-sdk/rds-signer": "^3.377.0",
+    "@aws-sdk/rds-signer": "^3.378.0",
     "cookie": "^0.5.0",
     "path-to-regexp": "^6.2.1",
     "pg": "^8.11.1",
