@@ -22,7 +22,7 @@
     "@aws-sdk/client-ecs": "^3.382.0",
     "@total-typescript/ts-reset": "^0.4.2",
     "@types/cookie": "^0.5.1",
-    "@types/node": "^20.4.5",
+    "@types/node": "^20.4.6",
     "@types/pg": "^8.10.2",
     "@types/prettier": "^2.7.3",
     "@typescript-eslint/eslint-plugin": "^6.2.1",
