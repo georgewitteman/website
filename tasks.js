@@ -5,18 +5,19 @@ import child_process from "node:child_process";
 
 /**
  * @param {string} command
- * @param {{ input?: string }} options
+ * @param {{ input?: string, cwd?: string }} options
  */
 function execSync(command, options = {}) {
   console.log("\x1b[1;34m> %s\x1b[0m", command);
   if (typeof options.input === "string") {
     child_process.execSync(command, {
+      cwd: options.cwd,
       input: options.input,
       stdio: ["pipe", process.stdout, process.stderr],
     });
     return;
   }
-  child_process.execSync(command, { stdio: "inherit" });
+  child_process.execSync(command, { stdio: "inherit", cwd: options.cwd });
 }
 
 /** @type {Record<string, { name: string, deps: string[], fn: () => Promise<void> }>} */
@@ -92,7 +93,7 @@ task("lint", [], async () => {
   }
   execSync("npx eslint .");
   execSync("npx tsc");
-  execSync("npx tsc --project ./static/tsconfig.json");
+  execSync("npx tsc", { cwd: "./static" });
 });
 
 task("test", [], async () => {

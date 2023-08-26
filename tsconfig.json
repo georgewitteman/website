@@ -11,6 +11,7 @@
   ],
   "exclude": ["static/**/*"],
   "compilerOptions": {
-    "module": "Node16"
+    "module": "Node16",
+    "moduleResolution": "Node16"
   }
 }

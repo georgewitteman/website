@@ -9,11 +9,14 @@
     "**/.*.cjs",
     "**/.*.mjs"
   ],
-  "exclude": [],
   "compilerOptions": {
     "module": "ES2022",
     "moduleDetection": "force",
-    "moduleResolution": "node16",
-    "lib": ["DOM"]
+    "lib": ["ES2022", "DOM"],
+    // Needed to avoid errors from @types/pg. Example:
+    //     ../node_modules/@types/pg/index.d.ts:11:26 - error TS2792: Cannot find module 'pg-types'. Did you mean to set the 'moduleResolution' option to 'nodenext', or to add aliases to the 'paths' option?
+    //
+    //     11 import pgTypes = require('pg-types');
+    "types": []
   }
 }
