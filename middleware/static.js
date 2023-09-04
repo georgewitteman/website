@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import { MyResponse } from "../lib/Response.js";
+import { MyResponse } from "../lib/response.js";
 import {
   getContentTypeFromExtension,
   isSupportedExtension,
@@ -66,7 +66,7 @@ async function getStaticFile(pathname) {
 }
 
 /**
- * @param {import("../lib/Request.js").MyRequest} req
+ * @param {import("../lib/request.js").MyRequest} req
  * @param {() => Promise<MyResponse>} next
  * @returns {Promise<MyResponse>}
  */

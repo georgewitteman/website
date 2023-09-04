@@ -18,9 +18,9 @@ async function safeGetSession(sessionId) {
 }
 
 /**
- * @param {import("../lib/Request.js").MyRequest} req
- * @param {() => Promise<import("../lib/Response.js").MyResponse>} next
- * @returns {Promise<import("../lib/Response.js").MyResponse>}
+ * @param {import("../lib/request.js").MyRequest} req
+ * @param {() => Promise<import("../lib/response.js").MyResponse>} next
+ * @returns {Promise<import("../lib/response.js").MyResponse>}
  */
 export async function runWithUser(req, next) {
   if (req.user) {

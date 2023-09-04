@@ -1,4 +1,4 @@
-import { MyResponse } from "../lib/Response.js";
+import { MyResponse } from "../lib/response.js";
 import { h, render } from "../lib/html.js";
 import { documentLayout } from "../lib/layout.js";
 import cookie from "cookie";
@@ -10,7 +10,7 @@ import {
 } from "../lib/user.js";
 import { config } from "../lib/config.js";
 import { z } from "zod";
-import { Router } from "../lib/Router.js";
+import { Router } from "../lib/router.js";
 
 export const router = new Router();
 
