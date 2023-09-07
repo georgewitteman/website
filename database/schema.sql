@@ -14,6 +14,7 @@ INSERT INTO public.app_user (id, email, password_hash, password_salt)
 
 CREATE TABLE IF NOT EXISTS session (
   id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL REFERENCES app_user(id),
-  expires_at TIMESTAMP NOT NULL
+  user_id TEXT REFERENCES app_user(id),
+  expires_at TIMESTAMP NOT NULL,
+  cookie JSON
 );
