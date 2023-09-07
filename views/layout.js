@@ -1,41 +1,40 @@
-import { h } from "./html.js";
+import { h } from "../lib/html.js";
 import { getStaticPathWithHash } from "../middleware/static.js";
 
-function headerUserLinks() {
-  return [
-    h("a", { href: "/auth/signin" }, ["Log In"]),
-    " | ",
-    h("a", { href: "/auth/signup" }, ["Sign Up"]),
-  ];
-  // const user = getCurrentUser();
-  // if (!user) {
-  //   return [
-  //     h("a", { href: "/auth/signin" }, ["Log In"]),
-  //     " | ",
-  //     h("a", { href: "/auth/signup" }, ["Sign Up"]),
-  //   ];
-  // }
+/**
+ * @param {{ user: {id: string} | undefined}} params
+ */
+function headerUserLinks({ user }) {
+  if (!user) {
+    return [
+      h("a", { href: "/auth/signin" }, ["Log In"]),
+      " | ",
+      h("a", { href: "/auth/signup" }, ["Sign Up"]),
+    ];
+  }
 
-  // return [
-  //   h("a", { href: route("auth", "profile", user.id) }, ["Profile"]),
-  //   " | ",
-  //   h("a", { href: "/auth/logout" }, ["Log Out"]),
-  // ];
+  return [
+    h("a", { href: "/auth/profile" }, ["Profile"]),
+    " | ",
+    h("a", { href: "/auth/logout" }, ["Log Out"]),
+  ];
 }
 
-export function header() {
+/**
+ * @param {{ user: {id: string} | undefined}} params
+ */
+export function header({ user }) {
   return h("header", { class: "mw-page mx-auto" }, [
     h("nav", {}, [
       h("a", { href: "/" }, ["\u2039 Home"]),
       " | ",
-      ...headerUserLinks(),
+      ...headerUserLinks({ user }),
     ]),
   ]);
 }
 
 /**
- *
- * @param {{ title?: string, head?: import("./html.js").Node[], main: import("./html.js").Node[], noHeader?: boolean }} params
+ * @param {{ title?: string, head?: import("../lib/html.js").Node[], main: import("../lib/html.js").Node[], noHeader?: boolean, user: {id:string} | undefined }} params
  */
 export async function documentLayout(params) {
   return h("html", { lang: "en" }, [
@@ -58,7 +57,7 @@ export async function documentLayout(params) {
       ...(params.head ?? []),
     ]),
     h("body", {}, [
-      ...(params.noHeader ? [] : [header()]),
+      ...(params.noHeader ? [] : [header(params)]),
       h("main", { class: "mw-page mx-auto" }, params.main ?? []),
     ]),
   ]);

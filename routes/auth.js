@@ -1,6 +1,6 @@
 import { MyResponse } from "../lib/response.js";
 import { h, render } from "../lib/html.js";
-import { documentLayout } from "../lib/layout.js";
+import { documentLayout } from "../views/layout.js";
 import cookie from "cookie";
 import { createSession, expireSession } from "../lib/session.js";
 import {
@@ -18,6 +18,7 @@ router.get("/auth/signup", async () => {
   return new MyResponse().html(
     render(
       await documentLayout({
+        user: undefined,
         title: "Sign up",
         main: [
           h("h1", {}, ["Sign Up"]),
@@ -57,6 +58,7 @@ router.get("/auth/signin", async () => {
   return new MyResponse().html(
     render(
       await documentLayout({
+        user: undefined,
         title: "Sign in",
         main: [
           h("h1", {}, ["Sign in"]),
@@ -120,6 +122,7 @@ router.get("/auth/profile", async (req) => {
   return new MyResponse().html(
     render(
       await documentLayout({
+        user,
         title: `Profile: ${user.email}`,
         main: [
           h("h1", {}, [user.email]),
