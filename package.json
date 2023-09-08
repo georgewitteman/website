@@ -33,11 +33,7 @@
   },
   "dependencies": {
     "@aws-sdk/rds-signer": "^3.405.0",
-    "@fastify/cookie": "^9.0.4",
-    "@fastify/session": "^10.4.0",
-    "@fastify/static": "^6.11.0",
     "cookie": "^0.5.0",
-    "fastify": "^4.22.2",
     "path-to-regexp": "^6.2.1",
     "pg": "^8.11.3",
     "safe-stable-stringify": "^2.4.3",

@@ -21,19 +21,3 @@ export async function requestIdMiddleware(req, next) {
     return next();
   });
 }
-
-/**
- *
- * @param {import("http").IncomingMessage} req
- * @param {import("http").ServerResponse} res
- * @param {import("@fastify/middie").NextFunction} next
- * @returns
- */
-export function requestIdMiddlewareMiddie(req, res, next) {
-  const maybeRequestId = req.headers["x-amzn-trace-id"];
-  const requestId =
-    typeof maybeRequestId === "string" ? maybeRequestId : randomUUID();
-  return requestIdAsyncLocalStorage.run({ requestId }, () => {
-    return next();
-  });
-}

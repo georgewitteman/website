@@ -1,40 +1,18 @@
 import { getPool } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
+import { requestListener } from "./lib/app.js";
+import { createServer } from "node:http";
 import { createHttpTerminator } from "./lib/http-terminator.js";
-import path from "node:path"
-import Fastify from 'fastify'
-import fastifyStatic from "@fastify/static"
-import fastifyCookie from "@fastify/cookie"
-import fastifySession from "@fastify/session";
-import { PostgreSQLSessionStore } from "./lib/session-store.js";
-import { getUserByEmail } from "./lib/user.js";
-import { randomUUID } from "node:crypto";
 
 const PORT = 8080;
 
 logger.info("Environment", { env: process.env });
 
-const fastify = Fastify({
-  logger: true
-})
+const server = createServer(requestListener).listen(PORT, "0.0.0.0", () => {
+  logger.info("listening on", server.address());
+});
 
-fastify.listen({port: PORT, host: "0.0.0.0"})
-fastify.register(fastifyCookie)
-fastify.register(fastifySession, {secret: "TODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODO", cookieName: "id", store: new PostgreSQLSessionStore(), idGenerator: () => randomUUID()})
-fastify.register(fastifyStatic, {root: path.join(path.dirname(import.meta.url.replace("file:", "")), "static")})
-fastify.get("/session", async (req) => {
-  console.log(req.session.cookie)
-  console.log(req.session.sessionId, req.session.get("user_id"))
-  if (!req.session.get("user_id")) {
-    const user = await getUserByEmail("george@witteman.me")
-    req.session.user_id = user?.id;
-    req.session.set("user_id", user?.id)
-  }
-  // await req.session.save();
-  return {sessionId: req.session.sessionId, encryptedSessionId: req.session.encryptedSessionId, session: req.session}
-})
-
-const httpTerminator = createHttpTerminator(fastify.server);
+const httpTerminator = createHttpTerminator(server);
 
 let forceClose = false;
 
