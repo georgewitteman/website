@@ -32,7 +32,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@aws-sdk/rds-signer": "^3.414.0",
+    "@aws-sdk/rds-signer": "^3.415.0",
     "cookie": "^0.5.0",
     "path-to-regexp": "^6.2.1",
     "pg": "^8.11.3",
