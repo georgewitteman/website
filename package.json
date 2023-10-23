@@ -37,6 +37,6 @@
     "path-to-regexp": "^6.2.1",
     "pg": "^8.11.3",
     "safe-stable-stringify": "^2.4.3",
-    "zod": "^3.22.2"
+    "zod": "^3.22.4"
   }
 }
