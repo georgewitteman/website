@@ -23,7 +23,7 @@
     "@total-typescript/ts-reset": "^0.5.1",
     "@types/cookie": "^0.5.2",
     "@types/node": "^20.8.7",
-    "@types/pg": "^8.10.3",
+    "@types/pg": "^8.10.8",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
     "eslint": "^8.52.0",
