@@ -1,11 +1,8 @@
-import { MyResponse } from "../lib/response.js";
-import { Router } from "../lib/router.js";
 import { randomUUID } from "crypto";
+import { Router } from "express";
 
-export const router = new Router();
+export const router = Router();
 
-router.get("/uuid", async () => {
-  return new MyResponse(200)
-    .header("Content-Type", "text/plain; charset=utf-8")
-    .body(randomUUID());
+router.get("/uuid", (_, res) => {
+  res.status(200).type("text").send(randomUUID());
 });
