@@ -6,6 +6,6 @@
     "types": ["bun-types"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "skipLibCheck": true
+    "skipLibCheck": true // needed to avoid conflicts with bun-types and @types/node
   }
 }
