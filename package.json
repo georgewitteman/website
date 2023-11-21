@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "main": "./dist/server.js",
+  "main": "./dist/server.ts",
   "scripts": {
     "watch": "concurrently bun:watch:*",
     "build": "bun run build:css",
     "build:css": "tailwindcss -i ./src/styles.css -o ./static/styles.css --minify",
     "watch:css": "tailwindcss -i ./src/styles.css -o ./static/styles.css --watch",
-    "watch:server": "bun run --hot ./src/server.js",
+    "watch:server": "bun run --hot ./src/server.ts",
     "prettier:fix": "prettier --write .",
-    "lint": "bun run tasks.js lint"
+    "lint": "bun run tasks.ts lint"
   },
   "repository": {
     "type": "git",

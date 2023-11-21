@@ -11,6 +11,7 @@ const content = (await fs.promises.readFile(schemaPath)).toString().trim();
 const client = await getPool().connect();
 logger.info("Starting transaction");
 await client.query("BEGIN");
+
 try {
   logger.info("Running DROP");
   await client.query(sql`

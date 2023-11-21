@@ -3,11 +3,10 @@ import { z } from "zod";
 import { ECSClient, UpdateServiceCommand } from "@aws-sdk/client-ecs";
 import child_process from "node:child_process";
 
-/**
- * @param {string} command
- * @param {{ input?: string, cwd?: string }} options
- */
-function execSync(command, options = {}) {
+function execSync(
+  command: string,
+  options: { input?: string; cwd?: string } = {},
+) {
   console.log("\x1b[1;34m> %s\x1b[0m", command);
   if (typeof options.input === "string") {
     child_process.execSync(command, {
@@ -20,14 +19,12 @@ function execSync(command, options = {}) {
   child_process.execSync(command, { stdio: "inherit", cwd: options.cwd });
 }
 
-/** @type {Record<string, { name: string, deps: string[], fn: () => Promise<void> }>} */
-const tasks = {};
+const tasks: Record<
+  string,
+  { name: string; deps: string[]; fn: () => Promise<void> }
+> = {};
 
-/**
- * @param {string} name
- * @returns {string[]}
- */
-function getTaskDeps(name) {
+function getTaskDeps(name: string): string[] {
   const task = tasks[name];
   if (!task) {
     throw new Error(`Task ${name} was not found`);
@@ -36,12 +33,7 @@ function getTaskDeps(name) {
   return deps.concat(...deps.map(getTaskDeps));
 }
 
-/**
- * @param {string} name
- * @param {string[]} deps
- * @param {() => Promise<void>} fn
- */
-function task(name, deps, fn) {
+function task(name: string, deps: string[], fn: () => Promise<void>) {
   tasks[name] = { name, deps, fn };
   try {
     getTaskDeps(name);
@@ -58,10 +50,7 @@ function task(name, deps, fn) {
 
 const AWS_REGION = "us-west-2";
 
-/**
- * @param {string} encodedString
- */
-function base64Decode(encodedString) {
+function base64Decode(encodedString: string) {
   return Buffer.from(encodedString, "base64").toString("utf-8");
 }
 
@@ -124,10 +113,7 @@ task("deploy", ["build"], async () => {
   console.log(response);
 });
 
-/**
- * @param {string} name
- */
-async function runTask(name) {
+async function runTask(name: string) {
   const task = tasks[name];
   if (!task) {
     throw new Error(`Task ${name} was not found`);
@@ -140,10 +126,7 @@ async function runTask(name) {
   await fn();
 }
 
-/**
- * @param {string[]} argv
- */
-async function runTasks(argv) {
+async function runTasks(argv: string[]) {
   const tasksToRun = argv.filter((arg) => arg in tasks);
   if (tasksToRun.length > 1) {
     console.error(
