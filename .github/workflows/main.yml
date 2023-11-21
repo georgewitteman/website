@@ -31,6 +31,8 @@ jobs:
           aws-region: us-west-2
           mask-aws-account-id: false
 
-      - run: npm install-ci-test
+      - run: bun install
+      - run: bun lint
+      - run: bun test
 
       - run: node tasks.js deploy
