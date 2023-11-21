@@ -36,7 +36,7 @@ COPY --from=prerelease /usr/src/app/package.json .
 
 # run the app
 USER bun
-EXPOSE 3000/tcp
+EXPOSE 8080/tcp
 ENTRYPOINT [ "bun", "run", "./src/server.js" ]
 # USER node
 # ENV CI true
