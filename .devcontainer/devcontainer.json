@@ -14,12 +14,12 @@
   },
   "containerEnv": {
     "PGUSER": "postgres"
-},
-"customizations": {
-	"vscode": {
-		"extensions": [
-			"ronnidc.nunjucks"
-		]
-	}
-}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ronnidc.nunjucks"
+      ]
+    }
+  }
 }
