@@ -12,7 +12,8 @@
     "watch:server": "bun run --hot ./src/server.ts",
     "prettier:fix": "prettier --write .",
     "lint": "bun run tasks.ts lint",
-    "ncu": "bunx npm-check-updates"
+    "ncu": "bunx npm-check-updates",
+    "deploy": "bun tasks.ts deploy"
   },
   "repository": {
     "type": "git",

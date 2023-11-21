@@ -34,4 +34,4 @@ jobs:
       - run: bun install
 
       # runs lint and test
-      - run: node tasks.ts deploy
+      - run: bun deploy
