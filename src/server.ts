@@ -2,7 +2,7 @@ import { getPool } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
 import { app } from "./lib/app.js";
 import { createServer } from "http";
-import { createTerminus } from "@godaddy/terminus";
+import { TerminusOptions, createTerminus } from "@godaddy/terminus";
 import { config } from "./lib/config.js";
 
 const PORT = 8080;
@@ -11,11 +11,10 @@ logger.info("Environment", { env: process.env });
 
 const server = createServer(app);
 
-/** @type {import("@godaddy/terminus").TerminusOptions} */
-const options = {
+const options: TerminusOptions = {
   signals: ["SIGINT", "SIGTERM"],
   onSignal: async () => {
-    logger.info("Server is starting cleanup 4");
+    logger.info("Server is starting cleanup");
 
     if (config.database.exists) {
       try {
