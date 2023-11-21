@@ -2,5 +2,5 @@
 
 set -o errexit
 
-node tasks.js lint
-node tasks.js test
+bun lint
+bun test

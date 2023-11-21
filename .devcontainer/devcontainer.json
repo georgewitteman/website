@@ -3,14 +3,14 @@
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "features": {
+    "./features/bun": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {
       "dockerDashComposeVersion": "v2",
       "moby": false
     }
   },
   "updateContentCommand": {
-    "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"],
-    "npm-install": ["npm", "ci"]
+    "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"]
   },
   "containerEnv": {
     "PGUSER": "postgres"
@@ -20,7 +20,8 @@
       "extensions": [
         "ronnidc.nunjucks",
         "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
       ]
     }
   }

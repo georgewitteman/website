@@ -86,14 +86,15 @@ async function getECRAuthorizationToken() {
 }
 
 task("lint", [], async () => {
-  execSync("npx prettier --check .");
-  execSync("npx eslint .");
-  execSync("npx tsc");
-  execSync("npx tsc", { cwd: "./static" });
+  execSync("bunx prettier --check .");
+  execSync("bunx eslint .");
+  execSync("bunx tsc");
+  execSync("bunx tsc", { cwd: "./static" });
+  execSync("bunx tsc", { cwd: "./static" });
 });
 
 task("test", [], async () => {
-  execSync("node --test");
+  execSync("bun test");
 });
 
 task("build", ["lint", "test"], async () => {

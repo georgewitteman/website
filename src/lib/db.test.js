@@ -1,4 +1,4 @@
-import { describe, test } from "node:test";
+import { describe, test } from "bun:test";
 import { sql } from "./db.js";
 import assert from "node:assert";
 

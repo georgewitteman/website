@@ -10,7 +10,7 @@
     "./.*.mjs"
   ],
   "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16"
+    "module": "ESNext",
+    "moduleResolution": "bundler"
   }
 }

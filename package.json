@@ -5,16 +5,13 @@
   "private": true,
   "main": "./dist/server.js",
   "scripts": {
-    "watch": "concurrently npm:watch:*",
-    "build": "npm run build:ts && npm run build:css",
-    "build:css": "tailwindcss -i ./src/styles.css -o ./dist/static/styles.css --minify",
-    "watch:css": "tailwindcss -i ./src/styles.css -o ./dist/static/styles.css --watch",
-    "build:ts": "tsc",
-    "watch:ts": "tsc --watch --preserveWatchOutput",
-    "watch:server": "nodemon",
+    "watch": "concurrently bun:watch:*",
+    "build": "bun run build:css",
+    "build:css": "tailwindcss -i ./src/styles.css -o ./static/styles.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles.css -o ./static/styles.css --watch",
+    "watch:server": "bun run ./src/server.js",
     "prettier:fix": "prettier --write .",
-    "lint": "node tasks.js lint",
-    "test": "node --test --throw-deprecation"
+    "lint": "bun run tasks.js lint"
   },
   "repository": {
     "type": "git",
@@ -37,6 +34,7 @@
     "@types/pg": "^8.10.9",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "@typescript-eslint/parser": "^6.11.0",
+    "bun-types": "^1.0.13",
     "concurrently": "^8.2.2",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.0.0",
