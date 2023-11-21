@@ -15,7 +15,7 @@ const server = createServer(app);
 const options = {
   signals: ["SIGINT", "SIGTERM"],
   onSignal: async () => {
-    logger.info("Server is starting cleanup");
+    logger.info("Server is starting cleanup 4");
 
     if (config.database.exists) {
       try {
