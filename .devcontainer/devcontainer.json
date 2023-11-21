@@ -10,7 +10,8 @@
     }
   },
   "updateContentCommand": {
-    "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"]
+    "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"],
+    "install": ["bun", "install"]
   },
   "containerEnv": {
     "PGUSER": "postgres"
