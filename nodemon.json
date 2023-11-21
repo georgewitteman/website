@@ -1,0 +1,5 @@
+{
+  "watch": ["static", "routes", "lib", "server.js"],
+  "ext": "js",
+  "signal": "SIGTERM"
+}
