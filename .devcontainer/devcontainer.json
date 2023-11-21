@@ -21,7 +21,8 @@
         "ronnidc.nunjucks",
         "bradlc.vscode-tailwindcss",
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint"
+        "dbaeumer.vscode-eslint",
+        "oven.bun-vscode"
       ]
     }
   }
