@@ -1,22 +1,18 @@
 import { ECRClient, GetAuthorizationTokenCommand } from "@aws-sdk/client-ecr";
 import { z } from "zod";
 import { ECSClient, UpdateServiceCommand } from "@aws-sdk/client-ecs";
-import child_process from "node:child_process";
+import { SpawnOptions } from "bun";
 
-function execSync(
-  command: string,
-  options: { input?: string; cwd?: string } = {},
+async function run(
+  command: string[],
+  options: { input?: SpawnOptions.Writable } = {},
 ) {
   console.log("\x1b[1;34m> %s\x1b[0m", command);
-  if (typeof options.input === "string") {
-    child_process.execSync(command, {
-      cwd: options.cwd,
-      input: options.input,
-      stdio: ["pipe", process.stdout, process.stderr],
-    });
-    return;
-  }
-  child_process.execSync(command, { stdio: "inherit", cwd: options.cwd });
+  await Bun.spawn(command, {
+    stdin: options.input,
+    stdout: "inherit",
+    stderr: "inherit",
+  }).exited;
 }
 
 const tasks: Record<
@@ -75,31 +71,40 @@ async function getECRAuthorizationToken() {
 }
 
 task("lint", [], async () => {
-  execSync("bunx prettier --check .");
-  execSync("bunx tsc");
-  execSync("bunx tsc", { cwd: "./static" });
-  execSync("bunx tsc", { cwd: "./static" });
+  await run(["bun", "lint"]);
 });
 
 task("test", [], async () => {
-  execSync("bun test");
+  await run(["bun", "test"]);
 });
 
 task("build", ["lint", "test"], async () => {
-  execSync("docker build -t website .");
-  execSync(
-    "docker tag website:latest 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest",
-  );
+  await run(["docker", "build", "-t", "website", "."]);
+  await run([
+    "docker",
+    "tag",
+    "website:latest",
+    "866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest",
+  ]);
 });
 
 task("deploy", ["build"], async () => {
-  execSync(
-    "docker login --username AWS --password-stdin 866631827662.dkr.ecr.us-west-2.amazonaws.com",
-    { input: await getECRAuthorizationToken() },
+  await run(
+    [
+      "docker",
+      "login",
+      "--username",
+      "AWS",
+      "--password-stdin",
+      "866631827662.dkr.ecr.us-west-2.amazonaws.com",
+    ],
+    { input: Buffer.from(await getECRAuthorizationToken()) },
   );
-  execSync(
-    "docker push 866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest",
-  );
+  await run([
+    "docker",
+    "push",
+    "866631827662.dkr.ecr.us-west-2.amazonaws.com/website:latest",
+  ]);
 
   const client = new ECSClient({ region: AWS_REGION });
   const response = await client.send(

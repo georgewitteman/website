@@ -1,14 +1,6 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": [
-    "**/*.js",
-    "**/*.cjs",
-    "**/*.mjs",
-    "**/*.ts",
-    "**/.*js",
-    "**/.*.cjs",
-    "**/.*.mjs"
-  ],
+  "include": ["**/*.js", "**/*.ts"],
   "compilerOptions": {
     "module": "ES2022",
     "moduleDetection": "force",

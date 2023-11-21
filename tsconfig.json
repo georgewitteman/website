@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "include": ["./**/*.js", "./**/*.ts"],
-  "exclude": ["./static/**/*", "./node_modules/**/*"],
+  "exclude": ["./static/**/*"],
   "compilerOptions": {
     "types": ["bun-types"],
     "module": "ESNext",
