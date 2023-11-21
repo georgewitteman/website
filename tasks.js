@@ -86,11 +86,7 @@ async function getECRAuthorizationToken() {
 }
 
 task("lint", [], async () => {
-  if (process.env.CI) {
-    execSync("npx prettier --check .");
-  } else {
-    execSync("npx prettier --write .");
-  }
+  execSync("npx prettier --check .");
   execSync("npx eslint .");
   execSync("npx tsc");
   execSync("npx tsc", { cwd: "./static" });

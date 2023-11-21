@@ -1,7 +1,20 @@
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md
 # docker run --publish 8080:8080 --rm --init "$(docker build --quiet .)"
 
-FROM node:21-alpine
+FROM node:20-alpine as build
+
+USER node
+ENV CI true
+ENV NODE_ENV production
+RUN npm config set update-notifier false
+RUN mkdir -p /home/node/app
+WORKDIR /home/node/app
+COPY package*.json ./
+RUN npm ci && npm cache clean --force
+COPY . .
+RUN npx tailwindcss -i ./static/input.css -o ./static/output.css --minify
+
+FROM node:20-alpine
 
 USER node
 
@@ -25,6 +38,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
+COPY --from=build /home/node/app/static/output.css ./static/output.css
 
 EXPOSE 8080
 

@@ -40,14 +40,22 @@ module.exports = {
       },
     },
     {
-      files: ["**/*"],
-      excludedFiles: "static/**/*",
+      files: ["*"],
       env: {
         node: true,
       },
     },
     {
-      files: ["*.test.js"],
+      files: ["src/**/*"],
+      env: {
+        node: true,
+      },
+      parserOptions: {
+        project: "src/tsconfig.json",
+      },
+    },
+    {
+      files: ["src/*.test.js"],
       rules: {
         "@typescript-eslint/no-floating-promises": "off",
       },

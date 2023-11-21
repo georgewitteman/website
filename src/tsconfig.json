@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "include": [
+    "./**/*.js",
+    "./**/*.cjs",
+    "./**/*.mjs",
+    "./**/*.ts",
+    "./**/.*js",
+    "./**/.*.cjs",
+    "./**/.*.mjs"
+  ],
+  "compilerOptions": {
+    "module": "Node16",
+    "moduleResolution": "Node16"
+  }
+}

@@ -3,9 +3,16 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "main": "server.js",
+  "main": "./dist/server.js",
   "scripts": {
-    "watch": "concurrently -n tailwind,server \"npx tailwindcss -i ./static/input.css -o ./static/output.css --watch\" \"nodemon\"",
+    "watch": "concurrently npm:watch:*",
+    "build": "npm run build:ts && npm run build:css",
+    "build:css": "tailwindcss -i ./src/styles.css -o ./dist/static/styles.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles.css -o ./dist/static/styles.css --watch",
+    "build:ts": "tsc",
+    "watch:ts": "tsc --watch --preserveWatchOutput",
+    "watch:server": "nodemon",
+    "prettier:fix": "prettier --write .",
     "lint": "node tasks.js lint",
     "test": "node --test --throw-deprecation"
   },

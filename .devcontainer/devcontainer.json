@@ -17,10 +17,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": [
-		"ronnidc.nunjucks",
-		"bradlc.vscode-tailwindcss"
-	]
+      "extensions": ["ronnidc.nunjucks", "bradlc.vscode-tailwindcss"]
     }
   }
 }

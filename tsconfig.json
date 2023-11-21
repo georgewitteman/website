@@ -1,15 +1,14 @@
 {
   "extends": "./tsconfig.base.json",
   "include": [
-    "**/*.js",
-    "**/*.cjs",
-    "**/*.mjs",
-    "**/*.ts",
-    "**/.*js",
-    "**/.*.cjs",
-    "**/.*.mjs"
+    "./*.js",
+    "./*.cjs",
+    "./*.mjs",
+    "./*.ts",
+    "./.*js",
+    "./.*.cjs",
+    "./.*.mjs"
   ],
-  "exclude": ["static/**/*"],
   "compilerOptions": {
     "module": "Node16",
     "moduleResolution": "Node16"

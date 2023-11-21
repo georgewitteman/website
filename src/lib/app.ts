@@ -8,7 +8,7 @@ import nunjucks from "nunjucks";
 export const app = express();
 
 // https://mozilla.github.io/nunjucks/getting-started.html
-nunjucks.configure("views", {
+nunjucks.configure(new URL("../../views", import.meta.url).pathname, {
   autoescape: true,
   express: app,
   noCache: config.nunjucks.noCache,
@@ -28,7 +28,8 @@ app.use(
   }),
 );
 app.use(morgan("combined"));
-app.use(express.static("static"));
+app.use(express.static(new URL("../../dist/static", import.meta.url).pathname));
+app.use(express.static(new URL("../../static", import.meta.url).pathname));
 app.use(express.json());
 app.use(utilsRouter);
 
