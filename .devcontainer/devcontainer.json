@@ -17,9 +17,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": [
-        "ronnidc.nunjucks"
-      ]
+      "extensions": ["ronnidc.nunjucks"]
     }
   }
 }
