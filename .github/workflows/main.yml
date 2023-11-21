@@ -32,7 +32,6 @@ jobs:
           mask-aws-account-id: false
 
       - run: bun install
-      - run: bun lint
-      - run: bun test
 
+      # runs lint and test
       - run: node tasks.ts deploy
