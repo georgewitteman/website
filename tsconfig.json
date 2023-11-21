@@ -1,16 +1,11 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": [
-    "./*.js",
-    "./*.cjs",
-    "./*.mjs",
-    "./*.ts",
-    "./.*js",
-    "./.*.cjs",
-    "./.*.mjs"
-  ],
+  "include": ["./**/*.js", "./**/*.ts"],
+  "exclude": ["./static/**/*", "./node_modules/**/*"],
   "compilerOptions": {
+    "types": ["bun-types"],
     "module": "ESNext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
   }
 }
