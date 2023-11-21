@@ -3,7 +3,6 @@
 .github
 .gitignore
 .prettierrc.cjs
-.eslintrc.cjs
 .vscode
 *.test.js
 build-and-deploy.js

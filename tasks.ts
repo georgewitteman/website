@@ -76,7 +76,6 @@ async function getECRAuthorizationToken() {
 
 task("lint", [], async () => {
   execSync("bunx prettier --check .");
-  execSync("bunx eslint .");
   execSync("bunx tsc");
   execSync("bunx tsc", { cwd: "./static" });
   execSync("bunx tsc", { cwd: "./static" });
