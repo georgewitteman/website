@@ -33,6 +33,10 @@ app.use(express.static(path.join(import.meta.dir, "../../static")));
 app.use(express.json());
 app.use(utilsRouter);
 
+app.get("/", (_, res) => {
+  res.render("index");
+});
+
 app.get("/test", (_req, res) => {
   res.render("test", { hello: "Hello, ", world: "world!" });
 });

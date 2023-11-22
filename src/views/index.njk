@@ -1,3 +1,7 @@
+{% macro link(href, text) %}
+<a class="text-blue-800 underline hover:no-underline" href="{{ href }}">{{ text }}</a>
+{% endmacro %}
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -9,14 +13,13 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="mw-page mx-auto">
+    <main class="max-w-3xl mx-auto">
       <ul>
         <li>
-          <a href="/microwave-time-calculator.html"
-            >Microwave Time Calculator</a
-          >
+          {{ link("/microwave-time-calculator.html", "Microwave Time Calculator") }}
         </li>
-        <li><a href="/stuff.html">Stuff I Use</a></li>
+        <li>{{ link("/stuff.html", "Stuff I Use") }}</li>
+        <li>{{ link("/test", "Test") }}</li>
         <li>
           <a href="/google-short-link.html">Shorten Google Search Links</a>
         </li>

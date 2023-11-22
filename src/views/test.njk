@@ -1,7 +1,21 @@
 {% import "macros.njk" as macros %}
-<link rel="stylesheet" href="/styles.css">
 
-<h1 class="font-bold text-xl">Test Template</h1>
-<p>{{ hello }}{{ world }}</p>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>George Witteman</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="author" content="George Witteman" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="max-w-3xl mx-auto">
+      <h1 class="font-bold text-xl">Test Template</h1>
+      <p>{{ hello }}{{ world }}</p>
 
-{{ macros.field("test") }}
+      {{ macros.field("test") }}
+    </main>
+  </body>
+</html>

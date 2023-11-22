@@ -1,6 +1,5 @@
 {% macro field(name, value='', type='text') %}
 <div class="field">
-  <input type="{{ type }}" name="{{ name }}"
-         value="{{ value | escape }}" />
+  <input type="{{ type }}" name="{{ name }}" value="{{ value | escape }}">
 </div>
 {% endmacro %}
