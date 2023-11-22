@@ -14,7 +14,7 @@
     "lint:prettier": "prettier --check .",
     "lint:tsc": "tsc",
     "lint:tsc-static": "cd ./static && tsc",
-    "fix:prettier": "prettier --write .",
+    "prettier:fix": "prettier --write .",
     "lint-old": "bun run tasks.ts lint",
     "ncu": "bunx npm-check-updates",
     "deploy": "bun tasks.ts deploy"
