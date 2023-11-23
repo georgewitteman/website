@@ -49,3 +49,7 @@ app.get("/", (_, res) => {
 app.get("/test", (req, res) => {
   res.render("test", { hello: "Hello, ", world: "world!" });
 });
+
+app.get("/amazon-short-link", (req, res) => {
+  res.render("amazon-short-link");
+});
