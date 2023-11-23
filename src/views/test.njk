@@ -1,21 +1,14 @@
 {% import "macros.njk" as macros %}
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>George Witteman</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="author" content="George Witteman" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <main class="max-w-3xl mx-auto">
-      <h1 class="font-bold text-xl">Test Template</h1>
-      <p>{{ hello }}{{ world }}</p>
+{% extends "layout.njk" %}
 
-      {{ macros.field("test") }}
-    </main>
-  </body>
-</html>
+{% macro link(href, text) %}
+<a class="text-blue-800 underline hover:no-underline" href="{{ href }}">{{ text }}</a>
+{% endmacro %}
+
+{% block content %}
+<h1 class="font-bold text-xl">Test Template</h1>
+<p>{{ hello }}{{ world }}</p>
+
+{{ macros.field("test") }}
+{% endblock %}

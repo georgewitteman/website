@@ -8,6 +8,7 @@ export const config = {
     secure: IS_PROD,
   },
   express: {
+    port: 8080,
     trustProxy: IS_PROD ? 1 : false,
   },
   helmet: {

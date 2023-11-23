@@ -5,8 +5,6 @@ import { createServer } from "http";
 import { TerminusOptions, createTerminus } from "@godaddy/terminus";
 import { config } from "./lib/config.js";
 
-const PORT = 8080;
-
 logger.info("Environment", { env: process.env });
 
 const server = createServer(app);
@@ -35,6 +33,6 @@ const options: TerminusOptions = {
 
 createTerminus(server, options);
 
-server.listen(PORT, "0.0.0.0", () => {
+server.listen(config.express.port, "0.0.0.0", () => {
   logger.info("listening on", server.address());
 });
