@@ -1,12 +1,12 @@
 import packageJson from "../../package.json";
 import { randomUUID } from "crypto";
 import { Router } from "express";
-import Bowser from "bowser";
+import UAParser from "ua-parser-js";
 
 export const router = Router();
 
 router.all("/echo", (req, res) => {
-  const browser = Bowser.getParser(req.get("user-agent") ?? "");
+  const parser = new UAParser(req.get("user-agent") ?? "");
 
   const url = new URL(req.originalUrl, `${req.protocol}://${req.hostname}`);
   const value = {
@@ -30,10 +30,10 @@ router.all("/echo", (req, res) => {
     method: req.method,
     headers: req.headers,
     body: req.body,
-    user_agent: browser.getResult(),
+    user_agent: parser.getResult(),
   };
 
-  if (browser.getBrowserName()) {
+  if (parser.getBrowser().name) {
     res.render("echo", { value });
     return;
   }
@@ -46,9 +46,9 @@ router.all("/echo", (req, res) => {
 });
 
 router.get("/uuid", (req, res) => {
-  const browser = Bowser.getParser(req.get("user-agent") ?? "");
+  const parser = new UAParser(req.get("user-agent") ?? "");
 
-  if (browser.getBrowserName()) {
+  if (parser.getBrowser().name) {
     res.render("uuid", { value: randomUUID() });
     return;
   }
