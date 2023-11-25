@@ -1,7 +1,6 @@
 const IS_PROD = process.env.AWS_EXECUTION_ENV === "AWS_ECS_FARGATE";
 
 export const config = {
-  httpOnlyDomain: "http.georgewitteman.com",
   database: {
     exists: !IS_PROD,
   },
