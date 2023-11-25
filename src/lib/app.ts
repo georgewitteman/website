@@ -23,6 +23,14 @@ app.disable("x-powered-by");
 // https://expressjs.com/en/guide/behind-proxies.html
 app.set("trust proxy", config.express.trustProxy);
 
+app.use((req, res, next) => {
+  if (req.hostname === config.httpOnlyDomain) {
+    res.status(200).type("html").send("<h1>HTTP Only Response</h1>");
+    return;
+  }
+  next();
+});
+
 app.use(
   helmet({
     contentSecurityPolicy: config.helmet.contentSecurityPolicy,
