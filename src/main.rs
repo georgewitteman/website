@@ -1,13 +1,16 @@
-use std::sync::OnceLock;
-
+use actix_web::dev::Service;
+use actix_web::{get, App, HttpResponse, HttpServer};
 use actix_web::{
-    get,
     http::header::HeaderName,
     middleware::Logger,
     web::{self},
-    App, HttpRequest, HttpResponse, HttpServer, Responder,
+    HttpRequest, Responder,
 };
+use futures_util::future::{self, Either, FutureExt};
+use rustls_pemfile::certs;
+use rustls_pemfile::ec_private_keys;
 use serde_json::Value;
+use std::sync::OnceLock;
 
 fn templates() -> &'static tera::Tera {
     static TERA: OnceLock<tera::Tera> = OnceLock::new();
@@ -24,9 +27,9 @@ fn templates() -> &'static tera::Tera {
     })
 }
 
-fn get_user_agent<'a>(header: &'a str) -> woothee::parser::WootheeResult<'a> {
+fn get_user_agent(header: &str) -> woothee::parser::WootheeResult {
     let parser = woothee::parser::Parser::new();
-    parser.parse(&header).unwrap_or_default()
+    parser.parse(header).unwrap_or_default()
 }
 
 #[get("/uuid")]
@@ -109,15 +112,6 @@ async fn amazon_short_link(req: HttpRequest) -> impl Responder {
     }
 }
 
-fn first_header_value<'a>(
-    req: &'a actix_web::dev::RequestHead,
-    name: &'_ actix_web::http::header::HeaderName,
-) -> Option<&'a str> {
-    let hdr = req.headers.get(name)?.to_str().ok()?;
-    let val = hdr.split(',').next()?.trim();
-    Some(val)
-}
-
 fn pretty_multimap(map: &multimap::MultiMap<String, String>) -> serde_json::Map<String, Value> {
     let mut pretty_map = serde_json::Map::new();
     for (k, v) in map.flat_iter() {
@@ -158,18 +152,13 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
         headers.insert(k, v)
     }
     // https://docs.aws.amazon.com/elasticloadbalancing/latest/application/x-forwarded-headers.html
-    let ip_addr = first_header_value(req.head(), &HeaderName::from_static("x-forwarded-for"))
-        .map(str::to_owned)
-        .or_else(|| req.peer_addr().map(|addr| addr.ip().to_string()));
+    let ip_addr = req.peer_addr().map(|a| a.ip());
 
     // https://docs.aws.amazon.com/elasticloadbalancing/latest/application/x-forwarded-headers.html
-    let host = first_header_value(req.head(), &HeaderName::from_static("x-forwarded-host"))
-        .or_else(|| {
-            req.headers()
-                .get(&HeaderName::from_static("host"))?
-                .to_str()
-                .ok()
-        })
+    let host = req
+        .headers()
+        .get(&HeaderName::from_static("host"))
+        .and_then(|v| v.to_str().ok())
         .or_else(|| {
             req.uri()
                 .authority()
@@ -179,8 +168,10 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
         .to_owned();
 
     // https://docs.aws.amazon.com/elasticloadbalancing/latest/application/x-forwarded-headers.html
-    let scheme = first_header_value(req.head(), &HeaderName::from_static("x-forwarded-proto"))
-        .or_else(|| req.uri().scheme().map(actix_web::http::uri::Scheme::as_str))
+    let scheme = req
+        .uri()
+        .scheme()
+        .map(actix_web::http::uri::Scheme::as_str)
         .or_else(|| Some("https").filter(|_| req.app_config().secure()))
         .unwrap_or("http")
         .to_owned();
@@ -242,21 +233,21 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
             context.insert("path", req.path());
             context.insert("body", &request_body);
             match templates().render("echo.html", &context) {
-                Ok(body) => {
+                Ok(rendered_template) => {
                     if parsed_user_agent.browser_type != "browser" {
                         return HttpResponse::Ok()
                             .insert_header((
                                 actix_web::http::header::CONTENT_TYPE,
                                 actix_web::http::header::ContentType::json(),
                             ))
-                            .body(body);
+                            .body(format!("{body}\n"));
                     }
                     HttpResponse::Ok()
                         .insert_header((
                             actix_web::http::header::CONTENT_TYPE,
                             actix_web::http::header::ContentType::html(),
                         ))
-                        .body(body)
+                        .body(rendered_template)
                 }
                 Err(err) => {
                     HttpResponse::from_error(actix_web::error::ErrorInternalServerError(err))
@@ -274,7 +265,35 @@ async fn manual_hello() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     log::info!("Starting server");
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let config = rustls::ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth();
+
+    let cert_file = &mut std::io::BufReader::new(std::fs::File::open("./fullchain.pem")?);
+    let key_file = &mut std::io::BufReader::new(std::fs::File::open("./key.pem")?);
+
+    // convert files to key/cert objects
+    let cert_chain = certs(cert_file)
+        .unwrap()
+        .into_iter()
+        .map(rustls::Certificate)
+        .collect();
+    let mut keys: Vec<rustls::PrivateKey> = ec_private_keys(key_file)
+        .unwrap()
+        .into_iter()
+        .map(rustls::PrivateKey)
+        .collect();
+
+    // exit if no keys could be parsed
+    if keys.is_empty() {
+        log::error!("Could not locate private keys.");
+        std::process::exit(1);
+    }
+
+    let config_with_cert = config.with_single_cert(cert_chain, keys.remove(0)).unwrap();
+
     HttpServer::new(|| {
         App::new()
             .service(amazon_short_link)
@@ -283,10 +302,48 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(echo)
             .route("/hey", web::get().to(manual_hello))
-            .service(actix_files::Files::new("/", "./static"))
+            .service(actix_files::Files::new("/", "./static").use_hidden_files())
+            .wrap_fn(|sreq, srv| {
+                let host = sreq
+                    .headers()
+                    .get(&HeaderName::from_static("host"))
+                    .and_then(|v| v.to_str().ok())
+                    .or_else(|| {
+                        sreq.uri()
+                            .authority()
+                            .map(actix_web::http::uri::Authority::as_str)
+                    })
+                    .unwrap_or_else(|| sreq.app_config().host())
+                    .to_owned();
+                let uri = sreq.uri().to_owned();
+                let url = format!("https://{host}{uri}");
+
+                // If the scheme is "https" then it will let other services below this wrap_fn
+                // handle the request and if it's "http" then a response with redirect status code
+                // will be sent whose "location" header will be same as before, with just "http"
+                // changed to "https"
+
+                let scheme = sreq
+                    .uri()
+                    .scheme()
+                    .map(actix_web::http::uri::Scheme::as_str)
+                    .or_else(|| Some("https").filter(|_| sreq.app_config().secure()))
+                    .unwrap_or("http")
+                    .to_owned();
+                if scheme == "https" {
+                    Either::Left(srv.call(sreq).map(|res| res))
+                } else {
+                    Either::Right(future::ready(Ok(sreq.into_response(
+                        HttpResponse::MovedPermanently()
+                            .append_header((actix_web::http::header::LOCATION, url))
+                            .finish(),
+                    ))))
+                }
+            })
             .wrap(Logger::default())
     })
-    .bind("0.0.0.0:8000")?
+    .bind("0.0.0.0:80")?
+    .bind_rustls_021("0.0.0.0:443", config_with_cert)?
     .run()
     .await?;
     log::info!("Server finished");

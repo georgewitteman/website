@@ -1,0 +1,13 @@
+[Unit]
+Description=Website
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+User=root
+WorkingDirectory=/home/ec2-user/website
+ExecStart=/home/ec2-user/website/website
+
+[Install]
+WantedBy=multi-user.target

@@ -6,6 +6,7 @@
     "PGUSER": "postgres"
   },
   "features": {
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {
       "dockerDashComposeVersion": "v2",
       "moby": false
