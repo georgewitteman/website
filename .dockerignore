@@ -1,14 +1,5 @@
-.devcontainer
+target
+Dockerfile
+.dockerignore
 .git
-.github
 .gitignore
-.prettierrc.cjs
-.vscode
-*.test.js
-build-and-deploy.js
-LICENSE
-node_modules
-npm-debug.log
-README.md
-tsconfig.json
-tsconfig-browser.json

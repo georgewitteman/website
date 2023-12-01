@@ -1,7 +1,0 @@
-{
-  "name": "Bun",
-  "id": "bun",
-  "version": "1.0.0",
-  "description": "Installs bun",
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
-}
