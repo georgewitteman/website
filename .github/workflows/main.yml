@@ -1,6 +1,7 @@
 name: main
 
 "on":
+  workflow_dispatch:
   push: { branches: [main] }
 
 permissions:
@@ -15,13 +16,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      CARGO_TERM_COLOR: always
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -31,7 +30,9 @@ jobs:
           aws-region: us-west-2
           mask-aws-account-id: false
 
-      - run: bun install
+      - run: rustup toolchain install stable --profile minimal --no-self-update
 
-      # runs lint and test
-      - run: bun run deploy
+      - name: Cache Build
+        uses: Swatinem/rust-cache@v2
+
+      - run: ./scripts/build.sh

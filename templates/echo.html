@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2 class="font-bold">Full Request</h2>
+<pre class="text-sm"><code class="whitespace-pre-wrap break-words">{{ value }}</code></pre>
+<h2 class="font-bold">Body</h2>
+<pre class="text-sm"><code class="whitespace-pre-wrap break-words">{{ body }}</code></pre>
+<h2 class="font-bold">Helpers</h2>
+<form method="GET" action="/echo">
+    <input name="input-field" type="text" value="post body">
+    <select name="cars" id="cars" multiple>
+        <option selected value="volvo">Volvo</option>
+        <option selected value="saab">Saab</option>
+        <option value="opel">Opel</option>
+        <option value="audi">Audi</option>
+    </select>
+    <button type="submit">GET</button>
+</form>
+<form method="POST" action="/echo">
+    <input name="input-field" type="text" value="post body">
+    <select name="cars" id="cars" multiple>
+        <option selected value="volvo">Volvo</option>
+        <option selected value="saab">Saab</option>
+        <option value="opel">Opel</option>
+        <option value="audi">Audi</option>
+    </select>
+    <button type="submit">POST</button>
+</form>
+<form method="POST" enctype="multipart/form-data" action="/echo">
+    <input name="input-field" type="text" value="post body">
+    <select name="cars" id="cars" multiple>
+        <option selected value="volvo">Volvo</option>
+        <option selected value="saab">Saab</option>
+        <option value="opel">Opel</option>
+        <option value="audi">Audi</option>
+    </select>
+    <button type="submit">POST multipart/form-data</button>
+</form>
+<form method="POST" enctype="text/plain" action="/echo">
+    <input name="input-field" type="text" value="post body">
+    <select name="cars" id="cars" multiple>
+        <option selected value="volvo">Volvo</option>
+        <option selected value="saab">Saab</option>
+        <option value="opel">Opel</option>
+        <option value="audi">Audi</option>
+    </select>
+    <button type="submit">POST text/plain</button>
+</form>
+{% endblock %}

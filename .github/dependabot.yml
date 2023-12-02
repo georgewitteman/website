@@ -5,19 +5,7 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#groups
-    groups:
-      aws-sdk:
-        patterns:
-          - "@aws-sdk/*"
-      typescript-eslint:
-        patterns:
-          - "@typescript-eslint/*"
-  - package-ecosystem: "docker"
+  - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "daily"

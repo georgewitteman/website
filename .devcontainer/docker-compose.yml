@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   app:
-    image: mcr.microsoft.com/devcontainers/base:debian
+    image: mcr.microsoft.com/devcontainers/rust:1-1-bookworm
 
     volumes:
       - ../..:/workspaces:cached

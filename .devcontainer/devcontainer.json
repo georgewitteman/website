@@ -2,28 +2,23 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "containerEnv": {
+    "PGUSER": "postgres"
+  },
   "features": {
-    "./features/bun": {},
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {
       "dockerDashComposeVersion": "v2",
       "moby": false
     }
-  },
-  "updateContentCommand": {
-    "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"],
-    "install": ["bun", "install"]
-  },
-  "containerEnv": {
-    "PGUSER": "postgres"
-  },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ronnidc.nunjucks",
-        "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode",
-        "oven.bun-vscode"
-      ]
-    }
-  }
+},
+"customizations": {
+	"vscode": {
+		"extensions": [
+			"bradlc.vscode-tailwindcss",
+			"rust-lang.rust-analyzer",
+			"GitHub.vscode-github-actions"
+		]
+	}
+}
 }

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>{% block title %}George Witteman{% endblock %}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="author" content="George Witteman" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/styles.css" />
+  {% block head %}
+  {% endblock %}
+</head>
+
+<body class="antialiased">
+  <header class="sticky top-0 bg-white">
+    <nav class="border-b border-slate-900/5">
+      <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8 flex items-center justify-between py-5">
+        <a href="/" class="font-bold text-xl whitespace-nowrap">George Witteman</a>
+        <div class="flex space-x-4">
+          {% macro nav_link(href, text) %}
+          <a class="whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium active:bg-gray-300 {% if path == href %}bg-gray-900 text-white{% else %}bg-gray-100 hover:bg-gray-200 {% endif %}"
+            href="{{ href }}">{{ text }}</a>
+          {% endmacro %}
+          {% call nav_link("/", "Home") %}
+          {% call nav_link("/uuid", "Random UUID") %}
+          {% call nav_link("/echo", "Echo") %}
+          {% call nav_link("/amazon-short-link", "Amazon Link Shortener") %}
+        </div>
+      </div>
+    </nav>
+  </header>
+  <main class="w-full max-w-7xl px-2 sm:px-6 lg:px-8 mx-auto mt-4">
+    {% block content %}
+    {% endblock %}
+  </main>
+</body>
+
+</html>
