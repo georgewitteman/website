@@ -1,11 +1,7 @@
 use actix_web::dev::Service;
 use actix_web::http::header::Header;
 use actix_web::{get, App, HttpResponse, HttpServer};
-use actix_web::{
-    middleware::Logger,
-    web::{self},
-    HttpRequest, Responder,
-};
+use actix_web::{middleware::Logger, HttpRequest, Responder};
 use askama_actix::TemplateToResponse;
 use futures_util::future::{self, Either};
 use rustls_pemfile::certs;
@@ -227,6 +223,15 @@ fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
     }
 }
 
+async fn redirect(req: HttpRequest) -> impl Responder {
+    let host = req.app_config().host();
+    let path_and_query = req.uri().path_and_query().map_or("", |pq| pq.as_str());
+    let url = format!("https://{host}{path_and_query}");
+    HttpResponse::MovedPermanently()
+        .append_header((actix_web::http::header::LOCATION, url))
+        .finish()
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     log::info!("Starting server");
@@ -248,31 +253,39 @@ async fn main() -> std::io::Result<()> {
 
     let mut srv = HttpServer::new(move || {
         App::new()
-            .wrap_fn(move |sreq, srv| {
-                if !redirect_https {
-                    return Either::Left(srv.call(sreq));
-                }
-                let host = sreq.app_config().host();
-                let path_and_query = sreq.uri().path_and_query().map_or("", |pq| pq.as_str());
-                let url = format!("https://{host}{path_and_query}");
-
-                if sreq.app_config().secure() {
-                    Either::Left(srv.call(sreq))
-                } else {
-                    Either::Right(future::ready(Ok(sreq.into_response(
-                        HttpResponse::MovedPermanently()
-                            .append_header((actix_web::http::header::LOCATION, url))
-                            .finish(),
-                    ))))
-                }
-            })
             .wrap(actix_web::middleware::Compress::default())
             .wrap(Logger::default())
-            .service(amazon_short_link)
-            .service(uuid_route)
-            .service(index)
-            .service(echo)
-            .service(actix_files::Files::new("/", "./static").use_hidden_files())
+            .service(
+                actix_web::web::scope("")
+                    .guard(actix_web::guard::Host(
+                        std::env::var("SERVER_HOSTNAME").unwrap_or("localhost".to_owned()),
+                    ))
+                    .wrap_fn(move |sreq, srv| {
+                        if !redirect_https {
+                            return Either::Left(srv.call(sreq));
+                        }
+                        let host = sreq.app_config().host();
+                        let path_and_query =
+                            sreq.uri().path_and_query().map_or("", |pq| pq.as_str());
+                        let url = format!("https://{host}{path_and_query}");
+
+                        if sreq.app_config().secure() {
+                            Either::Left(srv.call(sreq))
+                        } else {
+                            Either::Right(future::ready(Ok(sreq.into_response(
+                                HttpResponse::MovedPermanently()
+                                    .append_header((actix_web::http::header::LOCATION, url))
+                                    .finish(),
+                            ))))
+                        }
+                    })
+                    .service(amazon_short_link)
+                    .service(uuid_route)
+                    .service(index)
+                    .service(echo)
+                    .service(actix_files::Files::new("/", "./static").use_hidden_files()),
+            )
+            .default_service(actix_web::web::to(redirect))
     })
     .server_hostname(server_hostname)
     // Short timeout for now to have faster deploys
