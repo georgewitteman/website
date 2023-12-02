@@ -1,6 +1,7 @@
 name: main
 
 "on":
+  workflow_dispatch:
   push: { branches: [main] }
 
 permissions:
@@ -19,10 +20,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -31,7 +28,4 @@ jobs:
           aws-region: us-west-2
           mask-aws-account-id: false
 
-      - run: bun install
-
-      # runs lint and test
-      - run: bun run deploy
+      - run: ./scripts/build.sh

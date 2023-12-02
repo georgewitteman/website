@@ -16,7 +16,8 @@
 	"vscode": {
 		"extensions": [
 			"bradlc.vscode-tailwindcss",
-			"rust-lang.rust-analyzer"
+			"rust-lang.rust-analyzer",
+			"GitHub.vscode-github-actions"
 		]
 	}
 }

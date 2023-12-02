@@ -8,7 +8,6 @@
   <meta name="author" content="George Witteman" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="stylesheet" href="/styles.css" />
-  <!-- <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script> -->
   {% block head %}
   {% endblock %}
 </head>
@@ -23,11 +22,10 @@
           <a class="whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium active:bg-gray-300 {% if path == href %}bg-gray-900 text-white{% else %}bg-gray-100 hover:bg-gray-200 {% endif %}"
             href="{{ href }}">{{ text }}</a>
           {% endmacro %}
-          {{ self::nav_link(href="/", text="Home")}}
-          {{ self::nav_link(href="/test", text="Test Page")}}
-          {{ self::nav_link(href="/uuid", text="Random UUID")}}
-          {{ self::nav_link(href="/echo", text="Echo")}}
-          {{ self::nav_link(href="/amazon-short-link", text="Amazon Link Shortener")}}
+          {% call nav_link("/", "Home") %}
+          {% call nav_link("/uuid", "Random UUID") %}
+          {% call nav_link("/echo", "Echo") %}
+          {% call nav_link("/amazon-short-link", "Amazon Link Shortener") %}
         </div>
       </div>
     </nav>

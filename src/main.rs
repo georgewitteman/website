@@ -1,4 +1,5 @@
 use actix_web::dev::Service;
+use actix_web::http::header::Header;
 use actix_web::{get, App, HttpResponse, HttpServer};
 use actix_web::{
     http::header::HeaderName,
@@ -6,110 +7,78 @@ use actix_web::{
     web::{self},
     HttpRequest, Responder,
 };
+use askama_actix::TemplateToResponse;
 use futures_util::future::{self, Either};
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
 use serde_json::Value;
-use std::sync::OnceLock;
-
-fn templates() -> &'static tera::Tera {
-    static TERA: OnceLock<tera::Tera> = OnceLock::new();
-    TERA.get_or_init(|| {
-        let mut tera = match tera::Tera::new("templates/**/*") {
-            Ok(t) => t,
-            Err(e) => {
-                println!("Parsing error(s): {}", e);
-                ::std::process::exit(1);
-            }
-        };
-        tera.autoescape_on(vec![".html", ".sql"]);
-        tera
-    })
-}
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult {
     let parser = woothee::parser::Parser::new();
     parser.parse(header).unwrap_or_default()
 }
 
+fn requested_html(accept_header: &Option<actix_web::http::header::Accept>) -> bool {
+    let accept = match accept_header {
+        Some(hdr) => hdr,
+        None => return false,
+    };
+    for item in &accept.0 {
+        if item.item.subtype() == "html" {
+            return true;
+        }
+    }
+    false
+}
+
+#[derive(askama_actix::Template)]
+#[template(path = "uuid.html")]
+struct UuidTemplate<'a> {
+    path: &'a str,
+    value: &'a str,
+}
+
 #[get("/uuid")]
 async fn uuid_route(req: HttpRequest) -> impl Responder {
-    let user_agent = get_user_agent(
-        req.headers()
-            .get("user-agent")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or(""),
-    );
     let result = uuid::Uuid::new_v4();
-    let mut context = tera::Context::new();
-    context.insert("value", &result.to_string());
-    context.insert("path", req.path());
-    match templates().render("uuid.html", &context) {
-        Ok(body) => {
-            if user_agent.browser_type != "browser" {
-                return HttpResponse::Ok()
-                    .insert_header((
-                        actix_web::http::header::CONTENT_TYPE,
-                        actix_web::http::header::ContentType::plaintext(),
-                    ))
-                    .body(format!("{}\n", result));
-            }
-            HttpResponse::Ok()
-                .insert_header((
-                    actix_web::http::header::CONTENT_TYPE,
-                    actix_web::http::header::ContentType::html(),
-                ))
-                .body(body)
-        }
-        Err(err) => HttpResponse::from_error(actix_web::error::ErrorInternalServerError(err)),
+    if requested_html(&actix_web::http::header::Accept::parse(&req).ok()) {
+        let template = UuidTemplate {
+            path: req.path(),
+            value: &result.to_string(),
+        };
+        template.to_response()
+    } else {
+        HttpResponse::Ok()
+            .insert_header((
+                actix_web::http::header::CONTENT_TYPE,
+                actix_web::http::header::ContentType::plaintext(),
+            ))
+            .body(format!("{}\n", result))
     }
+}
+
+#[derive(askama_actix::Template)]
+#[template(path = "index.html")]
+struct IndexTemplate<'a> {
+    path: &'a str,
 }
 
 #[get("/")]
 async fn hello(req: HttpRequest) -> impl Responder {
-    let mut context = tera::Context::new();
-    context.insert("path", req.path());
-    match templates().render("index.html", &context) {
-        Ok(body) => HttpResponse::Ok()
-            .insert_header((
-                actix_web::http::header::CONTENT_TYPE,
-                actix_web::http::header::ContentType::html(),
-            ))
-            .body(body),
-        Err(err) => HttpResponse::from_error(actix_web::error::ErrorInternalServerError(err)),
-    }
+    let template = IndexTemplate { path: req.path() };
+    template.to_response()
 }
 
-#[get("/test")]
-async fn test_page(req: HttpRequest) -> impl Responder {
-    let mut context = tera::Context::new();
-    context.insert("path", req.path());
-    context.insert("hello", "Hello, ");
-    context.insert("world", "world!");
-    match templates().render("test.html", &context) {
-        Ok(body) => HttpResponse::Ok()
-            .insert_header((
-                actix_web::http::header::CONTENT_TYPE,
-                actix_web::http::header::ContentType::html(),
-            ))
-            .body(body),
-        Err(err) => HttpResponse::from_error(actix_web::error::ErrorInternalServerError(err)),
-    }
+#[derive(askama_actix::Template)]
+#[template(path = "amazon-short-link.html")]
+struct AmazonShortLinkTemplate<'a> {
+    path: &'a str,
 }
 
 #[get("/amazon-short-link")]
 async fn amazon_short_link(req: HttpRequest) -> impl Responder {
-    let mut context = tera::Context::new();
-    context.insert("path", req.path());
-    match templates().render("amazon-short-link.html", &context) {
-        Ok(body) => HttpResponse::Ok()
-            .insert_header((
-                actix_web::http::header::CONTENT_TYPE,
-                actix_web::http::header::ContentType::html(),
-            ))
-            .body(body),
-        Err(err) => HttpResponse::from_error(actix_web::error::ErrorInternalServerError(err)),
-    }
+    let template = AmazonShortLinkTemplate { path: req.path() };
+    template.to_response()
 }
 
 fn pretty_multimap(map: &multimap::MultiMap<String, String>) -> serde_json::Map<String, Value> {
@@ -129,6 +98,14 @@ fn pretty_multimap(map: &multimap::MultiMap<String, String>) -> serde_json::Map<
         }
     }
     pretty_map
+}
+
+#[derive(askama_actix::Template)]
+#[template(path = "echo.html")]
+struct EchoTemplate<'a> {
+    path: &'a str,
+    value: &'a str,
+    body: &'a str,
 }
 
 #[actix_web::route(
@@ -229,30 +206,20 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
     });
     match serde_json::to_string_pretty(&response) {
         Ok(body) => {
-            let mut context = tera::Context::new();
-            context.insert("value", &body);
-            context.insert("path", req.path());
-            context.insert("body", &request_body);
-            match templates().render("echo.html", &context) {
-                Ok(rendered_template) => {
-                    if parsed_user_agent.browser_type != "browser" {
-                        return HttpResponse::Ok()
-                            .insert_header((
-                                actix_web::http::header::CONTENT_TYPE,
-                                actix_web::http::header::ContentType::json(),
-                            ))
-                            .body(format!("{body}\n"));
-                    }
-                    HttpResponse::Ok()
-                        .insert_header((
-                            actix_web::http::header::CONTENT_TYPE,
-                            actix_web::http::header::ContentType::html(),
-                        ))
-                        .body(rendered_template)
-                }
-                Err(err) => {
-                    HttpResponse::from_error(actix_web::error::ErrorInternalServerError(err))
-                }
+            if requested_html(&actix_web::http::header::Accept::parse(&req).ok()) {
+                let template = EchoTemplate {
+                    path: req.path(),
+                    body: &request_body,
+                    value: &body,
+                };
+                template.to_response()
+            } else {
+                HttpResponse::Ok()
+                    .insert_header((
+                        actix_web::http::header::CONTENT_TYPE,
+                        actix_web::http::header::ContentType::json(),
+                    ))
+                    .body(format!("{body}\n"))
             }
         }
         Err(err) => HttpResponse::from_error(actix_web::error::JsonPayloadError::Serialize(err)),
@@ -358,7 +325,6 @@ async fn main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::Compress::default())
             .wrap(Logger::default())
             .service(amazon_short_link)
-            .service(test_page)
             .service(uuid_route)
             .service(hello)
             .service(echo)

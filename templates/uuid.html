@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Random UUID - {{ super() }}{% endblock %}
+{% block title %}Random UUID - {% call super() %}{% endblock %}
 
 {% block content %}
 <code id="code">{{ value }}</code>

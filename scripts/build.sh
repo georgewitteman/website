@@ -20,7 +20,6 @@ cargo build --release --target x86_64-unknown-linux-gnu
 cp ./target/x86_64-unknown-linux-gnu/release/website "${tmp_dir}/website"
 cp -r ./scripts "${tmp_dir}/scripts"
 cp -r ./static "${tmp_dir}/static"
-cp -r ./templates "${tmp_dir}/templates"
 cp -r ./website.service "${tmp_dir}/website.service"
 
 # Deploy
