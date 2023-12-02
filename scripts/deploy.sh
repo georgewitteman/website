@@ -5,6 +5,8 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
+DOMAIN="georgewitteman.com"
+
 ls -la "${HOME}/website"
 
 # Install acme.sh dependencies
@@ -21,9 +23,9 @@ sudo systemctl daemon-reload
 curl https://get.acme.sh | sh -s email=george@witteman.me
 
 # Get the certificate
-/home/ec2-user/.acme.sh/acme.sh --issue -d v2.georgewitteman.com --webroot "${HOME}/website/static" --server letsencrypt || true
+/home/ec2-user/.acme.sh/acme.sh --issue -d "$DOMAIN" --webroot "${HOME}/website/static" --server letsencrypt || true
 
-/home/ec2-user/.acme.sh/acme.sh --install-cert -d v2.georgewitteman.com \
+/home/ec2-user/.acme.sh/acme.sh --install-cert -d "$DOMAIN" \
 --cert-file "${HOME}/website/cert.pem" \
 --key-file "${HOME}/website/key.pem" \
 --fullchain-file "${HOME}/website/fullchain.pem" \

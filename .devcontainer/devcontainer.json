@@ -11,5 +11,13 @@
       "dockerDashComposeVersion": "v2",
       "moby": false
     }
-  }
+},
+"customizations": {
+	"vscode": {
+		"extensions": [
+			"bradlc.vscode-tailwindcss",
+			"rust-lang.rust-analyzer"
+		]
+	}
+}
 }

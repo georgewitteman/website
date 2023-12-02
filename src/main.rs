@@ -6,7 +6,7 @@ use actix_web::{
     web::{self},
     HttpRequest, Responder,
 };
-use futures_util::future::{self, Either, FutureExt};
+use futures_util::future::{self, Either};
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
 use serde_json::Value;
@@ -198,6 +198,7 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
         "version": format!("{:?}", req.head().version),
         "method": req.method().to_string(),
         "full_url": url,
+        "uri": req.uri().to_string(),
         "url": {
             "authority": url.authority(),
             "domain": url.domain(),
@@ -262,17 +263,19 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    log::info!("Starting server");
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-
+fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
     let config = rustls::ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth();
 
-    let cert_file = &mut std::io::BufReader::new(std::fs::File::open("./fullchain.pem")?);
-    let key_file = &mut std::io::BufReader::new(std::fs::File::open("./key.pem")?);
+    let cert_file = &mut std::io::BufReader::new(
+        std::fs::File::open("fullchain.pem")
+            .map_err(|e| rustls::Error::General(format!("Missing fullchain.pem: {:?}", e)))?,
+    );
+    let key_file = &mut std::io::BufReader::new(
+        std::fs::File::open("key.pem")
+            .map_err(|e| rustls::Error::General(format!("Missing key.pem: {:?}", e)))?,
+    );
 
     // convert files to key/cert objects
     let cert_chain = certs(cert_file)
@@ -280,23 +283,42 @@ async fn main() -> std::io::Result<()> {
         .into_iter()
         .map(rustls::Certificate)
         .collect();
-    let mut keys: Vec<rustls::PrivateKey> = ec_private_keys(key_file)
+    let keys: Vec<rustls::PrivateKey> = ec_private_keys(key_file)
         .unwrap()
         .into_iter()
         .map(rustls::PrivateKey)
         .collect();
 
-    // exit if no keys could be parsed
-    if keys.is_empty() {
-        log::error!("Could not locate private keys.");
-        std::process::exit(1);
+    match keys.first() {
+        None => Err(rustls::Error::General("Missing private key".to_string())),
+        Some(private_key) => config.with_single_cert(cert_chain, private_key.to_owned()),
+    }
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    log::info!("Starting server");
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let port = std::env::var("PORT").unwrap_or("8000".to_owned());
+    let port_https = std::env::var("PORT_HTTPS").unwrap_or("8443".to_owned());
+    log::info!("port: {port}; port_https: {port_https}");
+
+    let maybe_tls_config = get_tls_config();
+    let redirect_https = maybe_tls_config.is_ok();
+    if let Err(tls_config_err) = &maybe_tls_config {
+        log::info!(
+            "skipping tls because we couldn't find the config: {:?}",
+            tls_config_err
+        );
     }
 
-    let config_with_cert = config.with_single_cert(cert_chain, keys.remove(0)).unwrap();
-
-    HttpServer::new(|| {
+    let mut srv = HttpServer::new(move || {
         App::new()
-            .wrap_fn(|sreq, srv| {
+            .wrap_fn(move |sreq, srv| {
+                if !redirect_https {
+                    return Either::Left(srv.call(sreq));
+                }
                 let host = sreq
                     .headers()
                     .get(&HeaderName::from_static("host"))
@@ -324,7 +346,7 @@ async fn main() -> std::io::Result<()> {
                     .unwrap_or("http")
                     .to_owned();
                 if scheme == "https" {
-                    Either::Left(srv.call(sreq).map(|res| res))
+                    Either::Left(srv.call(sreq))
                 } else {
                     Either::Right(future::ready(Ok(sreq.into_response(
                         HttpResponse::MovedPermanently()
@@ -343,10 +365,15 @@ async fn main() -> std::io::Result<()> {
             .route("/hey", web::get().to(manual_hello))
             .service(actix_files::Files::new("/", "./static").use_hidden_files())
     })
-    .bind("0.0.0.0:80")?
-    .bind_rustls_021("0.0.0.0:443", config_with_cert)?
-    .run()
-    .await?;
+    // Short timeout for now to have faster deploys
+    .shutdown_timeout(10)
+    .bind(format!("0.0.0.0:{port}"))?;
+
+    if let Ok(tls_config) = maybe_tls_config {
+        srv = srv.bind_rustls_021(format!("0.0.0.0:{port_https}"), tls_config)?;
+    }
+
+    srv.run().await?;
     log::info!("Server finished");
     Ok(())
 }

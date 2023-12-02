@@ -9,5 +9,8 @@ User=root
 WorkingDirectory=/home/ec2-user/website
 ExecStart=/home/ec2-user/website/website
 
+Environment=PORT=80
+Environment=PORT_HTTPS=443
+
 [Install]
 WantedBy=multi-user.target
