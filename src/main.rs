@@ -63,7 +63,7 @@ struct IndexTemplate<'a> {
 }
 
 #[get("/")]
-async fn hello(req: HttpRequest) -> impl Responder {
+async fn index(req: HttpRequest) -> impl Responder {
     let template = IndexTemplate { path: req.path() };
     template.to_response()
 }
@@ -195,10 +195,6 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
     }
 }
 
-async fn manual_hello() -> impl Responder {
-    HttpResponse::Ok().body("Hey there!")
-}
-
 fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
     let config = rustls::ServerConfig::builder()
         .with_safe_defaults()
@@ -274,9 +270,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(amazon_short_link)
             .service(uuid_route)
-            .service(hello)
+            .service(index)
             .service(echo)
-            .route("/hey", web::get().to(manual_hello))
             .service(actix_files::Files::new("/", "./static").use_hidden_files())
     })
     .server_hostname(server_hostname)
