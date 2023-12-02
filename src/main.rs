@@ -1,11 +1,10 @@
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::str::FromStr;
+
 use actix_web::dev::Service;
 use actix_web::http::header::Header;
 use actix_web::{get, App, HttpResponse, HttpServer};
-use actix_web::{
-    middleware::Logger,
-    web::{self},
-    HttpRequest, Responder,
-};
+use actix_web::{middleware::Logger, HttpRequest, Responder};
 use askama_actix::TemplateToResponse;
 use futures_util::future::{self, Either};
 use rustls_pemfile::certs;
@@ -232,10 +231,11 @@ async fn main() -> std::io::Result<()> {
     log::info!("Starting server");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let port = std::env::var("PORT").unwrap_or("8000".to_owned());
-    let port_https = std::env::var("PORT_HTTPS").unwrap_or("8443".to_owned());
+    let port_http: u16 = u16::from_str(&std::env::var("PORT").unwrap_or_default()).unwrap_or(80);
+    let port_https: u16 =
+        u16::from_str(&std::env::var("PORT_HTTPS").unwrap_or_default()).unwrap_or(443);
     let server_hostname = std::env::var("SERVER_HOSTNAME").unwrap_or("localhost".to_owned());
-    log::info!("port: {port}; port_https: {port_https}; hostname: {server_hostname}");
+    log::info!("port_http: {port_http}; port_https: {port_https}; hostname: {server_hostname}");
 
     let maybe_tls_config = get_tls_config();
     let redirect_https = maybe_tls_config.is_ok();
@@ -245,6 +245,15 @@ async fn main() -> std::io::Result<()> {
             tls_config_err
         );
     }
+
+    let http_addrs = vec![
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, port_http)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, port_http)),
+    ];
+    let https_addrs = vec![
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, port_https)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, port_https)),
+    ];
 
     let mut srv = HttpServer::new(move || {
         App::new()
@@ -277,10 +286,10 @@ async fn main() -> std::io::Result<()> {
     .server_hostname(server_hostname)
     // Short timeout for now to have faster deploys
     .shutdown_timeout(10)
-    .bind(format!("0.0.0.0:{port}"))?;
+    .bind(&http_addrs[..])?;
 
     if let Ok(tls_config) = maybe_tls_config {
-        srv = srv.bind_rustls_021(format!("0.0.0.0:{port_https}"), tls_config)?;
+        srv = srv.bind_rustls_021(&https_addrs[..], tls_config)?;
     }
 
     srv.run().await?;

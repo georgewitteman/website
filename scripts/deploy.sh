@@ -9,6 +9,11 @@ DOMAIN="georgewitteman.com"
 
 ls -la "${HOME}/website"
 
+# https://serverfault.com/a/408670
+sudo rm /etc/sysctl.d/99-website.conf || true
+echo "net.ipv6.bindv6only=1" | sudo tee /etc/sysctl.d/99-website.conf
+sudo sysctl -p
+
 # Install acme.sh dependencies
 sudo dnf install cronie -y
 sudo systemctl enable crond.service
@@ -30,3 +35,6 @@ curl https://get.acme.sh | sh -s email=george@witteman.me
 --key-file "${HOME}/website/key.pem" \
 --fullchain-file "${HOME}/website/fullchain.pem" \
 --reloadcmd "sudo systemctl restart website"
+
+sleep "2s"
+sudo netstat -tulpn
