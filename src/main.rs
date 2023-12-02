@@ -296,13 +296,6 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(|| {
         App::new()
-            .service(amazon_short_link)
-            .service(test_page)
-            .service(uuid_route)
-            .service(hello)
-            .service(echo)
-            .route("/hey", web::get().to(manual_hello))
-            .service(actix_files::Files::new("/", "./static").use_hidden_files())
             .wrap_fn(|sreq, srv| {
                 let host = sreq
                     .headers()
@@ -340,7 +333,15 @@ async fn main() -> std::io::Result<()> {
                     ))))
                 }
             })
+            .wrap(actix_web::middleware::Compress::default())
             .wrap(Logger::default())
+            .service(amazon_short_link)
+            .service(test_page)
+            .service(uuid_route)
+            .service(hello)
+            .service(echo)
+            .route("/hey", web::get().to(manual_hello))
+            .service(actix_files::Files::new("/", "./static").use_hidden_files())
     })
     .bind("0.0.0.0:80")?
     .bind_rustls_021("0.0.0.0:443", config_with_cert)?
