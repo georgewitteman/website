@@ -1,8 +1,9 @@
+mod config;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::str::FromStr;
 
 use actix_web::dev::Service;
 use actix_web::http::header::Header;
+use actix_web::http::uri::Scheme;
 use actix_web::{get, App, HttpResponse, HttpServer};
 use actix_web::{middleware::Logger, HttpRequest, Responder};
 use askama_actix::TemplateToResponse;
@@ -10,6 +11,8 @@ use futures_util::future::{self, Either};
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
 use serde_json::Value;
+
+use crate::config::get_config;
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult {
     let parser = woothee::parser::Parser::new();
@@ -231,41 +234,29 @@ async fn main() -> std::io::Result<()> {
     log::info!("Starting server");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let port_http: u16 = u16::from_str(&std::env::var("PORT").unwrap_or_default()).unwrap_or(80);
-    let port_https: u16 =
-        u16::from_str(&std::env::var("PORT_HTTPS").unwrap_or_default()).unwrap_or(443);
-    let server_hostname = std::env::var("SERVER_HOSTNAME").unwrap_or("localhost".to_owned());
-    log::info!("port_http: {port_http}; port_https: {port_https}; hostname: {server_hostname}");
-
-    let maybe_tls_config = get_tls_config();
-    let redirect_https = maybe_tls_config.is_ok();
-    if let Err(tls_config_err) = &maybe_tls_config {
-        log::info!(
-            "skipping tls because we couldn't find the config: {:?}",
-            tls_config_err
-        );
-    }
+    let config = get_config();
 
     let http_addrs = vec![
-        SocketAddr::from((Ipv4Addr::UNSPECIFIED, port_http)),
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, port_http)),
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.http_port)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.http_port)),
     ];
     let https_addrs = vec![
-        SocketAddr::from((Ipv4Addr::UNSPECIFIED, port_https)),
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, port_https)),
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.https_port)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.https_port)),
     ];
 
-    let mut srv = HttpServer::new(move || {
+    let mut srv = HttpServer::new(|| {
         App::new()
-            .wrap_fn(move |sreq, srv| {
-                if !redirect_https {
+            .wrap_fn(|sreq, srv| {
+                let config = get_config();
+                if !config.tls_enabled {
                     return Either::Left(srv.call(sreq));
                 }
-                let host = sreq.app_config().host();
+                let website_domain = &config.website_domain;
                 let path_and_query = sreq.uri().path_and_query().map_or("", |pq| pq.as_str());
-                let url = format!("https://{host}{path_and_query}");
+                let url = format!("https://{website_domain}{path_and_query}");
 
-                if sreq.app_config().secure() {
+                if sreq.uri().scheme() == Some(&Scheme::HTTPS) {
                     Either::Left(srv.call(sreq))
                 } else {
                     Either::Right(future::ready(Ok(sreq.into_response(
@@ -283,12 +274,14 @@ async fn main() -> std::io::Result<()> {
             .service(echo)
             .service(actix_files::Files::new("/", "./static").use_hidden_files())
     })
-    .server_hostname(server_hostname)
+    .server_hostname(&config.website_domain)
     // Short timeout for now to have faster deploys
     .shutdown_timeout(10)
     .bind(&http_addrs[..])?;
 
-    if let Ok(tls_config) = maybe_tls_config {
+    if config.tls_enabled {
+        let tls_config = get_tls_config()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
         srv = srv.bind_rustls_021(&https_addrs[..], tls_config)?;
     }
 
