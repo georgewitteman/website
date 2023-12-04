@@ -229,6 +229,11 @@ fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
     }
 }
 
+async fn respond_with_scheme(req: HttpRequest) -> impl Responder {
+    let scheme = req.uri().scheme_str().unwrap_or("http");
+    HttpResponse::Ok().body(format!("{scheme}\n"))
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     log::info!("Starting server");
@@ -246,33 +251,46 @@ async fn main() -> std::io::Result<()> {
     ];
 
     let mut srv = HttpServer::new(|| {
+        let config = get_config();
         App::new()
-            .wrap_fn(|sreq, srv| {
-                let config = get_config();
-                if !config.tls_enabled {
-                    return Either::Left(srv.call(sreq));
-                }
-                let website_domain = &config.website_domain;
-                let path_and_query = sreq.uri().path_and_query().map_or("", |pq| pq.as_str());
-                let url = format!("https://{website_domain}{path_and_query}");
-
-                if sreq.uri().scheme() == Some(&Scheme::HTTPS) {
-                    Either::Left(srv.call(sreq))
-                } else {
-                    Either::Right(future::ready(Ok(sreq.into_response(
-                        HttpResponse::MovedPermanently()
-                            .append_header((actix_web::http::header::LOCATION, url))
-                            .finish(),
-                    ))))
-                }
-            })
             .wrap(actix_web::middleware::Compress::default())
             .wrap(Logger::default())
-            .service(amazon_short_link)
-            .service(uuid_route)
-            .service(index)
-            .service(echo)
-            .service(actix_files::Files::new("/", "./static").use_hidden_files())
+            .service(
+                actix_web::web::scope("")
+                    .guard(actix_web::guard::Host(&config.website_domain))
+                    .wrap_fn(|sreq, srv| {
+                        log::debug!("Checking for https redirection");
+                        let config = get_config();
+                        if !config.tls_enabled {
+                            log::debug!("Skipping https redirection due to tls_enabled = false");
+                            return Either::Left(srv.call(sreq));
+                        }
+                        let website_domain = &config.website_domain;
+                        let path_and_query =
+                            sreq.uri().path_and_query().map_or("", |pq| pq.as_str());
+                        let url = format!("https://{website_domain}{path_and_query}");
+
+                        if sreq.uri().scheme() == Some(&Scheme::HTTPS) {
+                            Either::Left(srv.call(sreq))
+                        } else {
+                            Either::Right(future::ready(Ok(sreq.into_response(
+                                HttpResponse::MovedPermanently()
+                                    .append_header((actix_web::http::header::LOCATION, url))
+                                    .finish(),
+                            ))))
+                        }
+                    })
+                    .service(amazon_short_link)
+                    .service(uuid_route)
+                    .service(index)
+                    .service(echo)
+                    .service(actix_files::Files::new("/", "./static").use_hidden_files()),
+            )
+            .service(
+                actix_web::web::scope("")
+                    .guard(actix_web::guard::Host(&config.http_only_domain))
+                    .route("/", actix_web::web::get().to(respond_with_scheme)),
+            )
     })
     .server_hostname(&config.website_domain)
     // Short timeout for now to have faster deploys
