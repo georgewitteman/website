@@ -223,10 +223,20 @@ fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
         .map(rustls::PrivateKey)
         .collect();
 
+    let mut resolver = rustls::server::ResolvesServerCertUsingSni::new();
+
     match keys.first() {
         None => Err(rustls::Error::General("Missing private key".to_string())),
-        Some(private_key) => config.with_single_cert(cert_chain, private_key.to_owned()),
-    }
+        Some(private_key) => resolver.add(
+            "georgewitteman.com",
+            rustls::sign::CertifiedKey::new(
+                cert_chain,
+                rustls::sign::any_supported_type(&private_key).unwrap(),
+            ),
+        ),
+        // Some(private_key) => config.with_single_cert(cert_chain, private_key.to_owned()),
+    }?;
+    Ok(config.with_cert_resolver(std::sync::Arc::new(resolver)))
 }
 
 #[actix_web::main]
