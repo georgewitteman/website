@@ -10,6 +10,7 @@ use askama_actix::TemplateToResponse;
 use futures_util::future::{self, Either};
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
+use rustls_pki_types::{CertificateDer, PrivateKeyDer, PrivateSec1KeyDer};
 use serde_json::Value;
 
 use crate::config::get_config;
@@ -198,9 +199,7 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
 }
 
 fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
-    let config = rustls::ServerConfig::builder()
-        .with_safe_defaults()
-        .with_no_client_auth();
+    let config = rustls::ServerConfig::builder().with_no_client_auth();
 
     let cert_file = &mut std::io::BufReader::new(
         std::fs::File::open("fullchain.pem")
@@ -212,20 +211,16 @@ fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
     );
 
     // convert files to key/cert objects
-    let cert_chain = certs(cert_file)
-        .unwrap()
-        .into_iter()
-        .map(rustls::Certificate)
-        .collect();
-    let keys: Vec<rustls::PrivateKey> = ec_private_keys(key_file)
-        .unwrap()
-        .into_iter()
-        .map(rustls::PrivateKey)
-        .collect();
+    let cert_chain = certs(cert_file).filter_map(|c| c.ok()).collect();
+    let keys: Vec<PrivateSec1KeyDer<'static>> =
+        ec_private_keys(key_file).filter_map(|k| k.ok()).collect();
 
     match keys.first() {
         None => Err(rustls::Error::General("Missing private key".to_string())),
-        Some(private_key) => config.with_single_cert(cert_chain, private_key.to_owned()),
+        Some(private_key) => config.with_single_cert(
+            cert_chain,
+            PrivateKeyDer::Sec1(private_key.secret_sec1_der().into()),
+        ),
     }
 }
 
