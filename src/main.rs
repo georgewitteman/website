@@ -268,13 +268,18 @@ async fn main() -> std::io::Result<()> {
                     ))))
                 }
             })
+            .wrap(
+                actix_web::middleware::DefaultHeaders::new()
+                    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
+                    .add((actix_web::http::header::X_CONTENT_TYPE_OPTIONS, "nosniff")),
+            )
+            .wrap(actix_web::middleware::Compress::default())
+            .wrap(Logger::default())
             .service(amazon_short_link)
             .service(uuid_route)
             .service(index)
             .service(echo)
             .service(actix_files::Files::new("/", "./static").use_hidden_files())
-            .wrap(actix_web::middleware::Compress::default())
-            .wrap(Logger::default())
     })
     .server_hostname(&config.website_domain)
     // Short timeout for now to have faster deploys
