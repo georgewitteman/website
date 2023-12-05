@@ -12,7 +12,6 @@ ExecStart=/home/ec2-user/website/website
 Environment=PORT=80
 Environment=PORT_HTTPS=443
 Environment=SERVER_HOSTNAME=georgewitteman.com
-Environment=HTTP_SERVER_HOSTNAME=http.georgewitteman.com
 
 [Install]
 WantedBy=multi-user.target
