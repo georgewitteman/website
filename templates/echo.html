@@ -1,11 +1,10 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h2 class="font-bold">Full Request</h2>
-<pre class="text-sm"><code class="whitespace-pre-wrap break-words">{{ value }}</code></pre>
-<h2 class="font-bold">Body</h2>
-<pre class="text-sm"><code class="whitespace-pre-wrap break-words">{{ body }}</code></pre>
-<h2 class="font-bold">Helpers</h2>
+<pre class="text-xs"><code class="code">{{ value }}</code></pre>
+<h2>Body</h2>
+<pre class="text-xs"><code class="code">{{ body }}</code></pre>
+<h2>Helpers</h2>
 <form method="GET" action="/echo">
     <input name="input-field" type="text" value="post body">
     <select name="cars" id="cars" multiple>

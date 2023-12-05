@@ -11,10 +11,6 @@ tmp_key_file="${tmp_key_dir}/${key_type}"
 
 tmp_dir="$(mktemp -d)"
 
-sudo curl -sL -o /usr/local/bin/tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
-sudo chmod +x /usr/local/bin/tailwindcss
-tailwindcss -i ./input.css -o ./static/styles.css --minify
-
 # Build
 cargo build --release --target x86_64-unknown-linux-gnu
 cp ./target/x86_64-unknown-linux-gnu/release/website "${tmp_dir}/website"
