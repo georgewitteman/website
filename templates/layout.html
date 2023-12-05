@@ -15,25 +15,17 @@
 <body class="antialiased bg-white">
   <header class="sticky top-0 bg-neutral-700 text-neutral-200">
     <nav class="mx-auto max-w-7xl px-4 flex items-center justify-between text-sm py-4 gap-x-2">
-      <a href="/" class="font-bold whitespace-nowrap">G<span class="hidden sm:inline">eorge </span>W<span
-          class="hidden sm:inline">itteman</span></a>
+      <a href="/" class="font-bold whitespace-nowrap text-white">G<span class="hidden sm:inline">eorge </span>W<span class="hidden sm:inline">itteman</span></a>
       <ul class="flex space-x-4">
-        {% macro nav_link(href, text) %}
-        <li><a class="whitespace-nowrap hover:text-white {% if path == href %}text-white{% endif %}"
-            href="{{ href }}">{{ text }}</a></li>
-        {% endmacro %}
-        {% call nav_link("/", "Home") %}
-        {% call nav_link("/uuid", "UUID") %}
-        {% call nav_link("/echo", "Echo") %}
-        {% call nav_link("/amazon-short-link", "Amazon Link") %}
+        <li><a class="whitespace-nowrap hover:text-white{% if path == "/uuid" %} text-white{% endif %}" href="/uuid">UUID</a></li>
+        <li><a class="whitespace-nowrap hover:text-white{% if path == "/echo" %} text-white{% endif %}" href="/echo">Echo</a></li>
+        <li><a class="whitespace-nowrap hover:text-white{% if path == "/amazon-short-link" %} text-white{% endif %}" href="/amazon-short-link">Amazon Links</a></li>
       </ul>
     </nav>
   </header>
   <main class="w-full max-w-7xl px-2 sm:px-6 lg:px-8 mx-auto mt-4">
-    </li>
     {% block content %}
     {% endblock %}
   </main>
 </body>
-
 </html>
