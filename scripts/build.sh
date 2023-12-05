@@ -13,7 +13,7 @@ tmp_dir="$(mktemp -d)"
 
 sudo curl -sL -o /usr/local/bin/tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
 sudo chmod +x /usr/local/bin/tailwindcss
-tailwindcss -i ./styles.css -o ./static/styles.css --minify
+tailwindcss -i ./input.css -o ./static/styles.css --minify
 
 # Build
 cargo build --release --target x86_64-unknown-linux-gnu
