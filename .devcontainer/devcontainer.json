@@ -11,14 +11,27 @@
       "dockerDashComposeVersion": "v2",
       "moby": false
     }
-},
-"customizations": {
-	"vscode": {
-		"extensions": [
-			"bradlc.vscode-tailwindcss",
-			"rust-lang.rust-analyzer",
-			"GitHub.vscode-github-actions"
-		]
-	}
-}
+  },
+  "updateContentCommand": {
+    "hooks-setup": [
+      "git",
+      "config",
+      "core.hooksPath",
+      ".hooks"
+    ],
+    "cargo-watch": [
+      "cargo",
+      "install",
+      "cargo-watch"
+    ]
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bradlc.vscode-tailwindcss",
+        "rust-lang.rust-analyzer",
+        "GitHub.vscode-github-actions"
+      ]
+    }
+  }
 }
