@@ -1,29 +1,13 @@
-import { AMAZON_LONG_URL } from "./lib/amazon-short-links.js";
-import { getAsin } from "./lib/amazon-short-links.js";
-import { AMAZON_URL } from "./lib/amazon-short-links.js";
-import { assert } from "./lib/assert.js";
-
+import { getAsin, AMAZON_LONG_URL } from "./lib/amazon-short-links.js";
 const formElement = document.getElementById("form");
 const longUrlElement = document.getElementById("long_url");
 const pasteUrlElement = document.getElementById("paste_url");
 const pasteCopyUrlElement = document.getElementById("paste_copy_url");
 const shortUrlElement = document.getElementById("short_url");
-const shortishUrlElement = document.getElementById("shortish_url");
 
 const copyShortUrl = document.getElementById("copy_short_url");
-const copyShortishUrl = document.getElementById("copy_shortish_url");
-
-assert(formElement instanceof HTMLFormElement);
-assert(longUrlElement instanceof HTMLInputElement);
-assert(pasteUrlElement instanceof HTMLButtonElement);
-assert(pasteCopyUrlElement instanceof HTMLButtonElement);
-assert(shortUrlElement instanceof HTMLOutputElement);
-assert(shortishUrlElement instanceof HTMLOutputElement);
-assert(copyShortUrl instanceof HTMLButtonElement);
-assert(copyShortishUrl instanceof HTMLButtonElement);
 
 copyShortUrl.style.display = "none";
-copyShortishUrl.style.display = "none";
 
 pasteUrlElement.addEventListener("click", () => {
   navigator.clipboard.readText().then((longUrl) => {
@@ -59,38 +43,51 @@ pasteCopyUrlElement.addEventListener("click", () => {
   });
 });
 
+const UNNECESSARY_QUERY_PARAMS = [
+  "utm_source",
+  "utm_medium",
+  "utm_content",
+  "fbclid",
+  "campaign_id",
+  "ad_id",
+]
+
+function cleanUrl(url) {
+  const asin = getAsin(url.href);
+  if (asin) {
+    return `${AMAZON_LONG_URL}${asin}`;
+  }
+  UNNECESSARY_QUERY_PARAMS.forEach((name) => {
+    url.searchParams.delete(name);
+  })
+  return url.href;
+}
+
 formElement.addEventListener("input", () => {
   if (!(longUrlElement instanceof HTMLInputElement)) {
     throw new Error("Invalid type");
   }
-  const asin = getAsin(longUrlElement.value);
-  if (!asin) {
+  if (!URL.canParse(longUrlElement.value)) {
     shortUrlElement.innerText = "";
-    shortishUrlElement.innerText = "";
     copyShortUrl.style.display = "none";
-    copyShortishUrl.style.display = "none";
     return;
   }
-  const shortUrl = `${AMAZON_URL}${asin}`;
-  const shortishUrl = `${AMAZON_LONG_URL}${asin}`;
+
+  const url = new URL(longUrlElement.value);
+
+  const shortUrl = cleanUrl(url)
 
   const shortLinkElement = document.createElement("a");
   shortLinkElement.setAttribute("href", shortUrl);
   shortLinkElement.innerText = shortUrl;
 
-  const shortishUrlLink = document.createElement("a");
-  shortishUrlLink.setAttribute("href", shortishUrl);
-  shortishUrlLink.innerText = shortishUrl;
-
   shortUrlElement.replaceChildren(shortLinkElement);
-  shortishUrlElement.replaceChildren(shortishUrlLink);
 
   copyShortUrl.style.display = "initial";
-  copyShortishUrl.style.display = "initial";
 });
 
 formElement.addEventListener("submit", function (e) {
-  const content = shortishUrlElement.textContent;
+  const content = shortUrlElement.textContent;
   if (typeof content === "string") {
     navigator.clipboard.writeText(content);
   }
@@ -102,13 +99,5 @@ copyShortUrl.addEventListener("click", (e) => {
     throw new Error("Invalid type");
   }
   navigator.clipboard.writeText(shortUrlElement.value);
-  e.preventDefault();
-});
-
-copyShortishUrl.addEventListener("click", (e) => {
-  if (!(shortishUrlElement instanceof HTMLOutputElement)) {
-    throw new Error("Invalid type");
-  }
-  navigator.clipboard.writeText(shortishUrlElement.value);
   e.preventDefault();
 });
