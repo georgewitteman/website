@@ -12,14 +12,14 @@
   {% endblock %}
 </head>
 
-<body class="antialiased">
+<body>
   <header class="header">
     <nav class="header-nav">
-      <h1 class="header-logo"><a href="/" class="header-logo">GW</a></h1>
+      <h1 class="header-logo"><a href="/" class="header-logo-link">GW</a></h1>
       <ul class="header-nav-ul">
-        <li><a class="header-nav-link {% if path == "/uuid" %} header-nav-link-active{% endif %}" href="/uuid">UUID</a></li>
-        <li><a class="header-nav-link {% if path == "/echo" %} header-nav-link-active{% endif %}" href="/echo">Echo</a></li>
-        <li><a class="header-nav-link {% if path == "/amazon-short-link" %} header-nav-link-active{% endif %}" href="/amazon-short-link">Amazon Links</a></li>
+        <li class="header-nav-li"><a class="header-nav-link{% if path == "/uuid" %} header-nav-link-active{% endif %}" href="/uuid">UUID</a></li>
+        <li class="header-nav-li"><a class="header-nav-link{% if path == "/echo" %} header-nav-link-active{% endif %}" href="/echo">Echo</a></li>
+        <li class="header-nav-li"><a class="header-nav-link{% if path == "/amazon-short-link" %} header-nav-link-active{% endif %}" href="/amazon-short-link">Amazon Links</a></li>
       </ul>
     </nav>
   </header>
