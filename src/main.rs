@@ -50,10 +50,7 @@ async fn uuid_route(req: HttpRequest) -> impl Responder {
         template.to_response()
     } else {
         HttpResponse::Ok()
-            .insert_header((
-                actix_web::http::header::CONTENT_TYPE,
-                actix_web::http::header::ContentType::plaintext(),
-            ))
+            .content_type(actix_web::http::header::ContentType::plaintext())
             .body(format!("{}\n", result))
     }
 }
@@ -198,10 +195,7 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
                 template.to_response()
             } else {
                 HttpResponse::Ok()
-                    .insert_header((
-                        actix_web::http::header::CONTENT_TYPE,
-                        actix_web::http::header::ContentType::json(),
-                    ))
+                    .content_type(actix_web::http::header::ContentType::json())
                     .body(format!("{body}\n"))
             }
         }
