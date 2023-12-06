@@ -4,7 +4,7 @@ use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use actix_web::dev::Service;
 use actix_web::http::header::Header;
 use actix_web::http::uri::Scheme;
-use actix_web::{get, App, HttpResponse, HttpServer};
+use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web::{middleware::Logger, HttpRequest, Responder};
 use askama_actix::TemplateToResponse;
 use futures_util::future::{self, Either};
@@ -241,6 +241,12 @@ fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
     }
 }
 
+async fn not_found() -> HttpResponse {
+    HttpResponse::NotFound()
+        .content_type(actix_web::http::header::ContentType::html())
+        .body("<h1>404 Not Found</h1>")
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     log::info!("Starting server");
@@ -293,6 +299,7 @@ async fn main() -> std::io::Result<()> {
             .service(index)
             .service(echo)
             .service(actix_files::Files::new("/", "./static").use_hidden_files())
+            .default_service(web::route().to(not_found))
     })
     .server_hostname(&config.website_domain)
     // Short timeout for now to have faster deploys
