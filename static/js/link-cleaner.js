@@ -63,17 +63,24 @@ function cleanUrl(url) {
   return url.href;
 }
 
+function safeUrlParse(input) {
+  try {
+    return new URL(input)
+  } catch {
+    return undefined;
+  }
+}
+
 formElement.addEventListener("input", () => {
   if (!(longUrlElement instanceof HTMLInputElement)) {
     throw new Error("Invalid type");
   }
-  if (!URL.canParse(longUrlElement.value)) {
+  const url = safeUrlParse(longUrlElement.value);
+  if (!url) {
     shortUrlElement.innerText = "";
     copyShortUrl.style.display = "none";
     return;
   }
-
-  const url = new URL(longUrlElement.value);
 
   const shortUrl = cleanUrl(url)
 
