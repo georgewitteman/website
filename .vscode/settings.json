@@ -1,4 +1,12 @@
 {
     "html.format.enable": false,
-    "css.format.enable": false
+    "css.format.enable": false,
+    "javascript.preferences.importModuleSpecifierEnding": "js",
+    "typescript.preferences.importModuleSpecifierEnding": "js",
+    "[html]": {
+        "editor.tabSize": 2
+    },
+    "[javascript]": {
+        "editor.tabSize": 2
+    }
 }

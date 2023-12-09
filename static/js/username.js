@@ -1,4 +1,4 @@
-import { assert } from "./lib/assert.js";
+import { assert } from "./assert.js";
 
 const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
 const default_length = 8;

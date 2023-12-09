@@ -1,4 +1,4 @@
-import { assert } from "./lib/assert.js";
+import { assert } from "./assert.js";
 
 const formElement = document.getElementById("form");
 const emailInputElement = document.getElementById("email");

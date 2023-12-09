@@ -1,7 +1,5 @@
-import { AMAZON_LONG_URL } from "./lib/amazon-short-links.js";
-import { getAsin } from "./lib/amazon-short-links.js";
-import { AMAZON_URL } from "./lib/amazon-short-links.js";
-import { assert } from "./lib/assert.js";
+import { AMAZON_LONG_URL, getAsin, AMAZON_URL } from "./amazon-short-links.js";
+import { assert } from "./assert.js";
 
 const formElement = document.getElementById("form");
 const longUrlElement = document.getElementById("long_url");
