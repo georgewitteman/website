@@ -1,8 +1,11 @@
 mod config;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+mod private_relay;
 
+use crate::config::get_config;
+use crate::private_relay::get_private_relay_range;
 use actix_web::dev::Service;
 use actix_web::http::header::Header;
+use actix_web::http::header::{Accept, ContentType, LOCATION, X_CONTENT_TYPE_OPTIONS};
 use actix_web::http::uri::Scheme;
 use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web::{middleware::Logger, HttpRequest, Responder};
@@ -11,15 +14,14 @@ use futures_util::future::{self, Either};
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
 use serde_json::Value;
-
-use crate::config::get_config;
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult {
     let parser = woothee::parser::Parser::new();
     parser.parse(header).unwrap_or_default()
 }
 
-fn requested_html(accept_header: &Option<actix_web::http::header::Accept>) -> bool {
+fn requested_html(accept_header: &Option<Accept>) -> bool {
     let accept = match accept_header {
         Some(hdr) => hdr,
         None => return false,
@@ -42,7 +44,7 @@ struct UuidTemplate<'a> {
 #[get("/uuid")]
 async fn uuid_route(req: HttpRequest) -> impl Responder {
     let result = uuid::Uuid::new_v4();
-    if requested_html(&actix_web::http::header::Accept::parse(&req).ok()) {
+    if requested_html(&Accept::parse(&req).ok()) {
         let template = UuidTemplate {
             path: req.path(),
             value: &result.to_string(),
@@ -50,7 +52,7 @@ async fn uuid_route(req: HttpRequest) -> impl Responder {
         template.to_response()
     } else {
         HttpResponse::Ok()
-            .content_type(actix_web::http::header::ContentType::plaintext())
+            .content_type(ContentType::plaintext())
             .body(format!("{}\n", result))
     }
 }
@@ -65,6 +67,28 @@ struct IndexTemplate<'a> {
 async fn index(req: HttpRequest) -> impl Responder {
     let template = IndexTemplate { path: req.path() };
     template.to_response()
+}
+
+#[get("/icloud-private-relay")]
+async fn icloud_private_relay(req: HttpRequest) -> impl Responder {
+    let socket_addr = match req.peer_addr() {
+        Some(socket_addr) => socket_addr,
+        None => {
+            return HttpResponse::BadRequest()
+                .content_type(ContentType::plaintext())
+                .body("missing IP address");
+        }
+    };
+
+    match get_private_relay_range(&socket_addr.ip()) {
+        None => HttpResponse::Ok()
+            .content_type(ContentType::plaintext())
+            .body(format!("{} is not iCloud Private Relay", socket_addr.ip())),
+
+        Some(range) => HttpResponse::Ok()
+            .content_type(ContentType::plaintext())
+            .body(format!("{}: {}", socket_addr.ip(), range.line)),
+    }
 }
 
 #[derive(askama::Template)]
@@ -186,7 +210,7 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
     });
     match serde_json::to_string_pretty(&response) {
         Ok(body) => {
-            if requested_html(&actix_web::http::header::Accept::parse(&req).ok()) {
+            if requested_html(&Accept::parse(&req).ok()) {
                 let template = EchoTemplate {
                     path: req.path(),
                     body: &request_body,
@@ -195,7 +219,7 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
                 template.to_response()
             } else {
                 HttpResponse::Ok()
-                    .content_type(actix_web::http::header::ContentType::json())
+                    .content_type(ContentType::json())
                     .body(format!("{body}\n"))
             }
         }
@@ -237,7 +261,7 @@ fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
 
 async fn not_found() -> HttpResponse {
     HttpResponse::NotFound()
-        .content_type(actix_web::http::header::ContentType::html())
+        .content_type(ContentType::html())
         .body("<h1>404 Not Found</h1>")
 }
 
@@ -275,7 +299,7 @@ async fn main() -> std::io::Result<()> {
                 } else {
                     Either::Right(future::ready(Ok(sreq.into_response(
                         HttpResponse::MovedPermanently()
-                            .append_header((actix_web::http::header::LOCATION, url))
+                            .append_header((LOCATION, url))
                             .finish(),
                     ))))
                 }
@@ -283,7 +307,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(
                 actix_web::middleware::DefaultHeaders::new()
                     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
-                    .add((actix_web::http::header::X_CONTENT_TYPE_OPTIONS, "nosniff")),
+                    .add((X_CONTENT_TYPE_OPTIONS, "nosniff")),
             )
             .wrap(actix_web::middleware::Compress::default())
             .wrap(Logger::default())
@@ -292,6 +316,7 @@ async fn main() -> std::io::Result<()> {
             .service(uuid_route)
             .service(index)
             .service(echo)
+            .service(icloud_private_relay)
             .service(actix_files::Files::new("/", "./static").use_hidden_files())
             .default_service(web::route().to(not_found))
     })
