@@ -92,18 +92,6 @@ async fn icloud_private_relay(req: HttpRequest) -> impl Responder {
 }
 
 #[derive(askama::Template)]
-#[template(path = "link-cleaner.html")]
-struct LinkCleanerTemplate<'a> {
-    path: &'a str,
-}
-
-#[get("/link-cleaner")]
-async fn link_cleaner(req: HttpRequest) -> impl Responder {
-    let template = LinkCleanerTemplate { path: req.path() };
-    template.to_response()
-}
-
-#[derive(askama::Template)]
 #[template(path = "amazon-short-link.html")]
 struct AmazonShortLinkTemplate<'a> {
     path: &'a str,
@@ -312,7 +300,6 @@ async fn main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::Compress::default())
             .wrap(Logger::default())
             .service(amazon_short_link)
-            .service(link_cleaner)
             .service(uuid_route)
             .service(index)
             .service(echo)

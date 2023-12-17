@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Link Cleaner - George Witteman</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="author" content="George Witteman" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/lib/simple.css">
+</head>
+<body>
+  <header>
+    <nav><a href="/">&lsaquo; Home</a></nav>
+  </header>
+  <main>
+    <form id="form">
+      <label>
+        Long URL<br />
+        <input type="text" name="long_url" id="long_url" autofocus="" placeholder="https://www.example.com/long-url?utm_source=ig&utm_medium=Instagram_Reels..." />
+        <button id="paste_url" type="button">Paste</button>
+        <button id="paste_copy_url" type="button">Paste &amp; Copy</button>
+      </label>
+      <p>
+        Short URL<br />
+        <output for="form" id="short_url"></output>
+        <button id="copy_short_url" type="button" style="display: none">
+          Copy
+        </button>
+      </p>
+    </form>
+  </main>
+
+  <script>
+    const AMAZON_URL = "https://amzn.com/dp/";
+    const AMAZON_LONG_URL = "https://www.amazon.com/dp/";
+    const ASIN_REGEX = /\/([A-Z0-9]{10})/;
+
+    /**
+     * @param {string} longUrl
+     * @returns
+     */
+    function getAsin(longUrl) {
+      let asin = longUrl.match(ASIN_REGEX);
+      if (!asin || asin.length < 1) {
+        return null;
+      }
+      return asin[1];
+    }
+
+    const formElement = document.getElementById("form");
+    const longUrlElement = document.getElementById("long_url");
+    const pasteUrlElement = document.getElementById("paste_url");
+    const pasteCopyUrlElement = document.getElementById("paste_copy_url");
+    const shortUrlElement = document.getElementById("short_url");
+
+    const copyShortUrl = document.getElementById("copy_short_url");
+
+    copyShortUrl.style.display = "none";
+
+    pasteUrlElement.addEventListener("click", () => {
+      navigator.clipboard.readText().then((longUrl) => {
+        longUrlElement.value = longUrl;
+        longUrlElement.dispatchEvent(
+          new Event("input", {
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        longUrlElement.focus();
+        if (longUrlElement instanceof HTMLInputElement) {
+          longUrlElement.select();
+        }
+      });
+    });
+
+    pasteCopyUrlElement.addEventListener("click", () => {
+      navigator.clipboard.readText().then((longUrl) => {
+        longUrlElement.value = longUrl;
+        longUrlElement.dispatchEvent(
+          new Event("input", {
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        formElement.dispatchEvent(
+          new Event("submit", {
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      });
+    });
+
+    function cleanGoogleSearchUrl(url) {
+      if (url.hostname !== "www.google.com" || url.pathname !== "/search") {
+        return undefined
+      }
+      const query = url.searchParams.get("q");
+      if (!query) {
+        return undefined;
+      }
+
+      const searchParams = new URLSearchParams([["q", query]]);
+      return new URL(`https://google.com/search?${searchParams.toString()}`);
+    }
+
+    const UNNECESSARY_QUERY_PARAMS = [
+      "utm_source",
+      "utm_medium",
+      "utm_content",
+      "fbclid",
+      "campaign_id",
+      "ad_id",
+    ];
+
+    function cleanUrl(url) {
+      const asin = getAsin(url.href);
+      if (asin) {
+        return `${AMAZON_LONG_URL}${asin}`;
+      }
+      const googleUrl = cleanGoogleSearchUrl(url);
+      if (googleUrl) {
+        return googleUrl;
+      }
+      UNNECESSARY_QUERY_PARAMS.forEach((name) => {
+        url.searchParams.delete(name);
+      })
+      return url.href;
+    }
+
+    function safeUrlParse(input) {
+      try {
+        return new URL(input)
+      } catch {
+        return undefined;
+      }
+    }
+
+    function onInput() {
+      if (!(longUrlElement instanceof HTMLInputElement)) {
+        throw new Error("Invalid type");
+      }
+      const url = safeUrlParse(longUrlElement.value);
+      if (!url) {
+        shortUrlElement.innerText = "";
+        copyShortUrl.style.display = "none";
+        return;
+      }
+
+      const shortUrl = cleanUrl(url)
+
+      const shortLinkElement = document.createElement("a");
+      shortLinkElement.setAttribute("href", shortUrl);
+      shortLinkElement.innerText = shortUrl;
+
+      shortUrlElement.replaceChildren(shortLinkElement);
+
+      copyShortUrl.style.display = "initial";
+    }
+
+    formElement.addEventListener("input", onInput);
+    // In case somehow there ends up being content on the initial load
+    onInput();
+
+    formElement.addEventListener("submit", function (e) {
+      const content = shortUrlElement.textContent;
+      if (typeof content === "string") {
+        navigator.clipboard.writeText(content);
+      }
+      e.preventDefault();
+    });
+
+    copyShortUrl.addEventListener("click", (e) => {
+      if (!(shortUrlElement instanceof HTMLOutputElement)) {
+        throw new Error("Invalid type");
+      }
+      navigator.clipboard.writeText(shortUrlElement.value);
+      e.preventDefault();
+    });
+  </script>
+</body>
+</html>
