@@ -278,19 +278,20 @@ async fn main() -> std::io::Result<()> {
                     log::debug!("Skipping https redirection due to tls_enabled = false");
                     return Either::Left(srv.call(sreq));
                 }
-                let website_domain = &config.website_domain;
-                let path_and_query = sreq.uri().path_and_query().map_or("", |pq| pq.as_str());
-                let url = format!("https://{website_domain}{path_and_query}");
 
-                if sreq.uri().scheme() == Some(&Scheme::HTTPS) {
-                    Either::Left(srv.call(sreq))
-                } else {
-                    Either::Right(future::ready(Ok(sreq.into_response(
-                        HttpResponse::MovedPermanently()
-                            .append_header((LOCATION, url))
-                            .finish(),
-                    ))))
+                // Based on https://github.com/petertrotman/actix-web-middleware-redirect-https
+                if sreq.connection_info().scheme() == &Scheme::HTTPS {
+                    return Either::Left(srv.call(sreq));
                 }
+
+                let host = sreq.connection_info().host().to_owned();
+                let uri = sreq.uri().to_owned();
+                let url = format!("https://{}{}", host, uri);
+                Either::Right(future::ready(Ok(sreq.into_response(
+                    HttpResponse::MovedPermanently()
+                        .append_header((LOCATION, url))
+                        .finish(),
+                ))))
             })
             .wrap(
                 actix_web::middleware::DefaultHeaders::new()

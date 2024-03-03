@@ -25,7 +25,7 @@ sudo cp "${HOME}/website/website.service" "/etc/systemd/system/website.service"
 sudo systemctl daemon-reload
 sudo systemctl enable website
 
-# # Install acme.sh
+# Install acme.sh
 curl https://get.acme.sh | sh -s email=george@witteman.me
 
 # Get the certificate
