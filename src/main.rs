@@ -305,7 +305,7 @@ async fn main() -> std::io::Result<()> {
     if config.tls_enabled {
         let tls_config = get_tls_config()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
-        srv = srv.bind_rustls_0_22(&https_addrs[..], tls_config)?;
+        srv = srv.bind_rustls_0_23(&https_addrs[..], tls_config)?;
     }
 
     srv.run().await?;
