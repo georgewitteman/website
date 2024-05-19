@@ -70,6 +70,14 @@ async fn index(req: HttpRequest) -> impl Responder {
     template.to_response()
 }
 
+#[get("/sha")]
+async fn sha() -> impl Responder {
+    let sha = option_env!("GITHUB_SHA").unwrap_or("unknown");
+    HttpResponse::Ok()
+        .content_type(ContentType::plaintext())
+        .body(sha)
+}
+
 #[get("/icloud-private-relay")]
 async fn icloud_private_relay(req: HttpRequest) -> impl Responder {
     let socket_addr = match req.peer_addr() {
@@ -291,6 +299,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(amazon_short_link)
             .service(uuid_route)
+            .service(sha)
             .service(index)
             .service(echo)
             .service(icloud_private_relay)
