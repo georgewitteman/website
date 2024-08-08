@@ -31,6 +31,7 @@ jobs:
           mask-aws-account-id: false
 
       - run: rustup toolchain install stable --profile minimal --no-self-update
+      - run: rustup show
 
       - name: Cache Build
         uses: Swatinem/rust-cache@v2
