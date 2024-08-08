@@ -30,8 +30,13 @@ jobs:
           aws-region: us-west-2
           mask-aws-account-id: false
 
-      - run: rustup toolchain install stable --profile minimal --no-self-update
-      - run: rustup show
+      # https://github.com/rust-lang/rust-analyzer/blob/935883fd826c46e7e7e6de19cf24377c21f1b2ba/.github/workflows/ci.yaml#L63-L67
+      - name: Install Rust toolchain
+        run: |
+          rustup update --no-self-update stable
+          rustup default stable
+          rustup component add --toolchain stable rustfmt
+          rustup show
 
       - name: Cache Build
         uses: Swatinem/rust-cache@v2
