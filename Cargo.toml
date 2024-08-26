@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-files = "0.6.6"
-actix-web = { version = "4.8.0", features = ["rustls-0_23"] }
+actix-web = { version = "4.9.0", features = ["rustls-0_23"] }
 askama = { version = "0.12.1", features = ["with-actix-web"] }
 askama_actix = "0.14.0"
 csv = "1.3.0"
