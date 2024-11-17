@@ -11,10 +11,10 @@ use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web::{middleware::Logger, HttpRequest, Responder};
 use askama_actix::TemplateToResponse;
 use futures_util::future::{self, Either};
-use rustls_pki_types::pem::PemObject;
-use rustls_pki_types::{CertificateDer, PrivateKeyDer};
+use rustls_acme::{caches::DirCache, futures_rustls::rustls::ServerConfig, AcmeConfig};
 use serde_json::Value;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use tokio_stream::StreamExt;
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult {
     let parser = woothee::parser::Parser::new();
@@ -223,29 +223,37 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
     }
 }
 
-fn get_tls_config() -> Result<rustls::ServerConfig, rustls::Error> {
-    let config = rustls::ServerConfig::builder().with_no_client_auth();
-
-    let cert_chain = CertificateDer::pem_file_iter("fullchain.pem")
-        .expect("Error getting certs from fullchain.pem")
-        .filter_map(|c| c.ok())
-        .collect();
-    let private_key =
-        PrivateKeyDer::from_pem_file("key.pem").expect("Error getting private key from key.pem");
-
-    config.with_single_cert(cert_chain, private_key)
-}
-
 async fn not_found() -> HttpResponse {
     HttpResponse::NotFound()
         .content_type(ContentType::html())
-        .body("<h1>404 Not Found</h1>")
+        .body("<h1>404 - Not Found</h1>")
+}
+
+// https://github.com/FlorianUekermann/rustls-acme/issues/54
+fn make_auto_rustls_config(domain: &str) -> ServerConfig {
+    let mut state = AcmeConfig::new([domain])
+        .contact_push("mailto:george@witteman.me")
+        .cache(DirCache::new("./rustls_acme_cache"))
+        .directory("https://acme-v02.api.letsencrypt.org/directory")
+        .state();
+    let rustls_config = state.challenge_rustls_config();
+
+    tokio::spawn(async move {
+        loop {
+            match state.next().await.unwrap() {
+                Ok(ok) => log::info!("ACME configuration event: {ok:?}"),
+                Err(err) => log::error!("ACME configuration error: {err:?}"),
+            }
+        }
+    });
+
+    ServerConfig::clone(&rustls_config)
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    log::info!("Starting server");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    log::info!("Starting server");
 
     let config = get_config();
 
@@ -304,9 +312,12 @@ async fn main() -> std::io::Result<()> {
     .bind(&http_addrs[..])?;
 
     if config.tls_enabled {
-        let tls_config = get_tls_config()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
-        srv = srv.bind_rustls_0_23(&https_addrs[..], tls_config)?;
+        // let tls_config = get_tls_config()
+        //     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        srv = srv.bind_rustls_0_23(
+            &https_addrs[..],
+            make_auto_rustls_config(&config.website_domain),
+        )?;
     }
 
     srv.run().await?;
