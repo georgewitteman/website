@@ -18,6 +18,7 @@ sudo sysctl -p
 sudo cp "${HOME}/website/website.service" "/etc/systemd/system/website.service"
 sudo systemctl daemon-reload
 sudo systemctl enable website
+sudo systemctl restart website
 
 sleep "2s"
 sudo netstat -tulpn
