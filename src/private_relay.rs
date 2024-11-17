@@ -1,41 +1,32 @@
-use std::{fs::File, sync::OnceLock};
+use std::sync::LazyLock;
 
-#[derive(Debug, Default, Clone)]
-pub struct PrivateRelayIpRange {
-    pub subnet: ipnet::IpNet,
-    pub line: String,
-}
+static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
-fn get_ranges() -> &'static Vec<PrivateRelayIpRange> {
-    static RANGES: OnceLock<Vec<PrivateRelayIpRange>> = OnceLock::new();
-    RANGES.get_or_init(|| {
-        let file =
-            File::open("./static/private-relay-ip-addresses.csv").expect("File path should exist");
-        let mut rdr = csv::Reader::from_reader(file);
-        let mut ranges = vec![];
-        for result in rdr.records() {
-            let record = result.expect("File should be a valid CSV");
-            let subnet: ipnet::IpNet = record
-                .get(0)
-                .expect("First column should always exist")
-                .parse()
-                .expect("IP address should be valid");
-            let range = PrivateRelayIpRange {
-                subnet,
-                line: record.into_iter().collect::<Vec<&str>>().join(","),
-            };
-            ranges.push(range);
-        }
-        ranges
-    })
-}
-
-pub fn get_private_relay_range(ip_addr: &std::net::IpAddr) -> Option<PrivateRelayIpRange> {
-    let ranges = get_ranges();
-    for range in ranges {
-        if range.subnet.contains(ip_addr) {
-            return Some(range.clone());
+pub async fn get_private_relay_range(
+    ip_addr: &std::net::IpAddr,
+) -> Result<Option<String>, reqwest::Error> {
+    // I tried caching this, and it seems like the response was getting cached, but it actually made
+    // things slower
+    let response = CLIENT
+        .get("https://mask-api.icloud.com/egress-ip-ranges.csv")
+        .send()
+        .await?
+        .error_for_status()?
+        .bytes()
+        .await?;
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(response.as_ref());
+    for result in reader.records() {
+        let record = result.expect("File should be a valid CSV");
+        let subnet: ipnet::IpNet = record
+            .get(0)
+            .expect("First column should always exist")
+            .parse()
+            .expect("IP address should be valid");
+        if subnet.contains(ip_addr) {
+            return Ok(Some(record.as_slice().to_owned()));
         }
     }
-    None
+    Ok(None)
 }

@@ -88,14 +88,18 @@ async fn icloud_private_relay(req: HttpRequest) -> impl Responder {
         }
     };
 
-    match get_private_relay_range(&socket_addr.ip()) {
-        None => HttpResponse::Ok()
+    match get_private_relay_range(&socket_addr.ip()).await {
+        Ok(None) => HttpResponse::Ok()
             .content_type(ContentType::plaintext())
             .body(format!("{} is not iCloud Private Relay", socket_addr.ip())),
 
-        Some(range) => HttpResponse::Ok()
+        Ok(Some(line)) => HttpResponse::Ok()
             .content_type(ContentType::plaintext())
-            .body(format!("{}: {}", socket_addr.ip(), range.line)),
+            .body(format!("{}: {}", socket_addr.ip(), line)),
+
+        Err(e) => HttpResponse::InternalServerError()
+            .content_type(ContentType::plaintext())
+            .body(e.to_string()),
     }
 }
 
@@ -257,11 +261,11 @@ async fn main() -> std::io::Result<()> {
 
     let config = get_config();
 
-    let http_addrs = vec![
+    let http_addrs = [
         SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.http_port)),
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.http_port)),
     ];
-    let https_addrs = vec![
+    let https_addrs = [
         SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.https_port)),
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.https_port)),
     ];
