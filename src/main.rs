@@ -11,10 +11,16 @@ use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web::{middleware::Logger, HttpRequest, Responder};
 use askama_actix::TemplateToResponse;
 use futures_util::future::{self, Either};
+use opentelemetry::global;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
+use opentelemetry_sdk::trace::TracerProvider;
+use opentelemetry_stdout::SpanExporter;
 use rustls_acme::{caches::DirCache, futures_rustls::rustls::ServerConfig, AcmeConfig};
 use serde_json::Value;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use tokio_stream::StreamExt;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult {
     let parser = woothee::parser::Parser::new();
@@ -245,8 +251,8 @@ fn make_auto_rustls_config(domain: &str) -> ServerConfig {
     tokio::spawn(async move {
         loop {
             match state.next().await.unwrap() {
-                Ok(ok) => log::info!("ACME configuration event: {ok:?}"),
-                Err(err) => log::error!("ACME configuration error: {err:?}"),
+                Ok(ok) => tracing::info!("ACME configuration event: {ok:?}"),
+                Err(err) => tracing::error!("ACME configuration error: {err:?}"),
             }
         }
     });
@@ -254,10 +260,46 @@ fn make_auto_rustls_config(domain: &str) -> ServerConfig {
     ServerConfig::clone(&rustls_config)
 }
 
+fn init_trace() {
+    global::set_text_map_propagator(TraceContextPropagator::new());
+    let exporter = opentelemetry_stdout::SpanExporter::default();
+    let provider = TracerProvider::builder()
+        .with_simple_exporter(exporter)
+        .build();
+    global::set_tracer_provider(provider);
+}
+
+// fn init_metrics() {
+//     let exporter = opentelemetry_stdout::MetricExporter::default();
+//     let reader = opentelemetry_sdk::metrics::PeriodicReader::builder(
+//         exporter,
+//         opentelemetry_sdk::runtime::Runtime
+//     )
+//     .build();
+//     opentelemetry_sdk::metrics::SdkMeterProvider::builder()
+//         .with_reader(reader)
+//         .build()
+// }
+
+fn init_logs() {
+    let exporter = opentelemetry_stdout::LogExporter::default();
+    let provider = opentelemetry_sdk::logs::LoggerProvider::builder()
+        .with_simple_exporter(exporter)
+        .build();
+    let bridge = opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(&provider);
+    tracing_subscriber::registry().with(bridge).init();
+}
+
+fn init_otel() {
+    init_trace();
+    // init_metrics();
+    init_logs();
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    log::info!("Starting server");
+    init_otel();
+    tracing::info!("Starting server");
 
     let config = get_config();
 
@@ -273,10 +315,10 @@ async fn main() -> std::io::Result<()> {
     let mut srv = HttpServer::new(|| {
         App::new()
             .wrap_fn(|sreq, srv| {
-                log::debug!("Checking for https redirection");
+                tracing::debug!("Checking for https redirection");
                 let config = get_config();
                 if !config.tls_enabled {
-                    log::debug!("Skipping https redirection due to tls_enabled = false");
+                    tracing::debug!("Skipping https redirection due to tls_enabled = false");
                     return Either::Left(srv.call(sreq));
                 }
 
@@ -325,6 +367,6 @@ async fn main() -> std::io::Result<()> {
     }
 
     srv.run().await?;
-    log::info!("Server finished");
+    tracing::info!("Server finished");
     Ok(())
 }
