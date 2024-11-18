@@ -238,7 +238,7 @@ fn make_auto_rustls_config(domain: &str) -> ServerConfig {
     let mut state = AcmeConfig::new([domain])
         .contact_push("mailto:george@witteman.me")
         .cache(DirCache::new("./rustls_acme_cache"))
-        .directory("https://acme.zerossl.com/v2/DV90")
+        .directory("https://acme-v02.api.letsencrypt.org/directory")
         .state();
     let rustls_config = state.challenge_rustls_config();
 
