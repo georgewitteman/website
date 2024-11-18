@@ -238,7 +238,7 @@ fn make_auto_rustls_config(domain: &str) -> ServerConfig {
     let mut state = AcmeConfig::new([domain])
         .contact_push("mailto:george@witteman.me")
         .cache(DirCache::new("./rustls_acme_cache"))
-        .directory("https://acme-v02.api.letsencrypt.org/directory")
+        .directory("https://acme.zerossl.com/v2/DV90")
         .state();
     let rustls_config = state.challenge_rustls_config();
 
@@ -316,8 +316,6 @@ async fn main() -> std::io::Result<()> {
     .bind(&http_addrs[..])?;
 
     if config.tls_enabled {
-        // let tls_config = get_tls_config()
-        //     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
         srv = srv.bind_rustls_0_23(
             &https_addrs[..],
             make_auto_rustls_config(&config.website_domain),
