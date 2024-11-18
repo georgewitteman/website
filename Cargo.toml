@@ -20,7 +20,7 @@ reqwest = "0.12.9"
 rustls = "0.23.17"
 rustls-acme = "0.12.1"
 rustls-pki-types = "1.10.0"
-serde_json = "1.0.132"
+serde_json = "1.0.133"
 tokio = "1.41.1"
 tokio-stream = "0.1.16"
 uuid = { version = "1.11.0", features = ["v4"] }
