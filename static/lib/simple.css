@@ -704,3 +704,8 @@ sub {
   padding: 1.5rem;
   margin: 2rem 0;
 }
+
+/** MODIFICATIONS **/
+.hidden {
+  display: none;
+}

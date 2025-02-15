@@ -4,8 +4,11 @@ mod private_relay;
 use crate::config::get_config;
 use crate::private_relay::get_private_relay_range;
 use actix_web::dev::Service;
-use actix_web::http::header::Header;
-use actix_web::http::header::{Accept, ContentType, LOCATION, X_CONTENT_TYPE_OPTIONS};
+use actix_web::http::header::{
+    Accept, ContentType, CONTENT_SECURITY_POLICY, LOCATION, PERMISSIONS_POLICY, REFERRER_POLICY,
+    STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
+};
+use actix_web::http::header::{Header, X_XSS_PROTECTION};
 use actix_web::http::uri::Scheme;
 use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web::{middleware::Logger, HttpRequest, Responder};
@@ -101,18 +104,6 @@ async fn icloud_private_relay(req: HttpRequest) -> impl Responder {
             .content_type(ContentType::plaintext())
             .body(e.to_string()),
     }
-}
-
-#[derive(askama::Template)]
-#[template(path = "amazon-short-link.html")]
-struct AmazonShortLinkTemplate<'a> {
-    path: &'a str,
-}
-
-#[get("/amazon-short-link")]
-async fn amazon_short_link(req: HttpRequest) -> impl Responder {
-    let template = AmazonShortLinkTemplate { path: req.path() };
-    template.to_response()
 }
 
 fn pretty_multimap(map: &multimap::MultiMap<String, String>) -> serde_json::Map<String, Value> {
@@ -297,11 +288,16 @@ async fn main() -> std::io::Result<()> {
             .wrap(
                 actix_web::middleware::DefaultHeaders::new()
                     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
-                    .add((X_CONTENT_TYPE_OPTIONS, "nosniff")),
+                    .add((CONTENT_SECURITY_POLICY, "default-src 'self'"))
+                    .add((PERMISSIONS_POLICY, "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"))
+                    .add((REFERRER_POLICY, "same-origin"))
+                    .add((STRICT_TRANSPORT_SECURITY, "max-age=31536000; includeSubDomains"))
+                    .add((X_CONTENT_TYPE_OPTIONS, "nosniff"))
+                    .add((X_FRAME_OPTIONS, "DENY"))
+                    .add((X_XSS_PROTECTION, "1; mode=block")),
             )
             .wrap(actix_web::middleware::Compress::default())
             .wrap(Logger::default())
-            .service(amazon_short_link)
             .service(uuid_route)
             .service(sha)
             .service(index)
