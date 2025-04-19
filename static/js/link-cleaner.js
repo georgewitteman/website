@@ -74,6 +74,9 @@ function cleanGoogleSearchUrl(url) {
   return new URL(`https://google.com/search?${searchParams.toString()}`);
 }
 
+// https://github.com/jparise/chrome-utm-stripper
+// https://github.com/AdguardTeam/AdguardFilters/tree/master/TrackParamFilter/sections
+// https://github.com/brave/brave-core/blob/master/components/query_filter/utils.cc
 // https://github.com/mpchadwick/tracking-query-params-registry/blob/master/_data/params.csv
 const UNNECESSARY_QUERY_PARAMS = [
   /^ScCid$/,
@@ -100,7 +103,8 @@ const UNNECESSARY_QUERY_PARAMS = [
   /^gdfms$/,
   /^gdftrk$/,
   /^hsa_/,
-  /^igshid$/,
+  /^igsh$/, // Instagram
+  /^igshid$/, // Instagram
   /^irclickid$/,
   /^matomo_/,
   /^mc_cid$/,
