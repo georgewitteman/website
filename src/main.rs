@@ -12,7 +12,8 @@ use actix_web::http::header::{Header, X_XSS_PROTECTION};
 use actix_web::http::uri::Scheme;
 use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web::{middleware::Logger, HttpRequest, Responder};
-use askama_actix::TemplateToResponse;
+use askama::Template;
+use askama_web::WebTemplate;
 use futures_util::future::{self, Either};
 use rustls_acme::{caches::DirCache, futures_rustls::rustls::ServerConfig, AcmeConfig};
 use serde_json::Value;
@@ -37,7 +38,7 @@ fn requested_html(accept_header: &Option<Accept>) -> bool {
     false
 }
 
-#[derive(askama::Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "uuid.html")]
 struct UuidTemplate<'a> {
     path: &'a str,
@@ -52,7 +53,7 @@ async fn uuid_route(req: HttpRequest) -> impl Responder {
             path: req.path(),
             value: &result.to_string(),
         };
-        template.to_response()
+        template.respond_to(&req)
     } else {
         HttpResponse::Ok()
             .content_type(ContentType::plaintext())
@@ -60,7 +61,7 @@ async fn uuid_route(req: HttpRequest) -> impl Responder {
     }
 }
 
-#[derive(askama::Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "index.html")]
 struct IndexTemplate<'a> {
     path: &'a str,
@@ -69,7 +70,7 @@ struct IndexTemplate<'a> {
 #[get("/")]
 async fn index(req: HttpRequest) -> impl Responder {
     let template = IndexTemplate { path: req.path() };
-    template.to_response()
+    template.respond_to(&req)
 }
 
 #[get("/sha")]
@@ -125,7 +126,7 @@ fn pretty_multimap(map: &multimap::MultiMap<String, String>) -> serde_json::Map<
     pretty_map
 }
 
-#[derive(askama::Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "echo.html")]
 struct EchoTemplate<'a> {
     path: &'a str,
@@ -207,7 +208,7 @@ async fn echo(req: HttpRequest, body: actix_web::web::Bytes) -> impl Responder {
                     body: &request_body,
                     value: &body,
                 };
-                template.to_response()
+                template.respond_to(&req)
             } else {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
