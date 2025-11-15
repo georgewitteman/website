@@ -1,4 +1,5 @@
 mod config;
+use tracing_subscriber::{fmt, EnvFilter};
 mod private_relay;
 
 use crate::config::get_config;
@@ -25,7 +26,6 @@ use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::EnvFilter;
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult<'_> {
     let parser = woothee::parser::Parser::new();
@@ -395,8 +395,10 @@ fn make_auto_rustls_config(domain: &str) -> RustlsConfig {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    tracing_subscriber::fmt().with_env_filter(env_filter).init();
+    // Configure log level from RUST_LOG, with a fallback
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug"));
+
+    fmt().with_env_filter(filter).init();
     tracing::info!("Starting server");
 
     let config = get_config();
@@ -449,10 +451,10 @@ async fn main() -> std::io::Result<()> {
         match server.await {
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, err));
+                return Err(std::io::Error::other(err));
             }
             Err(err) => {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, err));
+                return Err(std::io::Error::other(err));
             }
         }
     }
