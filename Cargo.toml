@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 askama = "0.12.1"
-askama_axum = "0.4.0"
+askama_axum = "0.5.0"
 axum = { version = "0.7", features = ["macros", "http2"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 csv = "1.4.0"
