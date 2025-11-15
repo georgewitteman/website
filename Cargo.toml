@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-askama = "0.12.1"
+askama = "0.14.0"
 askama_axum = "0.4.0"
 axum = { version = "0.7", features = ["macros", "http2"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
