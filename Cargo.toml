@@ -11,9 +11,7 @@ askama_axum = "0.4.0"
 axum = { version = "0.7", features = ["macros", "http2"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 csv = "1.4.0"
-env_logger = "0.11.8"
 ipnet = "2.11.0"
-log = "0.4.28"
 multimap = "0.10.1"
 reqwest = "0.12.24"
 rustls = "0.23.35"
@@ -27,3 +25,5 @@ uuid = { version = "1.18.1", features = ["v4"] }
 woothee = "0.13.0"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 tower = "0.5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
