@@ -25,6 +25,7 @@ use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
+use tracing_subscriber::EnvFilter;
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult<'_> {
     let parser = woothee::parser::Parser::new();
@@ -381,10 +382,10 @@ fn make_auto_rustls_config(domain: &str) -> RustlsConfig {
         while let Some(event) = state_for_task.next().await {
             match event {
                 Ok(ok) => {
-                    log::info!("ACME configuration event: {ok:?}");
+                    tracing::info!("ACME configuration event: {ok:?}");
                     tls_config_handle.reload_from_config(state_for_task.default_rustls_config());
                 }
-                Err(err) => log::error!("ACME configuration error: {err:?}"),
+                Err(err) => tracing::error!("ACME configuration error: {err:?}"),
             }
         }
     });
@@ -394,8 +395,9 @@ fn make_auto_rustls_config(domain: &str) -> RustlsConfig {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    log::info!("Starting server");
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
+    tracing::info!("Starting server");
 
     let config = get_config();
 
@@ -423,7 +425,7 @@ async fn main() -> std::io::Result<()> {
 
     for addr in http_addrs {
         let service = http_service.clone();
-        log::info!("Starting HTTP server on {addr}");
+        tracing::info!("Starting HTTP server on {addr}");
         servers.push(tokio::spawn(async move {
             axum_server::bind(addr).serve(service).await
         }));
@@ -434,7 +436,7 @@ async fn main() -> std::io::Result<()> {
         for addr in https_addrs {
             let service = https_service.clone();
             let tls_config = tls_config.clone();
-            log::info!("Starting HTTPS server on {addr}");
+            tracing::info!("Starting HTTPS server on {addr}");
             servers.push(tokio::spawn(async move {
                 axum_server::bind_rustls(addr, tls_config)
                     .serve(service)
@@ -455,7 +457,7 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    log::info!("Server finished");
+    tracing::info!("Server finished");
     Ok(())
 }
 
