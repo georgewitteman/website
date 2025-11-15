@@ -16,6 +16,9 @@ PrivateTmp=true
 ProtectSystem=full
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 
+# Allow high number of concurrent connections (increase file descriptor limit)
+LimitNOFILE=65535
+
 Environment=PORT=80
 Environment=PORT_HTTPS=443
 Environment=SERVER_HOSTNAME=georgewitteman.com
