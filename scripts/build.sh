@@ -37,6 +37,9 @@ aws ec2-instance-connect send-ssh-public-key \
     --ssh-public-key "file://${tmp_key_file}.pub"
 
 rsync --partial --progress --archive --verbose --delete \
+    --exclude='active_port' \
+    --exclude='website-blue' \
+    --exclude='website-green' \
     -e "ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i \"${tmp_key_file}\"" \
     "$tmp_dir/." \
     ec2-user@54.71.97.150:/home/ec2-user/website
