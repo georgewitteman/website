@@ -29,13 +29,15 @@ fn get_user_agent(header: &str) -> woothee::parser::WootheeResult<'_> {
     parser.parse(header).unwrap_or_default()
 }
 
+/// Returns true if the peer address is a trusted proxy (localhost).
+fn is_trusted_proxy(peer_addr: &SocketAddr) -> bool {
+    peer_addr.ip().is_loopback()
+}
+
 /// Extracts the real client IP from the X-Forwarded-For header set by Caddy.
 /// Only trusts this header when the request comes from localhost (the proxy).
 fn get_real_ip(headers: &HeaderMap, peer_addr: &SocketAddr) -> std::net::IpAddr {
-    // Only trust X-Forwarded-For from localhost (where Caddy runs)
-    let is_trusted_proxy = peer_addr.ip().is_loopback();
-
-    if is_trusted_proxy {
+    if is_trusted_proxy(peer_addr) {
         headers
             .get("x-forwarded-for")
             .and_then(|v| v.to_str().ok())
@@ -44,8 +46,20 @@ fn get_real_ip(headers: &HeaderMap, peer_addr: &SocketAddr) -> std::net::IpAddr 
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(|| peer_addr.ip())
     } else {
-        // Don't trust forwarding headers from non-proxy sources
         peer_addr.ip()
+    }
+}
+
+/// Extracts the real protocol from the X-Forwarded-Proto header set by Caddy.
+/// Only trusts this header when the request comes from localhost (the proxy).
+fn get_real_proto<'a>(headers: &'a HeaderMap, peer_addr: &SocketAddr) -> &'a str {
+    if is_trusted_proxy(peer_addr) {
+        headers
+            .get("x-forwarded-proto")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("http")
+    } else {
+        "http"
     }
 }
 
@@ -219,18 +233,14 @@ async fn echo(
         Some(real_ip.to_string())
     };
 
-    let forwarded_proto = headers
-        .get("x-forwarded-proto")
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "http".to_string());
+    let scheme = get_real_proto(&headers, &peer_addr);
 
     let response = serde_json::json!({
         "connection_info": {
             "realip_remote_addr": real_ip_str,
             "peer_addr": peer_addr.to_string(),
             "host": headers.get(header::HOST).and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
-            "scheme": forwarded_proto,
+            "scheme": scheme,
         },
         "version": format!("{:?}", request.version()),
         "method": request.method().as_str(),
@@ -1293,6 +1303,49 @@ mod tests {
 
         let result = get_real_ip(&headers, &peer_addr);
         assert_eq!(result.to_string(), "203.0.113.50");
+    }
+
+    // ==================== get_real_proto Unit Tests ====================
+
+    #[test]
+    fn get_real_proto_uses_header_from_trusted_proxy() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+        let peer_addr: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+
+        let result = get_real_proto(&headers, &peer_addr);
+        assert_eq!(result, "https");
+    }
+
+    #[test]
+    fn get_real_proto_falls_back_to_http_when_no_header() {
+        let headers = HeaderMap::new();
+        let peer_addr: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+
+        let result = get_real_proto(&headers, &peer_addr);
+        assert_eq!(result, "http");
+    }
+
+    #[test]
+    fn get_real_proto_ignores_header_from_untrusted_source() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+        // Request comes directly from external IP, not through Caddy
+        let peer_addr: SocketAddr = "203.0.113.50:12345".parse().unwrap();
+
+        let result = get_real_proto(&headers, &peer_addr);
+        // Should return http, NOT the spoofed header
+        assert_eq!(result, "http");
+    }
+
+    #[test]
+    fn get_real_proto_trusts_header_from_ipv6_loopback() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+        let peer_addr: SocketAddr = "[::1]:12345".parse().unwrap();
+
+        let result = get_real_proto(&headers, &peer_addr);
+        assert_eq!(result, "https");
     }
 
     // ==================== icloud_private_relay Tests ====================
