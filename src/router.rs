@@ -12,7 +12,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
-use crate::handlers::{echo, icloud_private_relay, index, sha, uuid_route};
+use crate::handlers::{echo, icloud_private_relay, index, sha, slot, uuid_route};
 
 /// Returns a 404 Not Found response.
 fn not_found() -> Response {
@@ -38,6 +38,7 @@ pub fn create_app_router() -> Router {
         .route("/uuid", get(uuid_route))
         .route("/sha", get(sha))
         .route("/icloud-private-relay", get(icloud_private_relay))
+        .route("/slot", get(slot))
         .route("/echo", any(echo))
         .fallback_service(static_files)
         // Security headers

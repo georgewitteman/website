@@ -520,6 +520,45 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
     }
 
+    // ==================== Slot Endpoint Tests ====================
+
+    #[tokio::test]
+    async fn slot_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/slot").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn slot_returns_plain_text() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/slot").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/plain"));
+    }
+
+    #[tokio::test]
+    async fn slot_returns_valid_slot_name() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/slot").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let body = body_string(response.into_body()).await;
+        let slot = body.trim();
+        assert!(
+            slot == "blue" || slot == "green" || slot == "unknown",
+            "Expected slot to be 'blue', 'green', or 'unknown', got: {}",
+            slot
+        );
+    }
+
     // ==================== 404 Tests ====================
 
     #[tokio::test]
