@@ -41,23 +41,38 @@ fi
 if [ "$active_port" = "8080" ]; then
     deploy_slot="green"
     deploy_port="8081"
+    other_slot="blue"
+    other_port="8080"
 else
     deploy_slot="blue"
     deploy_port="8080"
+    other_slot="green"
+    other_port="8081"
 fi
 
 echo "Active port: $active_port, deploying to: $deploy_slot (port $deploy_port)"
 
-# Copy binary to the appropriate slot
+# Copy binary to both slots (ensures rollback slot has a binary)
 cp "${WEBSITE_DIR}/website" "${WEBSITE_DIR}/website-${deploy_slot}"
+if [ ! -f "${WEBSITE_DIR}/website-${other_slot}" ]; then
+    cp "${WEBSITE_DIR}/website" "${WEBSITE_DIR}/website-${other_slot}"
+fi
 
 # Install systemd services
 sudo cp "${WEBSITE_DIR}/website-blue.service" /etc/systemd/system/website-blue.service
 sudo cp "${WEBSITE_DIR}/website-green.service" /etc/systemd/system/website-green.service
 sudo systemctl daemon-reload
 
+# Ensure both slots are enabled and running. The inactive slot must be running
+# so we can roll back instantly by switching Caddy to it.
+sudo systemctl enable "website-blue"
+sudo systemctl enable "website-green"
+if ! sudo systemctl is-active --quiet "website-${other_slot}"; then
+    echo "Starting ${other_slot} slot for rollback capability"
+    sudo systemctl start "website-${other_slot}"
+fi
+
 # Start/restart the new version
-sudo systemctl enable "website-${deploy_slot}"
 sudo systemctl restart "website-${deploy_slot}"
 
 # Health check the new version
