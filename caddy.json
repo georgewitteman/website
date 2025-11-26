@@ -4,7 +4,6 @@
       "servers": {
         "main": {
           "listen": [":443", ":80"],
-          "protocols": ["h1", "h2"],
           "routes": [
             {
               "match": [{"host": ["georgewitteman.com"]}],
