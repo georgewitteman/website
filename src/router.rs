@@ -9,7 +9,8 @@ use std::convert::Infallible;
 use tower::service_fn;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
-use tower_http::trace::TraceLayer;
+use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tracing::Level;
 
 use crate::handlers::{echo, icloud_private_relay, index, sha, uuid_route};
 
@@ -70,5 +71,13 @@ pub fn create_app_router() -> Router {
             HeaderName::from_static("x-xss-protection"),
             HeaderValue::from_static("1; mode=block"),
         ))
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http()
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(tower_http::LatencyUnit::Micros),
+                ),
+        )
 }
