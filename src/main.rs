@@ -22,7 +22,7 @@ use multimap::MultiMap;
 use rustls_acme::{caches::DirCache, AcmeConfig};
 use serde_json::Value;
 use std::convert::Infallible;
-use std::net::{Ipv6Addr, SocketAddr};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use tower::service_fn;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
@@ -405,10 +405,14 @@ async fn main() -> std::io::Result<()> {
 
     let config = get_config();
 
-    // Bind only to IPv6 unspecified address - on Linux with default settings,
-    // this accepts both IPv4 and IPv6 connections (dual-stack socket)
-    let http_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.http_port));
-    let https_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.https_port));
+    let http_addrs = [
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.http_port)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.http_port)),
+    ];
+    let https_addrs = [
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.https_port)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.https_port)),
+    ];
 
     let app = create_app_router();
     let https_service = app
@@ -421,27 +425,40 @@ async fn main() -> std::io::Result<()> {
     };
     let http_service = http_router.into_make_service_with_connect_info::<SocketAddr>();
 
-    tracing::info!("Starting HTTP server on {http_addr}");
-    let http_server = tokio::spawn({
-        let service = http_service;
-        async move { axum_server::bind(http_addr).serve(service).await }
-    });
+    let mut servers = Vec::new();
+
+    for addr in http_addrs {
+        let service = http_service.clone();
+        tracing::info!("Starting HTTP server on {addr}");
+        servers.push(tokio::spawn(async move {
+            axum_server::bind(addr).serve(service).await
+        }));
+    }
 
     if config.tls_enabled {
         let tls_config = make_auto_rustls_config(&config.website_domain);
-        tracing::info!("Starting HTTPS server on {https_addr}");
-        let https_server = tokio::spawn(async move {
-            axum_server::bind_rustls(https_addr, tls_config)
-                .serve(https_service)
-                .await
-        });
-
-        tokio::select! {
-            result = http_server => result??,
-            result = https_server => result??,
+        for addr in https_addrs {
+            let service = https_service.clone();
+            let tls_config = tls_config.clone();
+            tracing::info!("Starting HTTPS server on {addr}");
+            servers.push(tokio::spawn(async move {
+                axum_server::bind_rustls(addr, tls_config)
+                    .serve(service)
+                    .await
+            }));
         }
-    } else {
-        http_server.await??;
+    }
+
+    for server in servers {
+        match server.await {
+            Ok(Ok(())) => {}
+            Ok(Err(err)) => {
+                return Err(std::io::Error::other(err));
+            }
+            Err(err) => {
+                return Err(std::io::Error::other(err));
+            }
+        }
     }
 
     tracing::info!("Server finished");
