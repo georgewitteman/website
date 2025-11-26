@@ -8,14 +8,7 @@
             {
               "match": [{"host": ["georgewitteman.com"]}],
               "handle": [
-                {
-                  "handler": "encode",
-                  "encodings": {
-                    "zstd": {},
-                    "gzip": {}
-                  },
-                  "prefer": ["zstd", "gzip"]
-                },
+                { "handler": "encode" },
                 {
                   "handler": "reverse_proxy",
                   "upstreams": [{"dial": "localhost:8080"}]
