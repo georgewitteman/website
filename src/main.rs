@@ -466,7 +466,34 @@ async fn main() -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::HeaderValue;
+    use axum::body::Body;
+    use axum::http::{HeaderValue, Method, Request};
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    // Helper to create test app router
+    fn test_app() -> Router {
+        create_app_router()
+    }
+
+    // Helper to extract body as string
+    async fn body_string(body: Body) -> String {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        String::from_utf8(bytes.to_vec()).unwrap()
+    }
+
+    // Helper to send request with mock ConnectInfo for echo endpoint testing
+    async fn send_with_connect_info(
+        app: Router,
+        mut request: Request<Body>,
+    ) -> axum::response::Response {
+        // Insert a mock ConnectInfo into request extensions
+        let mock_addr: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+        request.extensions_mut().insert(ConnectInfo(mock_addr));
+        app.oneshot(request).await.unwrap()
+    }
+
+    // ==================== Unit Tests ====================
 
     #[test]
     fn requested_html_detects_html_accept_header() {
@@ -488,6 +515,29 @@ mod tests {
         );
 
         assert!(!requested_html(&headers));
+    }
+
+    #[test]
+    fn requested_html_returns_false_for_missing_accept_header() {
+        let headers = HeaderMap::new();
+        assert!(!requested_html(&headers));
+    }
+
+    #[test]
+    fn requested_html_handles_wildcard_accept() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::ACCEPT, HeaderValue::from_static("*/*"));
+        assert!(!requested_html(&headers));
+    }
+
+    #[test]
+    fn requested_html_detects_html_in_complex_accept_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::ACCEPT,
+            HeaderValue::from_static("application/json, text/html;q=0.9, */*;q=0.8"),
+        );
+        assert!(requested_html(&headers));
     }
 
     #[test]
@@ -513,5 +563,829 @@ mod tests {
 
         let unique = result.get("unique").expect("expected single key to exist");
         assert_eq!(unique, &Value::String("value".to_string()));
+    }
+
+    #[test]
+    fn pretty_multimap_handles_empty_map() {
+        let multimap = MultiMap::new();
+        let result = pretty_multimap(&multimap);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn pretty_multimap_handles_three_duplicate_keys() {
+        let mut multimap = MultiMap::new();
+        multimap.insert("key".to_string(), "a".to_string());
+        multimap.insert("key".to_string(), "b".to_string());
+        multimap.insert("key".to_string(), "c".to_string());
+
+        let result = pretty_multimap(&multimap);
+        let values = result.get("key").unwrap().as_array().unwrap();
+        assert_eq!(values.len(), 3);
+    }
+
+    #[test]
+    fn get_user_agent_parses_chrome() {
+        let ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
+        let result = get_user_agent(ua);
+        assert_eq!(result.name, "Chrome");
+    }
+
+    #[test]
+    fn get_user_agent_handles_empty_string() {
+        let result = get_user_agent("");
+        assert_eq!(result.name, "UNKNOWN");
+    }
+
+    // ==================== Index Endpoint Tests ====================
+
+    #[tokio::test]
+    async fn index_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn index_returns_html_content() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/html"));
+    }
+
+    #[tokio::test]
+    async fn index_contains_expected_content() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let body = body_string(response.into_body()).await;
+        assert!(body.contains("George Witteman") || body.contains("uuid") || body.contains("echo"));
+    }
+
+    // ==================== UUID Endpoint Tests ====================
+
+    #[tokio::test]
+    async fn uuid_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/uuid").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn uuid_returns_plain_text_by_default() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/uuid").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/plain"));
+    }
+
+    #[tokio::test]
+    async fn uuid_returns_valid_uuid_format() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/uuid").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let body = body_string(response.into_body()).await;
+        let uuid_str = body.trim();
+        // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        assert_eq!(uuid_str.len(), 36);
+        assert!(uuid::Uuid::parse_str(uuid_str).is_ok());
+    }
+
+    #[tokio::test]
+    async fn uuid_returns_html_when_requested() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/uuid")
+                    .header(header::ACCEPT, "text/html")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/html"));
+    }
+
+    #[tokio::test]
+    async fn uuid_generates_different_values() {
+        let app = test_app();
+        let response1 = app
+            .clone()
+            .oneshot(Request::builder().uri("/uuid").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let body1 = body_string(response1.into_body()).await;
+
+        let response2 = app
+            .oneshot(Request::builder().uri("/uuid").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let body2 = body_string(response2.into_body()).await;
+
+        assert_ne!(body1, body2);
+    }
+
+    // ==================== SHA Endpoint Tests ====================
+
+    #[tokio::test]
+    async fn sha_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/sha").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn sha_returns_plain_text() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/sha").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/plain"));
+    }
+
+    #[tokio::test]
+    async fn sha_returns_unknown_in_test_env() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/sha").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let body = body_string(response.into_body()).await;
+        // In test environment, GITHUB_SHA is not set at compile time
+        assert!(!body.is_empty());
+    }
+
+    // ==================== Echo Endpoint Tests ====================
+
+    #[tokio::test]
+    async fn echo_returns_200_for_get() {
+        let app = test_app();
+        let request = Request::builder().uri("/echo").body(Body::empty()).unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn echo_returns_200_for_post() {
+        let app = test_app();
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/echo")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn echo_returns_200_for_put() {
+        let app = test_app();
+        let request = Request::builder()
+            .method(Method::PUT)
+            .uri("/echo")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn echo_returns_200_for_delete() {
+        let app = test_app();
+        let request = Request::builder()
+            .method(Method::DELETE)
+            .uri("/echo")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn echo_returns_json_by_default() {
+        let app = test_app();
+        let request = Request::builder().uri("/echo").body(Body::empty()).unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("application/json"));
+    }
+
+    #[tokio::test]
+    async fn echo_returns_html_when_requested() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo")
+            .header(header::ACCEPT, "text/html")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/html"));
+    }
+
+    #[tokio::test]
+    async fn echo_includes_method_in_response() {
+        let app = test_app();
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/echo")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["method"], "POST");
+    }
+
+    #[tokio::test]
+    async fn echo_includes_path_in_response() {
+        let app = test_app();
+        let request = Request::builder().uri("/echo").body(Body::empty()).unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["path"], "/echo");
+    }
+
+    #[tokio::test]
+    async fn echo_includes_query_string() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo?foo=bar&baz=qux")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["query_string"], "foo=bar&baz=qux");
+    }
+
+    #[tokio::test]
+    async fn echo_includes_custom_headers() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo")
+            .header("x-custom-header", "test-value")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["headers"]["x-custom-header"], "test-value");
+    }
+
+    #[tokio::test]
+    async fn echo_includes_request_body() {
+        let app = test_app();
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/echo")
+            .body(Body::from("test body content"))
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["body"], "test body content");
+    }
+
+    #[tokio::test]
+    async fn echo_includes_user_agent_parsing() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo")
+            .header(
+                header::USER_AGENT,
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124",
+            )
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert!(json["user_agent"].is_object());
+        assert!(json["user_agent"]["name"].is_string());
+    }
+
+    #[tokio::test]
+    async fn echo_includes_http_version() {
+        let app = test_app();
+        let request = Request::builder().uri("/echo").body(Body::empty()).unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert!(json["version"].as_str().unwrap().contains("HTTP"));
+    }
+
+    #[tokio::test]
+    async fn echo_includes_ip_address() {
+        let app = test_app();
+        let request = Request::builder().uri("/echo").body(Body::empty()).unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        // Our mock address is 127.0.0.1:12345
+        assert_eq!(json["ip"], "127.0.0.1");
+    }
+
+    #[tokio::test]
+    async fn echo_includes_peer_addr() {
+        let app = test_app();
+        let request = Request::builder().uri("/echo").body(Body::empty()).unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["peer_addr"], "127.0.0.1:12345");
+    }
+
+    #[tokio::test]
+    async fn echo_includes_uri_parts() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo?test=value")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert!(json["uri_parts"].is_object());
+        assert_eq!(json["uri_parts"]["path"], "/echo");
+        assert_eq!(json["uri_parts"]["query"], "test=value");
+    }
+
+    #[tokio::test]
+    async fn echo_handles_empty_body() {
+        let app = test_app();
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/echo")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["body"], "");
+    }
+
+    #[tokio::test]
+    async fn echo_respects_x_real_ip_header() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo")
+            .header("x-real-ip", "203.0.113.50")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(
+            json["connection_info"]["realip_remote_addr"],
+            "203.0.113.50"
+        );
+    }
+
+    #[tokio::test]
+    async fn echo_respects_x_forwarded_for_header() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo")
+            .header("x-forwarded-for", "198.51.100.10, 192.168.1.1")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        // Should take the first IP from x-forwarded-for
+        assert_eq!(
+            json["connection_info"]["realip_remote_addr"],
+            "198.51.100.10"
+        );
+    }
+
+    #[tokio::test]
+    async fn echo_prefers_x_real_ip_over_x_forwarded_for() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/echo")
+            .header("x-real-ip", "203.0.113.50")
+            .header("x-forwarded-for", "198.51.100.10")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(
+            json["connection_info"]["realip_remote_addr"],
+            "203.0.113.50"
+        );
+    }
+
+    // ==================== Static File Tests ====================
+
+    #[tokio::test]
+    async fn static_favicon_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/favicon.ico")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn static_css_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/styles.css")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn static_security_txt_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/security.txt")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn static_html_page_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/username.html")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn static_js_file_returns_200() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/js/uuid.js")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    // ==================== 404 Tests ====================
+
+    #[tokio::test]
+    async fn nonexistent_route_returns_404() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/nonexistent-path-12345")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn nonexistent_static_file_returns_404() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/does-not-exist.html")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn not_found_returns_html() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/nonexistent")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/html"));
+    }
+
+    #[tokio::test]
+    async fn not_found_body_contains_404() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/nonexistent")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let body = body_string(response.into_body()).await;
+        assert!(body.contains("404"));
+    }
+
+    // ==================== Security Headers Tests ====================
+
+    #[tokio::test]
+    async fn response_includes_csp_header() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let csp = response
+            .headers()
+            .get("content-security-policy")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(csp.contains("default-src 'self'"));
+    }
+
+    #[tokio::test]
+    async fn response_includes_hsts_header() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let hsts = response
+            .headers()
+            .get("strict-transport-security")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(hsts.contains("max-age="));
+    }
+
+    #[tokio::test]
+    async fn response_includes_x_frame_options() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let xfo = response
+            .headers()
+            .get("x-frame-options")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert_eq!(xfo, "DENY");
+    }
+
+    #[tokio::test]
+    async fn response_includes_x_content_type_options() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let xcto = response
+            .headers()
+            .get("x-content-type-options")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert_eq!(xcto, "nosniff");
+    }
+
+    #[tokio::test]
+    async fn response_includes_referrer_policy() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let rp = response
+            .headers()
+            .get("referrer-policy")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert_eq!(rp, "same-origin");
+    }
+
+    #[tokio::test]
+    async fn response_includes_permissions_policy() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let pp = response
+            .headers()
+            .get("permissions-policy")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(pp.contains("camera=()"));
+    }
+
+    #[tokio::test]
+    async fn response_includes_xss_protection() {
+        let app = test_app();
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        let xss = response
+            .headers()
+            .get("x-xss-protection")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(xss.contains("1"));
+    }
+
+    #[tokio::test]
+    async fn security_headers_present_on_static_files() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/styles.css")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert!(response.headers().get("content-security-policy").is_some());
+        assert!(response.headers().get("x-frame-options").is_some());
+    }
+
+    #[tokio::test]
+    async fn security_headers_present_on_404() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/nonexistent")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert!(response.headers().get("content-security-policy").is_some());
+        assert!(response.headers().get("x-frame-options").is_some());
+    }
+
+    // ==================== HTTP Redirect Tests ====================
+
+    #[tokio::test]
+    async fn redirect_to_https_returns_redirect() {
+        let router = Router::new().fallback(redirect_to_https);
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/some-path")
+                    .header(header::HOST, "example.com")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::PERMANENT_REDIRECT);
+    }
+
+    #[tokio::test]
+    async fn redirect_to_https_includes_location_header() {
+        let router = Router::new().fallback(redirect_to_https);
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/some-path?query=value")
+                    .header(header::HOST, "example.com")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let location = response.headers().get(header::LOCATION).unwrap();
+        assert_eq!(
+            location.to_str().unwrap(),
+            "https://example.com/some-path?query=value"
+        );
+    }
+
+    #[tokio::test]
+    async fn redirect_to_https_returns_400_without_host() {
+        let router = Router::new().fallback(redirect_to_https);
+        let response = router
+            .oneshot(Request::builder().uri("/path").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }
