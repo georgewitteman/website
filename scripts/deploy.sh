@@ -44,7 +44,25 @@ sudo systemctl restart website
 sudo systemctl enable caddy
 sudo systemctl reload-or-restart caddy
 
-sleep "2s"
+# Health check - verify the service is responding
+max_attempts=10
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+    if curl --fail --silent --max-time 5 http://localhost:8080/ > /dev/null; then
+        echo "Health check passed on attempt $attempt"
+        break
+    fi
+    echo "Health check attempt $attempt/$max_attempts failed, retrying..."
+    sleep 1
+    attempt=$((attempt + 1))
+done
+
+if [ $attempt -gt $max_attempts ]; then
+    echo "Health check failed after $max_attempts attempts"
+    sudo systemctl status website --no-pager || true
+    sudo journalctl -u website --no-pager -n 50 || true
+    exit 1
+fi
+
 sudo systemctl status website --no-pager || true
 sudo systemctl status caddy --no-pager || true
-sudo ss -tulpn
