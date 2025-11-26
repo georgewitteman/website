@@ -52,6 +52,9 @@ fi
 
 echo "Active port: $active_port, deploying to: $deploy_slot (port $deploy_port)"
 
+# Stop the deploy slot before copying (can't overwrite running binary)
+sudo systemctl stop "website-${deploy_slot}" 2>/dev/null || true
+
 # Copy binary to both slots (ensures rollback slot has a binary)
 cp "${WEBSITE_DIR}/website" "${WEBSITE_DIR}/website-${deploy_slot}"
 if [ ! -f "${WEBSITE_DIR}/website-${other_slot}" ]; then
@@ -73,6 +76,17 @@ if ! sudo systemctl is-active --quiet "website-${other_slot}"; then
     sudo systemctl reset-failed "website-${other_slot}" 2>/dev/null || true
     sudo systemctl start "website-${other_slot}"
 fi
+
+# Verify rollback slot is healthy before proceeding
+echo "Verifying rollback slot (${other_slot}) is healthy..."
+if ! curl --fail --silent --max-time 5 "http://localhost:${other_port}/" > /dev/null; then
+    echo "ERROR: Rollback slot ${other_slot} (port ${other_port}) is not healthy"
+    echo "Instant rollback will not be possible. Aborting deploy."
+    sudo systemctl status "website-${other_slot}" --no-pager || true
+    sudo journalctl -u "website-${other_slot}" --no-pager -n 50 || true
+    exit 1
+fi
+echo "Rollback slot healthy"
 
 # Start/restart the new version
 sudo systemctl restart "website-${deploy_slot}"
