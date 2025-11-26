@@ -1,5 +1,4 @@
 mod config;
-use tracing_subscriber::{fmt, EnvFilter};
 mod private_relay;
 
 use crate::config::get_config;
@@ -11,27 +10,43 @@ use axum::extract::{ConnectInfo, OriginalUri, Request as AxumRequest};
 use axum::http::header::{self, HeaderMap, HeaderName, HeaderValue};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::response::{Redirect, Response};
+use axum::response::Response;
 use axum::routing::{any, get};
 use axum::Router;
-use axum_extra::extract::Host;
-use axum_server::tls_rustls::RustlsConfig;
-use futures_util::StreamExt;
 use http_body_util::BodyExt;
 use multimap::MultiMap;
-use rustls_acme::{caches::DirCache, AcmeConfig};
 use serde_json::Value;
 use std::convert::Infallible;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::net::SocketAddr;
 use tower::service_fn;
-use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
+use tracing_subscriber::{fmt, EnvFilter};
 
 fn get_user_agent(header: &str) -> woothee::parser::WootheeResult<'_> {
     let parser = woothee::parser::Parser::new();
     parser.parse(header).unwrap_or_default()
+}
+
+/// Extracts the real client IP from the X-Forwarded-For header set by Caddy.
+/// Only trusts this header when the request comes from localhost (the proxy).
+fn get_real_ip(headers: &HeaderMap, peer_addr: &SocketAddr) -> std::net::IpAddr {
+    // Only trust X-Forwarded-For from localhost (where Caddy runs)
+    let is_trusted_proxy = peer_addr.ip().is_loopback();
+
+    if is_trusted_proxy {
+        headers
+            .get("x-forwarded-for")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.split(',').next())
+            .map(|s| s.trim())
+            .and_then(|s| s.parse().ok())
+            .unwrap_or_else(|| peer_addr.ip())
+    } else {
+        // Don't trust forwarding headers from non-proxy sources
+        peer_addr.ip()
+    }
 }
 
 fn requested_html(headers: &HeaderMap) -> bool {
@@ -94,14 +109,18 @@ async fn sha() -> Response {
         .into_response()
 }
 
-async fn icloud_private_relay(ConnectInfo(peer_addr): ConnectInfo<SocketAddr>) -> Response {
-    match get_private_relay_range(&peer_addr.ip()).await {
+async fn icloud_private_relay(
+    headers: HeaderMap,
+    ConnectInfo(peer_addr): ConnectInfo<SocketAddr>,
+) -> Response {
+    let real_ip = get_real_ip(&headers, &peer_addr);
+    match get_private_relay_range(&real_ip).await {
         Ok(None) => (
             [(
                 header::CONTENT_TYPE,
                 HeaderValue::from_static("text/plain; charset=utf-8"),
             )],
-            format!("{} is not iCloud Private Relay", peer_addr.ip()),
+            format!("{} is not iCloud Private Relay", real_ip),
         )
             .into_response(),
         Ok(Some(line)) => (
@@ -109,7 +128,7 @@ async fn icloud_private_relay(ConnectInfo(peer_addr): ConnectInfo<SocketAddr>) -
                 header::CONTENT_TYPE,
                 HeaderValue::from_static("text/plain; charset=utf-8"),
             )],
-            format!("{}: {}", peer_addr.ip(), line),
+            format!("{}: {}", real_ip, line),
         )
             .into_response(),
         Err(err) => (
@@ -192,32 +211,23 @@ async fn echo(
         Err(err) => format!("<binary {} bytes>", err.as_bytes().len()),
     };
 
-    let real_ip = headers
-        .get("x-real-ip")
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
-        .or_else(|| {
-            headers
-                .get("x-forwarded-for")
-                .and_then(|v| v.to_str().ok())
-                .and_then(|s| s.split(',').next().map(|part| part.trim().to_string()))
-        });
+    let real_ip = get_real_ip(&headers, &peer_addr);
+    // For backward compatibility in JSON output, return None if real_ip == peer_addr
+    let real_ip_str = if real_ip == peer_addr.ip() {
+        None
+    } else {
+        Some(real_ip.to_string())
+    };
 
     let forwarded_proto = headers
         .get("x-forwarded-proto")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string())
-        .unwrap_or_else(|| {
-            if config.tls_enabled {
-                "https".to_string()
-            } else {
-                "http".to_string()
-            }
-        });
+        .unwrap_or_else(|| "http".to_string());
 
     let response = serde_json::json!({
         "connection_info": {
-            "realip_remote_addr": real_ip,
+            "realip_remote_addr": real_ip_str,
             "peer_addr": peer_addr.to_string(),
             "host": headers.get(header::HOST).and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
             "scheme": forwarded_proto,
@@ -227,7 +237,6 @@ async fn echo(
         "uri": request.uri().to_string(),
         "app_config": {
             "host": config.website_domain.clone(),
-            "secure": config.tls_enabled,
         },
         "uri_parts": {
             "authority": request.uri().authority().map(|a| a.as_str().to_string()),
@@ -343,126 +352,38 @@ fn create_app_router() -> Router {
             HeaderName::from_static("x-xss-protection"),
             HeaderValue::from_static("1; mode=block"),
         ))
-        .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
-}
-
-async fn redirect_to_https(host: Option<Host>, OriginalUri(uri): OriginalUri) -> Response {
-    match host {
-        Some(Host(host)) => {
-            let location = format!("https://{}{}", host, uri);
-            Redirect::permanent(&location).into_response()
-        }
-        None => (
-            StatusCode::BAD_REQUEST,
-            [(
-                header::CONTENT_TYPE,
-                HeaderValue::from_static("text/plain; charset=utf-8"),
-            )],
-            "missing host header".to_string(),
-        )
-            .into_response(),
-    }
-}
-
-fn create_http_router() -> Router {
-    Router::new().fallback(redirect_to_https)
-}
-
-// https://github.com/FlorianUekermann/rustls-acme/issues/54
-fn make_auto_rustls_config(domain: &str) -> RustlsConfig {
-    let state = AcmeConfig::new([domain])
-        .contact_push("mailto:george@witteman.me")
-        .cache(DirCache::new("./rustls_acme_cache"))
-        .directory("https://acme-v02.api.letsencrypt.org/directory")
-        .state();
-    let tls_config = RustlsConfig::from_config(state.default_rustls_config());
-    let mut state_for_task = state;
-    let tls_config_handle = tls_config.clone();
-
-    tokio::spawn(async move {
-        while let Some(event) = state_for_task.next().await {
-            match event {
-                Ok(ok) => {
-                    tracing::info!("ACME configuration event: {ok:?}");
-                    tls_config_handle.reload_from_config(state_for_task.default_rustls_config());
-                }
-                Err(err) => tracing::error!("ACME configuration error: {err:?}"),
-            }
-        }
-    });
-
-    tls_config
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Configure log level from RUST_LOG, with a fallback
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug"));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     fmt().with_env_filter(filter).init();
     tracing::info!("Starting server");
 
     let config = get_config();
-
-    let http_addrs = [
-        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.http_port)),
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.http_port)),
-    ];
-    let https_addrs = [
-        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.https_port)),
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.https_port)),
-    ];
+    let addr: SocketAddr = format!("0.0.0.0:{}", config.port).parse().unwrap();
 
     let app = create_app_router();
-    let https_service = app
-        .clone()
-        .into_make_service_with_connect_info::<SocketAddr>();
-    let http_router = if config.tls_enabled {
-        create_http_router()
-    } else {
-        app
-    };
-    let http_service = http_router.into_make_service_with_connect_info::<SocketAddr>();
+    let service = app.into_make_service_with_connect_info::<SocketAddr>();
 
-    let mut servers = Vec::new();
-
-    for addr in http_addrs {
-        let service = http_service.clone();
-        tracing::info!("Starting HTTP server on {addr}");
-        servers.push(tokio::spawn(async move {
-            axum_server::bind(addr).serve(service).await
-        }));
-    }
-
-    if config.tls_enabled {
-        let tls_config = make_auto_rustls_config(&config.website_domain);
-        for addr in https_addrs {
-            let service = https_service.clone();
-            let tls_config = tls_config.clone();
-            tracing::info!("Starting HTTPS server on {addr}");
-            servers.push(tokio::spawn(async move {
-                axum_server::bind_rustls(addr, tls_config)
-                    .serve(service)
-                    .await
-            }));
-        }
-    }
-
-    for server in servers {
-        match server.await {
-            Ok(Ok(())) => {}
-            Ok(Err(err)) => {
-                return Err(std::io::Error::other(err));
-            }
-            Err(err) => {
-                return Err(std::io::Error::other(err));
-            }
-        }
-    }
+    tracing::info!("Listening on {addr}");
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, service)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     tracing::info!("Server finished");
     Ok(())
+}
+
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .expect("failed to install CTRL+C signal handler");
+    tracing::info!("Shutdown signal received");
 }
 
 #[cfg(test)]
@@ -980,55 +901,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn echo_respects_x_real_ip_header() {
+    async fn echo_uses_x_forwarded_for_header() {
         let app = test_app();
         let request = Request::builder()
             .uri("/echo")
-            .header("x-real-ip", "203.0.113.50")
+            .header("x-forwarded-for", "203.0.113.50, 192.168.1.1")
             .body(Body::empty())
             .unwrap();
         let response = send_with_connect_info(app, request).await;
 
         let body = body_string(response.into_body()).await;
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(
-            json["connection_info"]["realip_remote_addr"],
-            "203.0.113.50"
-        );
-    }
-
-    #[tokio::test]
-    async fn echo_respects_x_forwarded_for_header() {
-        let app = test_app();
-        let request = Request::builder()
-            .uri("/echo")
-            .header("x-forwarded-for", "198.51.100.10, 192.168.1.1")
-            .body(Body::empty())
-            .unwrap();
-        let response = send_with_connect_info(app, request).await;
-
-        let body = body_string(response.into_body()).await;
-        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        // Should take the first IP from x-forwarded-for
-        assert_eq!(
-            json["connection_info"]["realip_remote_addr"],
-            "198.51.100.10"
-        );
-    }
-
-    #[tokio::test]
-    async fn echo_prefers_x_real_ip_over_x_forwarded_for() {
-        let app = test_app();
-        let request = Request::builder()
-            .uri("/echo")
-            .header("x-real-ip", "203.0.113.50")
-            .header("x-forwarded-for", "198.51.100.10")
-            .body(Body::empty())
-            .unwrap();
-        let response = send_with_connect_info(app, request).await;
-
-        let body = body_string(response.into_body()).await;
-        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        // Should use the first IP from x-forwarded-for
         assert_eq!(
             json["connection_info"]["realip_remote_addr"],
             "203.0.113.50"
@@ -1340,54 +1224,139 @@ mod tests {
         assert!(response.headers().get("x-frame-options").is_some());
     }
 
-    // ==================== HTTP Redirect Tests ====================
+    // ==================== get_real_ip Unit Tests ====================
+
+    #[test]
+    fn get_real_ip_uses_x_forwarded_for_from_trusted_proxy() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-forwarded-for",
+            HeaderValue::from_static("203.0.113.50, 192.168.1.1"),
+        );
+        // Localhost is a trusted proxy (where Caddy runs)
+        let peer_addr: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+
+        let result = get_real_ip(&headers, &peer_addr);
+        // Should use the first IP from x-forwarded-for
+        assert_eq!(result.to_string(), "203.0.113.50");
+    }
+
+    #[test]
+    fn get_real_ip_falls_back_to_peer_addr_when_no_headers() {
+        let headers = HeaderMap::new();
+        let peer_addr: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+
+        let result = get_real_ip(&headers, &peer_addr);
+        assert_eq!(result.to_string(), "127.0.0.1");
+    }
+
+    #[test]
+    fn get_real_ip_handles_ipv6_from_trusted_proxy() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", HeaderValue::from_static("2001:db8::1"));
+        let peer_addr: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+
+        let result = get_real_ip(&headers, &peer_addr);
+        assert_eq!(result.to_string(), "2001:db8::1");
+    }
+
+    #[test]
+    fn get_real_ip_ignores_invalid_ip_in_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", HeaderValue::from_static("not-an-ip"));
+        let peer_addr: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+
+        let result = get_real_ip(&headers, &peer_addr);
+        // Falls back to peer_addr when header is invalid
+        assert_eq!(result.to_string(), "127.0.0.1");
+    }
+
+    #[test]
+    fn get_real_ip_ignores_headers_from_untrusted_source() {
+        // Security test: headers from non-localhost should be ignored
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", HeaderValue::from_static("8.8.8.8"));
+        // Request comes directly from external IP, not through Caddy
+        let peer_addr: SocketAddr = "203.0.113.50:12345".parse().unwrap();
+
+        let result = get_real_ip(&headers, &peer_addr);
+        // Should use peer_addr, NOT the spoofed header
+        assert_eq!(result.to_string(), "203.0.113.50");
+    }
+
+    #[test]
+    fn get_real_ip_trusts_headers_from_ipv6_loopback() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", HeaderValue::from_static("203.0.113.50"));
+        // IPv6 loopback is also a trusted proxy
+        let peer_addr: SocketAddr = "[::1]:12345".parse().unwrap();
+
+        let result = get_real_ip(&headers, &peer_addr);
+        assert_eq!(result.to_string(), "203.0.113.50");
+    }
+
+    // ==================== icloud_private_relay Tests ====================
 
     #[tokio::test]
-    async fn redirect_to_https_returns_redirect() {
-        let router = Router::new().fallback(redirect_to_https);
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .uri("/some-path")
-                    .header(header::HOST, "example.com")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
+    async fn icloud_private_relay_returns_200() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/icloud-private-relay")
+            .body(Body::empty())
             .unwrap();
+        let response = send_with_connect_info(app, request).await;
 
-        assert_eq!(response.status(), StatusCode::PERMANENT_REDIRECT);
+        assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[tokio::test]
-    async fn redirect_to_https_includes_location_header() {
-        let router = Router::new().fallback(redirect_to_https);
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .uri("/some-path?query=value")
-                    .header(header::HOST, "example.com")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
+    async fn icloud_private_relay_returns_plain_text() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/icloud-private-relay")
+            .body(Body::empty())
             .unwrap();
+        let response = send_with_connect_info(app, request).await;
 
-        let location = response.headers().get(header::LOCATION).unwrap();
-        assert_eq!(
-            location.to_str().unwrap(),
-            "https://example.com/some-path?query=value"
+        let content_type = response.headers().get(header::CONTENT_TYPE).unwrap();
+        assert!(content_type.to_str().unwrap().contains("text/plain"));
+    }
+
+    #[tokio::test]
+    async fn icloud_private_relay_uses_x_forwarded_for_header() {
+        let app = test_app();
+        let request = Request::builder()
+            .uri("/icloud-private-relay")
+            .header("x-forwarded-for", "203.0.113.50, 192.168.1.1")
+            .body(Body::empty())
+            .unwrap();
+        let response = send_with_connect_info(app, request).await;
+
+        let body = body_string(response.into_body()).await;
+        // Should use the first IP from x-forwarded-for (set by Caddy)
+        assert!(
+            body.contains("203.0.113.50"),
+            "Response should contain the forwarded IP, got: {}",
+            body
         );
     }
 
     #[tokio::test]
-    async fn redirect_to_https_returns_400_without_host() {
-        let router = Router::new().fallback(redirect_to_https);
-        let response = router
-            .oneshot(Request::builder().uri("/path").body(Body::empty()).unwrap())
-            .await
+    async fn icloud_private_relay_falls_back_to_peer_addr() {
+        let app = test_app();
+        // No forwarding headers - should use peer address
+        let request = Request::builder()
+            .uri("/icloud-private-relay")
+            .body(Body::empty())
             .unwrap();
+        let response = send_with_connect_info(app, request).await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = body_string(response.into_body()).await;
+        // send_with_connect_info uses 127.0.0.1
+        assert!(
+            body.contains("127.0.0.1"),
+            "Response should fall back to peer address, got: {}",
+            body
+        );
     }
 }

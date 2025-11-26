@@ -6,7 +6,8 @@
       "dockerDashComposeVersion": "v2",
       "moby": false
     },
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
+    "ghcr.io/devcontainers-extra/features/caddy:1": {}
   },
   "updateContentCommand": {
     "hooks-setup": [
@@ -25,7 +26,9 @@
     "vscode": {
       "extensions": [
         "rust-lang.rust-analyzer",
-        "GitHub.vscode-github-actions"
+        "GitHub.vscode-github-actions",
+        "coolbear.systemd-unit-file",
+        "matthewpi.caddyfile-support"
       ]
     }
   }

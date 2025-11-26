@@ -1,11 +1,10 @@
 # https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
 
 [Unit]
-Description=Website
+Description=Website Backend
 After=network.target network-online.target
 Requires=network-online.target
 
-# A lot of this was copied from https://github.com/caddyserver/dist/blob/master/init/caddy.service
 [Service]
 Type=simple
 Restart=always
@@ -14,14 +13,13 @@ WorkingDirectory=/home/ec2-user/website
 ExecStart=/home/ec2-user/website/website
 PrivateTmp=true
 ProtectSystem=full
-AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 
 # Allow high number of concurrent connections (increase file descriptor limit)
 LimitNOFILE=65535
 
-Environment=PORT=80
-Environment=PORT_HTTPS=443
+Environment=PORT=8080
 Environment=SERVER_HOSTNAME=georgewitteman.com
+Environment=RUST_LOG=info
 
 [Install]
 WantedBy=multi-user.target

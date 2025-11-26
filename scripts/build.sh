@@ -17,6 +17,8 @@ cp ./target/x86_64-unknown-linux-gnu/release/website "${tmp_dir}/website"
 cp -r ./scripts "${tmp_dir}/scripts"
 cp -r ./static "${tmp_dir}/static"
 cp -r ./website.service "${tmp_dir}/website.service"
+cp -r ./caddy.service "${tmp_dir}/caddy.service"
+cp -r ./Caddyfile "${tmp_dir}/Caddyfile"
 
 # Deploy
 ssh-keygen -t "$key_type" -f "$tmp_key_file" -N ""
@@ -28,7 +30,6 @@ aws ec2-instance-connect send-ssh-public-key \
     --ssh-public-key "file://${tmp_key_file}.pub"
 
 rsync --partial --progress --archive --verbose --delete \
-    --exclude rustls_acme_cache/ \
     -e "ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i \"${tmp_key_file}\"" \
     "$tmp_dir/." \
     ec2-user@54.71.97.150:/home/ec2-user/website
