@@ -22,8 +22,9 @@ cargo build --release --target x86_64-unknown-linux-gnu
 cp ./target/x86_64-unknown-linux-gnu/release/website "${tmp_dir}/website"
 cp -r ./scripts "${tmp_dir}/scripts"
 cp -r ./static "${tmp_dir}/static"
-cp -r ./website.service "${tmp_dir}/website.service"
-cp -r ./caddy.service "${tmp_dir}/caddy.service"
+cp ./website-blue.service "${tmp_dir}/website-blue.service"
+cp ./website-green.service "${tmp_dir}/website-green.service"
+cp ./caddy.service "${tmp_dir}/caddy.service"
 cp -r ./Caddyfile "${tmp_dir}/Caddyfile"
 
 # Deploy

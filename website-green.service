@@ -1,7 +1,7 @@
 # https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
 
 [Unit]
-Description=Website Backend
+Description=Website Backend (Green)
 After=network.target network-online.target
 Requires=network-online.target
 
@@ -10,14 +10,14 @@ Type=simple
 Restart=always
 User=ec2-user
 WorkingDirectory=/home/ec2-user/website
-ExecStart=/home/ec2-user/website/website
+ExecStart=/home/ec2-user/website/website-green
 PrivateTmp=true
 ProtectSystem=full
 
 # Allow high number of concurrent connections (increase file descriptor limit)
 LimitNOFILE=65535
 
-Environment=PORT=8080
+Environment=PORT=8081
 Environment=SERVER_HOSTNAME=georgewitteman.com
 Environment=RUST_LOG=info
 

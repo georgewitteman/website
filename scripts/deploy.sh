@@ -5,7 +5,10 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-ls -la "${HOME}/website"
+WEBSITE_DIR="${HOME}/website"
+ACTIVE_PORT_FILE="${WEBSITE_DIR}/active_port"
+
+ls -la "${WEBSITE_DIR}"
 
 # Install Caddy if not present
 if ! command -v caddy &> /dev/null; then
@@ -22,33 +25,46 @@ if ! command -v caddy &> /dev/null; then
     sudo mkdir -p /etc/caddy
     sudo mkdir -p /var/lib/caddy
     sudo chown caddy:caddy /var/lib/caddy
-
 fi
 
 # Install Caddy systemd service
-sudo cp "${HOME}/website/caddy.service" /etc/systemd/system/caddy.service
+sudo cp "${WEBSITE_DIR}/caddy.service" /etc/systemd/system/caddy.service
 
-# Configure Caddy
-sudo mkdir -p /etc/caddy
-sudo cp "${HOME}/website/Caddyfile" /etc/caddy/Caddyfile
-sudo chown root:root /etc/caddy/Caddyfile
-sudo chmod 644 /etc/caddy/Caddyfile
+# Determine which slot to deploy to (blue=8080, green=8081)
+if [ -f "$ACTIVE_PORT_FILE" ]; then
+    active_port=$(cat "$ACTIVE_PORT_FILE")
+else
+    # First deploy - default to blue being active, deploy to green
+    active_port="8080"
+fi
 
-# Start the backend service
-sudo cp "${HOME}/website/website.service" "/etc/systemd/system/website.service"
+if [ "$active_port" = "8080" ]; then
+    deploy_slot="green"
+    deploy_port="8081"
+else
+    deploy_slot="blue"
+    deploy_port="8080"
+fi
+
+echo "Active port: $active_port, deploying to: $deploy_slot (port $deploy_port)"
+
+# Copy binary to the appropriate slot
+cp "${WEBSITE_DIR}/website" "${WEBSITE_DIR}/website-${deploy_slot}"
+
+# Install systemd services
+sudo cp "${WEBSITE_DIR}/website-blue.service" /etc/systemd/system/website-blue.service
+sudo cp "${WEBSITE_DIR}/website-green.service" /etc/systemd/system/website-green.service
 sudo systemctl daemon-reload
-sudo systemctl enable website
-sudo systemctl restart website
 
-# Start/reload Caddy (reload for zero-downtime config changes)
-sudo systemctl enable caddy
-sudo systemctl reload-or-restart caddy
+# Start/restart the new version
+sudo systemctl enable "website-${deploy_slot}"
+sudo systemctl restart "website-${deploy_slot}"
 
-# Health check - verify the service is responding
+# Health check the new version
 max_attempts=10
 attempt=1
 while [ $attempt -le $max_attempts ]; do
-    if curl --fail --silent --max-time 5 http://localhost:8080/ > /dev/null; then
+    if curl --fail --silent --max-time 5 "http://localhost:${deploy_port}/" > /dev/null; then
         echo "Health check passed on attempt $attempt"
         break
     fi
@@ -59,10 +75,25 @@ done
 
 if [ $attempt -gt $max_attempts ]; then
     echo "Health check failed after $max_attempts attempts"
-    sudo systemctl status website --no-pager || true
-    sudo journalctl -u website --no-pager -n 50 || true
+    sudo systemctl status "website-${deploy_slot}" --no-pager || true
+    sudo journalctl -u "website-${deploy_slot}" --no-pager -n 50 || true
     exit 1
 fi
 
-sudo systemctl status website --no-pager || true
-sudo systemctl status caddy --no-pager || true
+# Update Caddyfile to point to new port
+sudo mkdir -p /etc/caddy
+sudo sed "s/localhost:[0-9]*/localhost:${deploy_port}/" "${WEBSITE_DIR}/Caddyfile" | sudo tee /etc/caddy/Caddyfile > /dev/null
+sudo chown root:root /etc/caddy/Caddyfile
+sudo chmod 644 /etc/caddy/Caddyfile
+
+# Reload Caddy to switch traffic
+sudo systemctl enable caddy
+sudo systemctl reload-or-restart caddy
+
+# Save the new active port
+echo "$deploy_port" > "$ACTIVE_PORT_FILE"
+
+echo "Deploy complete. Traffic now routing to $deploy_slot (port $deploy_port)"
+
+sudo systemctl status website-blue --no-pager || true
+sudo systemctl status website-green --no-pager || true
