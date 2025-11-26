@@ -77,16 +77,27 @@ if ! sudo systemctl is-active --quiet "website-${other_slot}"; then
     sudo systemctl start "website-${other_slot}"
 fi
 
-# Verify rollback slot is healthy before proceeding
+# Verify rollback slot is healthy before proceeding (with retries for startup time)
 echo "Verifying rollback slot (${other_slot}) is healthy..."
-if ! curl --fail --silent --max-time 5 "http://localhost:${other_port}/" > /dev/null; then
-    echo "ERROR: Rollback slot ${other_slot} (port ${other_port}) is not healthy"
+rollback_attempts=10
+rollback_attempt=1
+while [ $rollback_attempt -le $rollback_attempts ]; do
+    if curl --fail --silent --max-time 5 "http://localhost:${other_port}/" > /dev/null; then
+        echo "Rollback slot health check passed on attempt $rollback_attempt"
+        break
+    fi
+    echo "Rollback slot health check attempt $rollback_attempt/$rollback_attempts failed, retrying..."
+    sleep 1
+    rollback_attempt=$((rollback_attempt + 1))
+done
+
+if [ $rollback_attempt -gt $rollback_attempts ]; then
+    echo "ERROR: Rollback slot ${other_slot} (port ${other_port}) is not healthy after $rollback_attempts attempts"
     echo "Instant rollback will not be possible. Aborting deploy."
     sudo systemctl status "website-${other_slot}" --no-pager || true
     sudo journalctl -u "website-${other_slot}" --no-pager -n 50 || true
     exit 1
 fi
-echo "Rollback slot healthy"
 
 # Start/restart the new version
 sudo systemctl restart "website-${deploy_slot}"
