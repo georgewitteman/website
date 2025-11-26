@@ -11,6 +11,12 @@ tmp_key_file="${tmp_key_dir}/${key_type}"
 
 tmp_dir="$(mktemp -d)"
 
+# Clean up temp directories on exit
+cleanup() {
+    rm -rf "$tmp_key_dir" "$tmp_dir"
+}
+trap cleanup EXIT
+
 # Build
 cargo build --release --target x86_64-unknown-linux-gnu
 cp ./target/x86_64-unknown-linux-gnu/release/website "${tmp_dir}/website"
