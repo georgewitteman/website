@@ -35,10 +35,20 @@ jobs:
         run: |
           rustup update --no-self-update stable
           rustup default stable
-          rustup component add --toolchain stable rustfmt
+          rustup component add --toolchain stable rustfmt clippy
           rustup show
 
       - name: Cache Build
         uses: Swatinem/rust-cache@v2
 
-      - run: ./scripts/build.sh
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Deploy
+        run: ./scripts/build.sh
