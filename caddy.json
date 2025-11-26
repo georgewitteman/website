@@ -4,6 +4,9 @@
       "servers": {
         "main": {
           "listen": [":443", ":80"],
+          "strict_sni_host": true,
+          "idle_timeout": 30000000000,
+          "read_header_timeout": 5000000000,
           "routes": [
             {
               "match": [{"host": ["georgewitteman.com"]}],
