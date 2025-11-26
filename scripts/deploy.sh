@@ -69,6 +69,8 @@ sudo systemctl enable "website-blue"
 sudo systemctl enable "website-green"
 if ! sudo systemctl is-active --quiet "website-${other_slot}"; then
     echo "Starting ${other_slot} slot for rollback capability"
+    # Reset any failed state before starting
+    sudo systemctl reset-failed "website-${other_slot}" 2>/dev/null || true
     sudo systemctl start "website-${other_slot}"
 fi
 
