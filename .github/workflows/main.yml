@@ -14,16 +14,16 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       CARGO_TERM_COLOR: always
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           # https://github.com/georgewitteman/terraform/blob/main/aws_iam.tf
           role-to-assume: arn:aws:iam::866631827662:role/GitHubActionsOIDC

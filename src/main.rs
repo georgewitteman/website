@@ -5,14 +5,16 @@ mod private_relay;
 use crate::config::get_config;
 use crate::private_relay::get_private_relay_range;
 use askama::Template;
-use askama_axum::IntoResponse;
+use askama_web::WebTemplate;
 use axum::body::Body;
-use axum::extract::{ConnectInfo, Host, OriginalUri, Request as AxumRequest};
+use axum::extract::{ConnectInfo, OriginalUri, Request as AxumRequest};
 use axum::http::header::{self, HeaderMap, HeaderName, HeaderValue};
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::response::{Redirect, Response};
 use axum::routing::{any, get};
 use axum::Router;
+use axum_extra::extract::Host;
 use axum_server::tls_rustls::RustlsConfig;
 use futures_util::StreamExt;
 use http_body_util::BodyExt;
@@ -20,7 +22,7 @@ use multimap::MultiMap;
 use rustls_acme::{caches::DirCache, AcmeConfig};
 use serde_json::Value;
 use std::convert::Infallible;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::net::{Ipv6Addr, SocketAddr};
 use tower::service_fn;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
@@ -40,7 +42,7 @@ fn requested_html(headers: &HeaderMap) -> bool {
         .unwrap_or(false)
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "uuid.html")]
 struct UuidTemplate {
     path: String,
@@ -67,7 +69,7 @@ async fn uuid_route(headers: HeaderMap, OriginalUri(uri): OriginalUri) -> Respon
     }
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "index.html")]
 struct IndexTemplate {
     path: String,
@@ -141,7 +143,7 @@ fn pretty_multimap(map: &MultiMap<String, String>) -> serde_json::Map<String, Va
     pretty_map
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "echo.html")]
 struct EchoTemplate {
     path: String,
@@ -403,14 +405,10 @@ async fn main() -> std::io::Result<()> {
 
     let config = get_config();
 
-    let http_addrs = [
-        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.http_port)),
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.http_port)),
-    ];
-    let https_addrs = [
-        SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.https_port)),
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.https_port)),
-    ];
+    // Bind only to IPv6 unspecified address - on Linux with default settings,
+    // this accepts both IPv4 and IPv6 connections (dual-stack socket)
+    let http_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.http_port));
+    let https_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, config.https_port));
 
     let app = create_app_router();
     let https_service = app
@@ -423,40 +421,27 @@ async fn main() -> std::io::Result<()> {
     };
     let http_service = http_router.into_make_service_with_connect_info::<SocketAddr>();
 
-    let mut servers = Vec::new();
-
-    for addr in http_addrs {
-        let service = http_service.clone();
-        tracing::info!("Starting HTTP server on {addr}");
-        servers.push(tokio::spawn(async move {
-            axum_server::bind(addr).serve(service).await
-        }));
-    }
+    tracing::info!("Starting HTTP server on {http_addr}");
+    let http_server = tokio::spawn({
+        let service = http_service;
+        async move { axum_server::bind(http_addr).serve(service).await }
+    });
 
     if config.tls_enabled {
         let tls_config = make_auto_rustls_config(&config.website_domain);
-        for addr in https_addrs {
-            let service = https_service.clone();
-            let tls_config = tls_config.clone();
-            tracing::info!("Starting HTTPS server on {addr}");
-            servers.push(tokio::spawn(async move {
-                axum_server::bind_rustls(addr, tls_config)
-                    .serve(service)
-                    .await
-            }));
-        }
-    }
+        tracing::info!("Starting HTTPS server on {https_addr}");
+        let https_server = tokio::spawn(async move {
+            axum_server::bind_rustls(https_addr, tls_config)
+                .serve(https_service)
+                .await
+        });
 
-    for server in servers {
-        match server.await {
-            Ok(Ok(())) => {}
-            Ok(Err(err)) => {
-                return Err(std::io::Error::other(err));
-            }
-            Err(err) => {
-                return Err(std::io::Error::other(err));
-            }
+        tokio::select! {
+            result = http_server => result??,
+            result = https_server => result??,
         }
+    } else {
+        http_server.await??;
     }
 
     tracing::info!("Server finished");
