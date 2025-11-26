@@ -6,7 +6,6 @@ set -o pipefail
 set -o xtrace
 
 WEBSITE_DIR="${HOME}/website"
-ACTIVE_PORT_FILE="${WEBSITE_DIR}/active_port"
 
 ls -la "${WEBSITE_DIR}"
 
@@ -27,16 +26,12 @@ if ! command -v caddy &> /dev/null; then
     sudo chown caddy:caddy /var/lib/caddy
 fi
 
-# Install Caddy systemd service
-sudo cp "${WEBSITE_DIR}/caddy.service" /etc/systemd/system/caddy.service
+# Install Caddy systemd service (API-based configuration)
+sudo cp "${WEBSITE_DIR}/caddy-api.service" /etc/systemd/system/caddy.service
 
 # Determine which slot to deploy to (blue=8080, green=8081)
-if [ -f "$ACTIVE_PORT_FILE" ]; then
-    active_port=$(cat "$ACTIVE_PORT_FILE")
-else
-    # First deploy - default to blue being active, deploy to green
-    active_port="8080"
-fi
+# Query Caddy API for current upstream, default to 8080 if Caddy not running yet
+active_port=$(curl -sf "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0/dial" 2>/dev/null | tr -d '"' | sed 's/localhost://' || echo "8080")
 
 if [ "$active_port" = "8080" ]; then
     deploy_slot="green"
@@ -122,18 +117,24 @@ if [ $attempt -gt $max_attempts ]; then
     exit 1
 fi
 
-# Update Caddyfile to point to new port
-sudo mkdir -p /etc/caddy
-sudo sed "s/localhost:[0-9]*/localhost:${deploy_port}/" "${WEBSITE_DIR}/Caddyfile" | sudo tee /etc/caddy/Caddyfile > /dev/null
-sudo chown root:root /etc/caddy/Caddyfile
-sudo chmod 644 /etc/caddy/Caddyfile
-
-# Reload Caddy to switch traffic
+# Ensure Caddy is running with API
 sudo systemctl enable caddy
-sudo systemctl reload-or-restart caddy
+if ! sudo systemctl is-active --quiet caddy; then
+    # First time setup: start Caddy and load initial config
+    sudo systemctl start caddy
+    sleep 2
+    # Load initial configuration via API
+    curl -X POST \
+        -H "Content-Type: application/json" \
+        -d @"${WEBSITE_DIR}/caddy.json" \
+        "http://localhost:2019/load"
+fi
 
-# Save the new active port
-echo "$deploy_port" > "$ACTIVE_PORT_FILE"
+# Update upstream port via Caddy API
+curl -X PATCH \
+    -H "Content-Type: application/json" \
+    -d "{\"dial\": \"localhost:${deploy_port}\"}" \
+    "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0"
 
 echo "Deploy complete. Traffic now routing to $deploy_slot (port $deploy_port)"
 

@@ -5,5 +5,4 @@ set -o nounset
 set -o pipefail
 
 cargo fmt --check
-caddy fmt --diff Caddyfile
-caddy validate --config Caddyfile --adapter caddyfile
+caddy validate --config caddy.json

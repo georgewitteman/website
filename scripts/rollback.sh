@@ -6,14 +6,13 @@ set -o pipefail
 set -o xtrace
 
 WEBSITE_DIR="${HOME}/website"
-ACTIVE_PORT_FILE="${WEBSITE_DIR}/active_port"
 
-if [ ! -f "$ACTIVE_PORT_FILE" ]; then
-    echo "No active_port file found. Cannot determine current state."
+# Query Caddy API for current upstream
+active_port=$(curl -sf "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0/dial" | tr -d '"' | sed 's/localhost://')
+if [ -z "$active_port" ]; then
+    echo "Could not determine current active port from Caddy API."
     exit 1
 fi
-
-active_port=$(cat "$ACTIVE_PORT_FILE")
 
 # Determine which slot to roll back to
 if [ "$active_port" = "8080" ]; then
@@ -39,14 +38,11 @@ if ! curl --fail --silent --max-time 5 "http://localhost:${rollback_port}/" > /d
     exit 1
 fi
 
-# Update Caddyfile to point to rollback port
-sudo sed -i "s/localhost:[0-9]*/localhost:${rollback_port}/" /etc/caddy/Caddyfile
-
-# Reload Caddy to switch traffic
-sudo systemctl reload caddy
-
-# Save the new active port
-echo "$rollback_port" > "$ACTIVE_PORT_FILE"
+# Update upstream port via Caddy API
+curl -X PATCH \
+    -H "Content-Type: application/json" \
+    -d "{\"dial\": \"localhost:${rollback_port}\"}" \
+    "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0"
 
 echo "Rollback complete. Traffic now routing to $rollback_slot (port $rollback_port)"
 

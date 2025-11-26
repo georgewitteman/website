@@ -1,0 +1,45 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "main": {
+          "listen": [":443", ":80"],
+          "routes": [
+            {
+              "match": [{"host": ["georgewitteman.com"]}],
+              "handle": [
+                {
+                  "handler": "encode",
+                  "encodings": {
+                    "zstd": {},
+                    "gzip": {}
+                  }
+                },
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [{"dial": "localhost:8080"}]
+                }
+              ]
+            }
+          ],
+          "logs": {
+            "default_logger_name": "main"
+          }
+        }
+      }
+    },
+    "tls": {
+      "automation": {
+        "policies": [{"subjects": ["georgewitteman.com"]}]
+      }
+    }
+  },
+  "logging": {
+    "logs": {
+      "main": {
+        "encoder": {"format": "console"},
+        "writer": {"output": "stdout"}
+      }
+    }
+  }
+}

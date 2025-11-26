@@ -24,8 +24,8 @@ cp -r ./scripts "${tmp_dir}/scripts"
 cp -r ./static "${tmp_dir}/static"
 cp ./website-blue.service "${tmp_dir}/website-blue.service"
 cp ./website-green.service "${tmp_dir}/website-green.service"
-cp ./caddy.service "${tmp_dir}/caddy.service"
-cp -r ./Caddyfile "${tmp_dir}/Caddyfile"
+cp ./caddy-api.service "${tmp_dir}/caddy-api.service"
+cp ./caddy.json "${tmp_dir}/caddy.json"
 
 # Deploy
 ssh-keygen -t "$key_type" -f "$tmp_key_file" -N ""
@@ -37,7 +37,6 @@ aws ec2-instance-connect send-ssh-public-key \
     --ssh-public-key "file://${tmp_key_file}.pub"
 
 rsync --partial --progress --archive --verbose --delete \
-    --exclude='active_port' \
     --exclude='website-blue' \
     --exclude='website-green' \
     -e "ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i \"${tmp_key_file}\"" \
