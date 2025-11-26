@@ -120,21 +120,17 @@ fi
 # Ensure Caddy is running with API
 sudo systemctl enable caddy
 if ! sudo systemctl is-active --quiet caddy; then
-    # First time setup: start Caddy and load initial config
     sudo systemctl start caddy
     sleep 2
-    # Load initial configuration via API
-    curl -X POST \
-        -H "Content-Type: application/json" \
-        -d @"${WEBSITE_DIR}/caddy.json" \
-        "http://localhost:2019/load"
 fi
 
-# Update upstream port via Caddy API
-curl -X PATCH \
-    -H "Content-Type: application/json" \
-    -d "{\"dial\": \"localhost:${deploy_port}\"}" \
-    "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0"
+# Load full config with updated upstream port via Caddy API
+# Using sed to update the port in caddy.json before loading
+sed "s/localhost:8080/localhost:${deploy_port}/" "${WEBSITE_DIR}/caddy.json" | \
+    curl -X POST \
+        -H "Content-Type: application/json" \
+        -d @- \
+        "http://localhost:2019/load"
 
 echo "Deploy complete. Traffic now routing to $deploy_slot (port $deploy_port)"
 

@@ -38,11 +38,12 @@ if ! curl --fail --silent --max-time 5 "http://localhost:${rollback_port}/" > /d
     exit 1
 fi
 
-# Update upstream port via Caddy API
-curl -X PATCH \
-    -H "Content-Type: application/json" \
-    -d "{\"dial\": \"localhost:${rollback_port}\"}" \
-    "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0"
+# Load full config with updated upstream port via Caddy API
+sed "s/localhost:8080/localhost:${rollback_port}/" "${WEBSITE_DIR}/caddy.json" | \
+    curl -X POST \
+        -H "Content-Type: application/json" \
+        -d @- \
+        "http://localhost:2019/load"
 
 echo "Rollback complete. Traffic now routing to $rollback_slot (port $rollback_port)"
 
