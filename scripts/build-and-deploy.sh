@@ -8,9 +8,14 @@
 #   3. Rsyncs the build artifacts to the EC2 instance
 #   4. Runs server-deploy.sh on the EC2 instance to complete deployment
 #
-# Required environment variables:
-#   - EC2_INSTANCE_ID: The EC2 instance to deploy to
-#   - AWS credentials (configured via aws-actions/configure-aws-credentials)
+# Prerequisites:
+#   - AWS CLI configured with appropriate credentials
+#
+# Environment variables:
+#   EC2_INSTANCE_ID  - Required. The EC2 instance to deploy to.
+#
+# Usage:
+#   EC2_INSTANCE_ID=i-xxx ./scripts/build-and-deploy.sh
 #
 
 set -o errexit
@@ -18,7 +23,12 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-instance_id="${EC2_INSTANCE_ID:?EC2_INSTANCE_ID environment variable must be set}"
+if [ -z "${EC2_INSTANCE_ID:-}" ]; then
+    echo "ERROR: EC2_INSTANCE_ID environment variable is required"
+    exit 1
+fi
+
+instance_id="$EC2_INSTANCE_ID"
 instance_region="us-west-2"
 instance_user="ubuntu"
 

@@ -9,12 +9,13 @@
 #
 # Prerequisites:
 #   - AWS CLI configured with appropriate credentials
-#   - EC2_INSTANCE_ID environment variable set (or pass as argument)
+#
+# Environment variables:
+#   EC2_INSTANCE_ID  - Required. The EC2 instance ID to provision.
+#   SMTP_PASSWORD    - Required. Fastmail app password for email notifications.
 #
 # Usage:
-#   EC2_INSTANCE_ID=i-xxx ./scripts/setup.sh
-#   # or
-#   ./scripts/setup.sh i-xxx
+#   EC2_INSTANCE_ID=i-xxx SMTP_PASSWORD=xxx ./scripts/setup.sh
 #
 
 set -o errexit
@@ -22,17 +23,19 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-# Accept instance ID as argument or environment variable
-instance_id="${1:-${EC2_INSTANCE_ID:-}}"
-if [ -z "$instance_id" ]; then
-    echo "ERROR: EC2 instance ID required"
-    echo "Usage: $0 <instance-id>"
-    echo "   or: EC2_INSTANCE_ID=i-xxx $0"
+if [ -z "${EC2_INSTANCE_ID:-}" ]; then
+    echo "ERROR: EC2_INSTANCE_ID environment variable is required"
     exit 1
 fi
 
-instance_region="${EC2_REGION:-us-west-2}"
-instance_user="${EC2_USER:-ubuntu}"
+if [ -z "${SMTP_PASSWORD:-}" ]; then
+    echo "ERROR: SMTP_PASSWORD environment variable is required"
+    exit 1
+fi
+
+instance_id="$EC2_INSTANCE_ID"
+instance_region="us-west-2"
+instance_user="ubuntu"
 
 echo ""
 echo "=== Setup Configuration ==="
@@ -95,8 +98,8 @@ rsync --partial --progress --archive --verbose \
 # Make scripts directory and move setup script
 ssh $ssh_opts "${instance_user}@${instance_ip}" "mkdir -p /home/${instance_user}/website/scripts && mv /home/${instance_user}/website/server-setup.sh /home/${instance_user}/website/scripts/"
 
-# Run setup on server
-ssh $ssh_opts "${instance_user}@${instance_ip}" "/home/${instance_user}/website/scripts/server-setup.sh"
+# Run setup on server (pass SMTP_PASSWORD for email notifications)
+ssh $ssh_opts "${instance_user}@${instance_ip}" "SMTP_PASSWORD='${SMTP_PASSWORD:-}' /home/${instance_user}/website/scripts/server-setup.sh"
 
 echo ""
 echo "=== Server Provisioning Complete ==="

@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 #
-# server-setup.sh - One-time server provisioning
+# server-setup.sh - Server provisioning
 #
-# This script runs ON THE EC2 INSTANCE to set up a fresh server.
+# This script runs ON THE EC2 INSTANCE to set up the server.
 # It installs and configures:
+#   - Automatic security updates (unattended-upgrades)
+#   - Email notifications via Fastmail SMTP (msmtp)
 #   - Caddy web server (reverse proxy with automatic HTTPS)
 #   - Systemd services for blue/green deployment slots
 #
 # This script is idempotent - safe to run multiple times.
 #
-# Usage (run locally):
-#   ./scripts/setup.sh
+# Environment variables:
+#   SMTP_PASSWORD  - Required. Fastmail app password for email notifications.
 #
-# Or run directly on the server:
-#   ./scripts/server-setup.sh
+# Usage (run locally via setup.sh):
+#   EC2_INSTANCE_ID=i-xxx SMTP_PASSWORD=xxx ./scripts/setup.sh
 #
 
 set -o errexit
@@ -28,6 +30,65 @@ echo "=== Server Setup ==="
 echo "Website directory: $WEBSITE_DIR"
 echo "===================="
 echo ""
+
+#
+# Configure automatic security updates
+#
+echo "Configuring automatic updates..."
+sudo apt-get update
+sudo apt-get install -y unattended-upgrades apt-listchanges msmtp msmtp-mta
+
+# Configure msmtp for sending emails via Fastmail
+echo "Configuring msmtp with Fastmail SMTP..."
+sudo tee /etc/msmtprc > /dev/null << EOF
+defaults
+auth           on
+tls            on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+logfile        /var/log/msmtp.log
+
+account        fastmail
+host           smtp.fastmail.com
+port           587
+from           george@witteman.me
+user           george@witteman.me
+password       ${SMTP_PASSWORD}
+
+account default : fastmail
+EOF
+sudo chmod 600 /etc/msmtprc
+
+# Configure unattended-upgrades
+sudo tee /etc/apt/apt.conf.d/50unattended-upgrades > /dev/null << 'EOF'
+Unattended-Upgrade::Allowed-Origins {
+    "${distro_id}:${distro_codename}";
+    "${distro_id}:${distro_codename}-security";
+    "${distro_id}ESMApps:${distro_codename}-apps-security";
+    "${distro_id}ESM:${distro_codename}-infra-security";
+};
+
+// Remove unused kernel packages and dependencies
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+// Automatically reboot if required (at 3am)
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "03:00";
+
+// Email notifications
+Unattended-Upgrade::Mail "george@witteman.me";
+Unattended-Upgrade::MailReport "only-on-error";
+EOF
+
+# Enable automatic updates
+sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null << 'EOF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+EOF
+
+echo "Automatic updates configured"
 
 #
 # Install Caddy

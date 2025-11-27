@@ -8,12 +8,12 @@
 #
 # Prerequisites:
 #   - AWS CLI configured with appropriate credentials
-#   - EC2_INSTANCE_ID environment variable set (or pass as argument)
+#
+# Environment variables:
+#   EC2_INSTANCE_ID  - Required. The EC2 instance to rollback.
 #
 # Usage:
 #   EC2_INSTANCE_ID=i-xxx ./scripts/rollback.sh
-#   # or
-#   ./scripts/rollback.sh i-xxx
 #
 
 set -o errexit
@@ -21,17 +21,14 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-# Accept instance ID as argument or environment variable
-instance_id="${1:-${EC2_INSTANCE_ID:-}}"
-if [ -z "$instance_id" ]; then
-    echo "ERROR: EC2 instance ID required"
-    echo "Usage: $0 <instance-id>"
-    echo "   or: EC2_INSTANCE_ID=i-xxx $0"
+if [ -z "${EC2_INSTANCE_ID:-}" ]; then
+    echo "ERROR: EC2_INSTANCE_ID environment variable is required"
     exit 1
 fi
 
-instance_region="${EC2_REGION:-us-west-2}"
-instance_user="${EC2_USER:-ubuntu}"
+instance_id="$EC2_INSTANCE_ID"
+instance_region="us-west-2"
+instance_user="ubuntu"
 
 echo ""
 echo "=== Rollback Configuration ==="
