@@ -6,6 +6,7 @@
 # It installs and configures:
 #   - Automatic security updates (unattended-upgrades)
 #   - Email notifications via Fastmail SMTP (msmtp)
+#   - Disk space monitoring with email alerts
 #   - Caddy web server (reverse proxy with automatic HTTPS)
 #   - Systemd services for blue/green deployment slots
 #
@@ -71,9 +72,8 @@ Unattended-Upgrade::Allowed-Origins {
 Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
 
-// Automatically reboot if required (at 3am)
-Unattended-Upgrade::Automatic-Reboot "true";
-Unattended-Upgrade::Automatic-Reboot-Time "03:00";
+// Do not automatically reboot - notify via email instead
+Unattended-Upgrade::Automatic-Reboot "false";
 
 // Email notifications
 Unattended-Upgrade::Mail "george@witteman.me";
@@ -91,39 +91,41 @@ EOF
 echo "Automatic updates configured"
 
 #
-# Install Caddy
+# Set up disk space monitoring
 #
-if command -v caddy &> /dev/null; then
-    echo "Caddy is already installed: $(caddy version)"
-else
-    echo "Installing Caddy..."
-    curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o /tmp/caddy
-    chmod +x /tmp/caddy
-    sudo mv /tmp/caddy /usr/bin/caddy
-    echo "Caddy installed: $(caddy version)"
+echo "Setting up disk space monitoring..."
+sudo tee /usr/local/bin/check-disk-space > /dev/null << 'SCRIPT'
+#!/bin/bash
+THRESHOLD=80
+EMAIL="george@witteman.me"
+HOSTNAME=$(hostname)
+
+usage=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+
+if [ "$usage" -ge "$THRESHOLD" ]; then
+    echo -e "To: ${EMAIL}\nSubject: [${HOSTNAME}] Disk space alert: ${usage}% used\n\nDisk usage on ${HOSTNAME} has reached ${usage}%.\n\n$(df -h)" | msmtp "$EMAIL"
 fi
+SCRIPT
+sudo chmod +x /usr/local/bin/check-disk-space
+
+# Run disk space check daily at 6am
+echo "0 6 * * * root /usr/local/bin/check-disk-space" | sudo tee /etc/cron.d/disk-space-check > /dev/null
+
+echo "Disk space monitoring configured"
 
 #
-# Create caddy user and group
+# Install Caddy from official apt repository
 #
-if id "caddy" &>/dev/null; then
-    echo "Caddy user already exists"
-else
-    echo "Creating caddy user and group..."
-    sudo groupadd --system caddy 2>/dev/null || true
-    sudo useradd --system --gid caddy --create-home --home-dir /var/lib/caddy --shell /usr/sbin/nologin caddy
-fi
+echo "Installing Caddy from official repository..."
+sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg --yes
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y caddy
+echo "Caddy installed: $(caddy version)"
 
 #
-# Create Caddy directories
-#
-echo "Creating Caddy directories..."
-sudo mkdir -p /etc/caddy
-sudo mkdir -p /var/lib/caddy
-sudo chown caddy:caddy /var/lib/caddy
-
-#
-# Install Caddy systemd service
+# Install Caddy systemd service (override the default)
 #
 echo "Installing Caddy systemd service..."
 sudo cp "${WEBSITE_DIR}/caddy.service" /etc/systemd/system/caddy.service
