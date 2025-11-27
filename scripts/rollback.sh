@@ -18,7 +18,7 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-instance_id="i-0399e9f7faea4ef78"
+instance_id="i-095e542040fba92d3"
 instance_ip="54.71.97.150"
 instance_region="us-west-2"
 instance_user="ubuntu"
