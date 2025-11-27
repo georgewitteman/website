@@ -77,7 +77,7 @@ Unattended-Upgrade::Automatic-Reboot-Time "03:00";
 
 // Email notifications
 Unattended-Upgrade::Mail "george@witteman.me";
-Unattended-Upgrade::MailReport "only-on-error";
+Unattended-Upgrade::MailReport "always";
 EOF
 
 # Enable automatic updates
