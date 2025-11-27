@@ -22,11 +22,3 @@ woothee = "0.13.0"
 tower = "0.5.2"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["fmt", "env-filter"] }
-
-[profile.release]
-# Enable link-time optimization for better runtime performance (slower compile)
-lto = true
-# Use single codegen unit for maximum optimization (slower compile, can't parallelize)
-codegen-units = 1
-# Remove debug symbols for smaller binary size (harder to debug production crashes)
-strip = true
