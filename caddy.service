@@ -1,5 +1,5 @@
-# Caddy systemd service for API-based configuration
-# https://caddyserver.com/docs/running
+# Based on official caddy.service
+# https://github.com/caddyserver/dist/blob/master/init/caddy.service
 [Unit]
 Description=Caddy
 Documentation=https://caddyserver.com/docs/
@@ -10,8 +10,8 @@ Requires=network-online.target
 Type=notify
 User=caddy
 Group=caddy
-ExecStart=/usr/bin/caddy run --environ --resume
-ExecReload=/usr/bin/caddy reload --force
+ExecStart=/usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force
 TimeoutStopSec=5s
 LimitNOFILE=1048576
 LimitNPROC=512

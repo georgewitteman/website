@@ -8,7 +8,7 @@ set -o xtrace
 WEBSITE_DIR="${HOME}/website"
 
 # Query Caddy API for current upstream
-active_port=$(curl -sf "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0/dial" | tr -d '"' | sed 's/localhost://')
+active_port=$(curl -sf "http://localhost:2019/config/apps/http/servers/srv0/routes/0/handle/0/routes/0/handle/1/upstreams/0/dial" | tr -d '"' | sed 's/localhost://')
 if [ -z "$active_port" ]; then
     echo "Could not determine current active port from Caddy API."
     exit 1
@@ -38,12 +38,9 @@ if ! curl --fail --silent --max-time 5 "http://localhost:${rollback_port}/" > /d
     exit 1
 fi
 
-# Load full config with updated upstream port via Caddy API
-sed "s/localhost:8080/localhost:${rollback_port}/" "${WEBSITE_DIR}/caddy.json" | \
-    curl -X POST \
-        -H "Content-Type: application/json" \
-        -d @- \
-        "http://localhost:2019/load"
+# Update Caddyfile with rollback port and reload
+sudo sed -i "s/localhost:[0-9]*/localhost:${rollback_port}/" /etc/caddy/Caddyfile
+sudo systemctl reload caddy
 
 echo "Rollback complete. Traffic now routing to $rollback_slot (port $rollback_port)"
 

@@ -1,0 +1,14 @@
+{
+	servers {
+		strict_sni_host
+	}
+}
+
+georgewitteman.com {
+	encode zstd gzip
+	reverse_proxy localhost:8080
+	log {
+		output stdout
+		format console
+	}
+}

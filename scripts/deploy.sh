@@ -26,12 +26,12 @@ if ! command -v caddy &> /dev/null; then
     sudo chown caddy:caddy /var/lib/caddy
 fi
 
-# Install Caddy systemd service (API-based configuration)
-sudo cp "${WEBSITE_DIR}/caddy-api.service" /etc/systemd/system/caddy.service
+# Install Caddy systemd service and config
+sudo cp "${WEBSITE_DIR}/caddy.service" /etc/systemd/system/caddy.service
 
 # Determine which slot to deploy to (blue=8080, green=8081)
 # Query Caddy API for current upstream, default to 8080 if Caddy not running yet
-active_port=$(curl -sf "http://localhost:2019/config/apps/http/servers/main/routes/0/handle/1/upstreams/0/dial" 2>/dev/null | tr -d '"' | sed 's/localhost://' || echo "8080")
+active_port=$(curl -sf "http://localhost:2019/config/apps/http/servers/srv0/routes/0/handle/0/routes/0/handle/1/upstreams/0/dial" 2>/dev/null | tr -d '"' | sed 's/localhost://' || echo "8080")
 
 if [ "$active_port" = "8080" ]; then
     deploy_slot="green"
@@ -117,20 +117,13 @@ if [ $attempt -gt $max_attempts ]; then
     exit 1
 fi
 
-# Ensure Caddy is running with API
-sudo systemctl enable caddy
-if ! sudo systemctl is-active --quiet caddy; then
-    sudo systemctl start caddy
-    sleep 2
-fi
+# Update Caddyfile with new port and reload
+sudo mkdir -p /etc/caddy
+sed "s/localhost:8080/localhost:${deploy_port}/" "${WEBSITE_DIR}/Caddyfile" | sudo tee /etc/caddy/Caddyfile > /dev/null
 
-# Load full config with updated upstream port via Caddy API
-# Using sed to update the port in caddy.json before loading
-sed "s/localhost:8080/localhost:${deploy_port}/" "${WEBSITE_DIR}/caddy.json" | \
-    curl -X POST \
-        -H "Content-Type: application/json" \
-        -d @- \
-        "http://localhost:2019/load"
+# Reload Caddy to switch traffic
+sudo systemctl enable caddy
+sudo systemctl reload-or-restart caddy
 
 echo "Deploy complete. Traffic now routing to $deploy_slot (port $deploy_port)"
 

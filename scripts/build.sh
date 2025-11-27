@@ -24,8 +24,8 @@ cp -r ./scripts "${tmp_dir}/scripts"
 cp -r ./static "${tmp_dir}/static"
 cp ./website-blue.service "${tmp_dir}/website-blue.service"
 cp ./website-green.service "${tmp_dir}/website-green.service"
-cp ./caddy-api.service "${tmp_dir}/caddy-api.service"
-cp ./caddy.json "${tmp_dir}/caddy.json"
+cp ./caddy.service "${tmp_dir}/caddy.service"
+cp ./Caddyfile "${tmp_dir}/Caddyfile"
 
 # Deploy
 ssh-keygen -t "$key_type" -f "$tmp_key_file" -N ""
