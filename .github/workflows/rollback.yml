@@ -13,6 +13,10 @@ jobs:
   rollback:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      EC2_INSTANCE_ID: i-095e542040fba92d3
+      EC2_REGION: us-west-2
+      EC2_USER: ubuntu
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -26,30 +30,4 @@ jobs:
           mask-aws-account-id: false
 
       - name: Rollback
-        run: |
-          key_type="ed25519"
-          tmp_key_dir="$(mktemp -d)"
-          tmp_key_file="${tmp_key_dir}/${key_type}"
-
-          cleanup() {
-              rm -rf "$tmp_key_dir"
-          }
-          trap cleanup EXIT
-
-          ssh-keygen -t "$key_type" -f "$tmp_key_file" -N ""
-          chmod 600 "$tmp_key_file"
-          instance_id="i-095e542040fba92d3"
-          instance_user="ubuntu"
-          instance_ip=$(aws ec2 describe-instances \
-              --region us-west-2 \
-              --instance-ids "$instance_id" \
-              --query 'Reservations[0].Instances[0].PublicIpAddress' \
-              --output text)
-
-          aws ec2-instance-connect send-ssh-public-key \
-              --region us-west-2 \
-              --instance-id "$instance_id" \
-              --instance-os-user "$instance_user" \
-              --ssh-public-key "file://${tmp_key_file}.pub"
-
-          ssh -o StrictHostKeyChecking=no -o "IdentitiesOnly=yes" -i "${tmp_key_file}" "${instance_user}@${instance_ip}" "/home/${instance_user}/website/scripts/rollback.sh"
+        run: ./scripts/rollback.sh

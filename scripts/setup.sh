@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 #
-# rollback.sh - Trigger rollback on EC2 from local machine
+# setup.sh - Provision a fresh EC2 instance from your local machine
 #
-# This script runs locally (or on GitHub Actions). It:
+# This script runs LOCALLY and:
 #   1. Connects to the EC2 instance via SSH (using EC2 Instance Connect)
-#   2. Runs server-rollback.sh on the server
+#   2. Copies the setup files to the server
+#   3. Runs server-setup.sh on the server
 #
 # Prerequisites:
 #   - AWS CLI configured with appropriate credentials
 #   - EC2_INSTANCE_ID environment variable set (or pass as argument)
 #
 # Usage:
-#   EC2_INSTANCE_ID=i-xxx ./scripts/rollback.sh
+#   EC2_INSTANCE_ID=i-xxx ./scripts/setup.sh
 #   # or
-#   ./scripts/rollback.sh i-xxx
+#   ./scripts/setup.sh i-xxx
 #
 
 set -o errexit
@@ -34,11 +35,11 @@ instance_region="${EC2_REGION:-us-west-2}"
 instance_user="${EC2_USER:-ubuntu}"
 
 echo ""
-echo "=== Rollback Configuration ==="
+echo "=== Setup Configuration ==="
 echo "Instance ID: $instance_id"
 echo "Region:      $instance_region"
 echo "User:        $instance_user"
-echo "==============================="
+echo "==========================="
 echo ""
 
 # Create temporary SSH key
@@ -76,7 +77,29 @@ aws ec2-instance-connect send-ssh-public-key \
     --instance-os-user "$instance_user" \
     --ssh-public-key "file://${tmp_key_file}.pub"
 
-# Run rollback on server
-ssh -o StrictHostKeyChecking=no -o "IdentitiesOnly=yes" -i "${tmp_key_file}" \
-    "${instance_user}@${instance_ip}" \
-    "/home/${instance_user}/website/scripts/server-rollback.sh"
+ssh_opts="-o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i ${tmp_key_file}"
+
+# Create website directory on server
+ssh $ssh_opts "${instance_user}@${instance_ip}" "mkdir -p /home/${instance_user}/website"
+
+# Copy setup files to server
+rsync --partial --progress --archive --verbose \
+    -e "ssh $ssh_opts" \
+    ./scripts/server-setup.sh \
+    ./caddy.service \
+    ./website-blue.service \
+    ./website-green.service \
+    ./Caddyfile \
+    "${instance_user}@${instance_ip}:/home/${instance_user}/website/"
+
+# Make scripts directory and move setup script
+ssh $ssh_opts "${instance_user}@${instance_ip}" "mkdir -p /home/${instance_user}/website/scripts && mv /home/${instance_user}/website/server-setup.sh /home/${instance_user}/website/scripts/"
+
+# Run setup on server
+ssh $ssh_opts "${instance_user}@${instance_ip}" "/home/${instance_user}/website/scripts/server-setup.sh"
+
+echo ""
+echo "=== Server Provisioning Complete ==="
+echo ""
+echo "The server is now ready for deployments."
+echo "Push to main branch or run ./scripts/build.sh to deploy."
