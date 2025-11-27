@@ -13,10 +13,10 @@
 # This script is idempotent - safe to run multiple times.
 #
 # Environment variables:
-#   SMTP_PASSWORD  - Required. Fastmail app password for email notifications.
+#   SMTP_PASSWORD - Required. Fastmail app password for email notifications.
 #
 # Usage (run locally via setup.sh):
-#   EC2_INSTANCE_ID=i-xxx SMTP_PASSWORD=xxx ./scripts/setup.sh
+#   SMTP_PASSWORD=xxx ./scripts/setup.sh
 #
 
 set -o errexit

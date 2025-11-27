@@ -18,7 +18,6 @@ jobs:
     timeout-minutes: 10
     env:
       CARGO_TERM_COLOR: always
-      EC2_INSTANCE_ID: i-095e542040fba92d3
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

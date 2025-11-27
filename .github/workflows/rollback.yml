@@ -13,10 +13,6 @@ jobs:
   rollback:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    env:
-      EC2_INSTANCE_ID: i-095e542040fba92d3
-      EC2_REGION: us-west-2
-      EC2_USER: ubuntu
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

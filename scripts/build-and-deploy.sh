@@ -11,11 +11,8 @@
 # Prerequisites:
 #   - AWS CLI configured with appropriate credentials
 #
-# Environment variables:
-#   EC2_INSTANCE_ID  - Required. The EC2 instance to deploy to.
-#
 # Usage:
-#   EC2_INSTANCE_ID=i-xxx ./scripts/build-and-deploy.sh
+#   ./scripts/build-and-deploy.sh
 #
 
 set -o errexit
@@ -23,12 +20,8 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-if [ -z "${EC2_INSTANCE_ID:-}" ]; then
-    echo "ERROR: EC2_INSTANCE_ID environment variable is required"
-    exit 1
-fi
-
-instance_id="$EC2_INSTANCE_ID"
+instance_id="i-0399e9f7faea4ef78"
+instance_ip="54.71.97.150"
 instance_region="us-west-2"
 instance_user="ubuntu"
 
@@ -57,12 +50,6 @@ cp ./Caddyfile "${tmp_dir}/Caddyfile"
 # Deploy
 ssh-keygen -t "$key_type" -f "$tmp_key_file" -N ""
 chmod 600 "$tmp_key_file"
-
-instance_ip=$(aws ec2 describe-instances \
-    --region "$instance_region" \
-    --instance-ids "$instance_id" \
-    --query 'Reservations[0].Instances[0].PublicIpAddress' \
-    --output text)
 
 aws ec2-instance-connect send-ssh-public-key \
     --region "$instance_region" \
