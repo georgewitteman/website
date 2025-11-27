@@ -8,9 +8,9 @@ Requires=network-online.target
 [Service]
 Type=simple
 Restart=always
-User=ec2-user
-WorkingDirectory=/home/ec2-user/website
-ExecStart=/home/ec2-user/website/website-green
+User=ubuntu
+WorkingDirectory=/home/ubuntu/website
+ExecStart=/home/ubuntu/website/website-green
 PrivateTmp=true
 ProtectSystem=full
 

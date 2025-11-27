@@ -11,7 +11,7 @@ ls -la "${WEBSITE_DIR}"
 
 # Install Caddy if not present
 if ! command -v caddy &> /dev/null; then
-    # Download and install Caddy binary directly (Amazon Linux 2023 compatible)
+    # Download and install Caddy binary directly (Ubuntu compatible)
     curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o /tmp/caddy
     chmod +x /tmp/caddy
     sudo mv /tmp/caddy /usr/bin/caddy

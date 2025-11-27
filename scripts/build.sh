@@ -30,10 +30,18 @@ cp ./Caddyfile "${tmp_dir}/Caddyfile"
 # Deploy
 ssh-keygen -t "$key_type" -f "$tmp_key_file" -N ""
 chmod 600 "$tmp_key_file"
+instance_id="i-095e542040fba92d3"
+instance_user="ubuntu"
+instance_ip=$(aws ec2 describe-instances \
+    --region us-west-2 \
+    --instance-ids "$instance_id" \
+    --query 'Reservations[0].Instances[0].PublicIpAddress' \
+    --output text)
+
 aws ec2-instance-connect send-ssh-public-key \
     --region us-west-2 \
-    --instance-id i-03e83beff21cbda7c \
-    --instance-os-user ec2-user \
+    --instance-id "$instance_id" \
+    --instance-os-user "$instance_user" \
     --ssh-public-key "file://${tmp_key_file}.pub"
 
 rsync --partial --progress --archive --verbose --delete \
@@ -41,6 +49,6 @@ rsync --partial --progress --archive --verbose --delete \
     --exclude='website-green' \
     -e "ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i \"${tmp_key_file}\"" \
     "$tmp_dir/." \
-    ec2-user@54.71.97.150:/home/ec2-user/website
+    "${instance_user}@${instance_ip}:/home/${instance_user}/website"
 
-ssh -o StrictHostKeyChecking=no -o "IdentitiesOnly=yes" -i "${tmp_key_file}" ec2-user@54.71.97.150 /home/ec2-user/website/scripts/deploy.sh
+ssh -o StrictHostKeyChecking=no -o "IdentitiesOnly=yes" -i "${tmp_key_file}" "${instance_user}@${instance_ip}" "/home/${instance_user}/website/scripts/deploy.sh"
