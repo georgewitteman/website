@@ -1,6 +1,7 @@
 {
   "name": "website-e2e",
   "private": true,
+  "type": "module",
   "scripts": {
     "typecheck": "tsc",
     "test:e2e": "playwright test",
@@ -8,6 +9,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "@tsconfig/node-ts": "^23.6.2",
     "@tsconfig/node24": "^24.0.3",
     "@types/node": "^24.10.1",
     "typescript": "^5.8.3"

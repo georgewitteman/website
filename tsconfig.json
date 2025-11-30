@@ -1,5 +1,9 @@
 {
-  "extends": "@tsconfig/node24/tsconfig.json",
+  "extends": [
+    "@tsconfig/node24/tsconfig.json",
+    // https://nodejs.org/api/typescript.html#type-stripping
+    "@tsconfig/node-ts/tsconfig.json"
+  ],
   "compilerOptions": {
     "noEmit": true
   }
