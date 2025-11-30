@@ -23,7 +23,8 @@
         "coolbear.systemd-unit-file",
         "matthewpi.caddyfile-support",
         "ms-playwright.playwright",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+        "samuelcolvin.jinjahtml"
       ]
     }
   }
