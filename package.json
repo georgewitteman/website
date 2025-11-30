@@ -2,11 +2,14 @@
   "name": "website-e2e",
   "private": true,
   "scripts": {
+    "typecheck": "tsc",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0",
-    "@types/node": "^22.10.0"
+    "@playwright/test": "^1.57.0",
+    "@tsconfig/node24": "^24.0.3",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.8.3"
   }
 }
