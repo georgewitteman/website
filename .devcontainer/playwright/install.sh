@@ -1,5 +1,4 @@
 #!/bin/bash
 set -e
-# Install Playwright system dependencies and Chromium browser
-npx playwright install-deps chromium
-npx playwright install chromium
+# Install Playwright system dependencies and browsers
+npx playwright install --with-deps

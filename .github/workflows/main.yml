@@ -69,7 +69,7 @@ jobs:
         run: npm run format:check
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps
 
       - name: Run e2e tests
         run: npm run test:e2e
