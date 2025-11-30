@@ -8,7 +8,8 @@
       "dockerDashComposeVersion": "v2",
       "moby": false
     },
-    "ghcr.io/devcontainers/features/node:1": {}
+    "ghcr.io/devcontainers/features/node:1": {},
+    "./playwright": {}
   },
   "updateContentCommand": {
     "hooks-setup": [
@@ -29,7 +30,8 @@
         "rust-lang.rust-analyzer",
         "GitHub.vscode-github-actions",
         "coolbear.systemd-unit-file",
-        "matthewpi.caddyfile-support"
+        "matthewpi.caddyfile-support",
+        "ms-playwright.playwright"
       ]
     }
   }

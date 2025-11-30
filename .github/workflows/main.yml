@@ -54,5 +54,20 @@ jobs:
       - name: Run tests
         run: cargo test
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
       - name: Deploy
         run: ./scripts/build-and-deploy.sh

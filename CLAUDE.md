@@ -19,6 +19,10 @@ cargo test <test_name>             # Run a specific test
 cargo fmt --check                  # Check formatting
 cargo clippy -- -D warnings        # Run linter (warnings are errors in CI)
 
+# E2E tests (Playwright)
+npm run test:e2e                   # Run e2e tests (starts server automatically)
+npm run test:e2e:ui                # Run e2e tests with UI mode
+
 # Build
 cargo build --release --target x86_64-unknown-linux-gnu   # Production build for deployment
 
