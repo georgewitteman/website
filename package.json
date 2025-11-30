@@ -1,7 +1,18 @@
 {
   "name": "website-e2e",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": ">=11"
+    }
+  },
   "scripts": {
     "typecheck": "tsc",
     "format": "prettier --write .",
