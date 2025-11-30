@@ -3,7 +3,9 @@ export function decodeQuotedPrintable(encodedString) {
   // replace equals sign at end-of-line with nothing
   const normalizedWithNewlinesFixed = normalized.replace(/=\n/g, "");
   // Replace "=" followed by two hexadecimal characters with the corresponding ASCII character
-  return normalizedWithNewlinesFixed.replace(/=([0-9A-F]{2})/g, (match, p1) => String.fromCharCode(parseInt(p1, 16)));
+  return normalizedWithNewlinesFixed.replace(/=([0-9A-F]{2})/g, (match, p1) =>
+    String.fromCharCode(parseInt(p1, 16)),
+  );
 }
 
 const form = document.getElementById("form");

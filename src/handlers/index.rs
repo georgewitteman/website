@@ -6,7 +6,7 @@ use axum::extract::OriginalUri;
 use axum::response::{IntoResponse, Response};
 
 #[derive(Template, WebTemplate)]
-#[template(path = "index.html")]
+#[template(path = "index.html.jinja")]
 struct IndexTemplate {
     path: String,
 }

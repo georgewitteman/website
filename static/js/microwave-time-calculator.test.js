@@ -1,4 +1,7 @@
-import { secondsToMinsSecs, valueOrDefault } from "./microwave-time-calculator.js";
+import {
+  secondsToMinsSecs,
+  valueOrDefault,
+} from "./microwave-time-calculator.js";
 
 describe("secondsToMinsSecs", () => {
   [
@@ -10,33 +13,20 @@ describe("secondsToMinsSecs", () => {
   ].forEach(([input, expected]) => {
     it(`should convert ${input} to ${expected.minutes}m, ${expected.seconds}s`, () => {
       expect(secondsToMinsSecs(input)).toEqual(expected);
-    })
-  })
-})
+    });
+  });
+});
 
 describe("valueOrDefault", () => {
-  [
-    0,
-    999,
-    Number.MAX_SAFE_INTEGER,
-  ].forEach((input) => {
+  [0, 999, Number.MAX_SAFE_INTEGER].forEach((input) => {
     it(`should use the value for ${input}`, () => {
       expect(valueOrDefault(input, 1234)).toEqual(input);
-    })
+    });
   });
 
-  [
-    "abc",
-    "",
-    "0",
-    "a.1",
-    true,
-    false,
-    NaN,
-    null,
-  ].forEach((input) => {
+  ["abc", "", "0", "a.1", true, false, NaN, null].forEach((input) => {
     it(`should use defaults for ${String(input)}`, () => {
       expect(valueOrDefault(input, 1234)).toEqual(1234);
-    })
-  })
-})
+    });
+  });
+});

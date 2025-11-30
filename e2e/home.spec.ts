@@ -10,7 +10,7 @@ test.describe("Home page", () => {
     await page.goto("/");
     await expect(page.locator('a[href="/icloud-private-relay"]')).toBeVisible();
     await expect(
-      page.locator('a[href="/microwave-time-calculator.html"]')
+      page.locator('a[href="/microwave-time-calculator.html"]'),
     ).toBeVisible();
   });
 });

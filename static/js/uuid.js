@@ -5,4 +5,4 @@ element.addEventListener("click", () => {
   range.selectNodeContents(element);
   selection.removeAllRanges();
   selection.addRange(range);
-})
+});

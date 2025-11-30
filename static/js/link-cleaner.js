@@ -31,7 +31,7 @@ pasteUrlElement.addEventListener("click", () => {
       new Event("input", {
         bubbles: true,
         cancelable: true,
-      })
+      }),
     );
     longUrlElement.focus();
     if (longUrlElement instanceof HTMLInputElement) {
@@ -47,13 +47,13 @@ pasteCopyUrlElement.addEventListener("click", () => {
       new Event("input", {
         bubbles: true,
         cancelable: true,
-      })
+      }),
     );
     formElement.dispatchEvent(
       new Event("submit", {
         bubbles: true,
         cancelable: true,
-      })
+      }),
     );
   });
 });
@@ -195,7 +195,7 @@ function onInput() {
   const url = safeUrlParse(longUrlElement.value);
   if (!url) {
     shortUrlElement.innerText = "";
-    copyShortUrl.classList.add("hidden")
+    copyShortUrl.classList.add("hidden");
     return;
   }
 

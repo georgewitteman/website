@@ -8,3 +8,4 @@ cargo fmt --check
 caddy fmt --diff Caddyfile
 caddy validate --config Caddyfile --adapter caddyfile
 npm run typecheck
+npm run format:check

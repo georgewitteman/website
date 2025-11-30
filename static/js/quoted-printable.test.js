@@ -1,8 +1,8 @@
 import { decodeQuotedPrintable } from "./quoted-printable.js";
 
 describe("decodeQuotedPrintable", () => {
-    it("should convert an encoded string to a normal string", () => {
-        const input = `<html xmlns:v=3D"urn:schemas-microsoft-com:vml">
+  it("should convert an encoded string to a normal string", () => {
+    const input = `<html xmlns:v=3D"urn:schemas-microsoft-com:vml">
 <head>
 <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1.=
 0">
@@ -23,7 +23,7 @@ span.yshortcuts:focus {color:#333366; background-color:none; border:none;}
 utm_medium=3Demail&utm_content=3Deagle-logo&utm_campaign=3Dtrackingnotify">
       <img style=3D"min-width: 0;" src=3D"https://www.usps.com/email-templa=
 te/tracking/tracking-email-logo.png" alt=3D"USPS Logo" />`;
-        const expected = `<html xmlns:v="urn:schemas-microsoft-com:vml">
+    const expected = `<html xmlns:v="urn:schemas-microsoft-com:vml">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -40,7 +40,7 @@ span.yshortcuts:focus {color:#333366; background-color:none; border:none;}
 <body style="padding:0;margin:0;min-width:100%;max-width:100%;">
 <table width="100%">
       <a border='0' href="https://www.usps.com/?utm_source=delivered&utm_medium=email&utm_content=eagle-logo&utm_campaign=trackingnotify">
-      <img style="min-width: 0;" src="https://www.usps.com/email-template/tracking/tracking-email-logo.png" alt="USPS Logo" />`
-        expect(decodeQuotedPrintable(input)).toEqual(expected);
-    })
-})
+      <img style="min-width: 0;" src="https://www.usps.com/email-template/tracking/tracking-email-logo.png" alt="USPS Logo" />`;
+    expect(decodeQuotedPrintable(input)).toEqual(expected);
+  });
+});

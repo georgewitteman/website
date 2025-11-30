@@ -1,4 +1,7 @@
-import { secondsToMinsSecs, valueOrDefault } from "/js/microwave-time-calculator.js";
+import {
+  secondsToMinsSecs,
+  valueOrDefault,
+} from "/js/microwave-time-calculator.js";
 
 document.querySelector("#reset-form").addEventListener("submit", (e) => {
   e.preventDefault();

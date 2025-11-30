@@ -67,7 +67,7 @@ test.describe("Microwave Time Calculator", () => {
 
   test("loads values from URL parameters", async ({ page }) => {
     await page.goto(
-      "/microwave-time-calculator.html?box_wattage=1000&your_wattage=800"
+      "/microwave-time-calculator.html?box_wattage=1000&your_wattage=800",
     );
 
     await expect(page.locator("#box_wattage")).toHaveValue("1000");

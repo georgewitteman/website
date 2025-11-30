@@ -49,6 +49,7 @@ cargo build --release --target x86_64-unknown-linux-gnu   # Production build for
 ### Deployment
 
 Blue-green deployment on EC2:
+
 - `website-blue.service` / `website-green.service` - Systemd units for each slot
 - Caddy handles HTTPS termination and proxies to the active slot
 - `scripts/server-deploy.sh` runs on EC2 to swap slots atomically

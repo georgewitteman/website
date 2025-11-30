@@ -1,11 +1,11 @@
-{% extends "layout.html" %}
+{% extends "layout.html.jinja" %}
 
 {% block title %}Random UUID - {% call super() %}{% endblock %}
 
 {% block head %}
-<script type="module" src="/js/uuid.js"></script>
+  <script type="module" src="/js/uuid.js"></script>
 {% endblock %}
 
 {% block content %}
-<code id="code">{{ value }}</code>
+  <code id="code">{{ value }}</code>
 {% endblock %}

@@ -12,17 +12,8 @@
     "./playwright": {}
   },
   "updateContentCommand": {
-    "hooks-setup": [
-      "git",
-      "config",
-      "core.hooksPath",
-      ".hooks"
-    ],
-    "cargo-watch": [
-      "cargo",
-      "install",
-      "cargo-watch"
-    ]
+    "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"],
+    "cargo-watch": ["cargo", "install", "cargo-watch"]
   },
   "customizations": {
     "vscode": {
@@ -31,7 +22,8 @@
         "GitHub.vscode-github-actions",
         "coolbear.systemd-unit-file",
         "matthewpi.caddyfile-support",
-        "ms-playwright.playwright"
+        "ms-playwright.playwright",
+        "esbenp.prettier-vscode"
       ]
     }
   }

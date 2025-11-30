@@ -2,10 +2,10 @@
  * @param {number} seconds
  */
 export function secondsToMinsSecs(seconds) {
-    return {
-        minutes: Math.floor(seconds / 60),
-        seconds: Math.round(seconds % 60),
-    };
+  return {
+    minutes: Math.floor(seconds / 60),
+    seconds: Math.round(seconds % 60),
+  };
 }
 
 /**
@@ -13,5 +13,5 @@ export function secondsToMinsSecs(seconds) {
  * @param {number} nanValue
  */
 export function valueOrDefault(value, nanValue) {
-    return typeof value !== "number" || Number.isNaN(value) ? nanValue : value;
+  return typeof value !== "number" || Number.isNaN(value) ? nanValue : value;
 }

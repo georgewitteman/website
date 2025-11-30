@@ -9,9 +9,11 @@ test.describe("Link Cleaner", () => {
   test("cleans UTM parameters from URL", async ({ page }) => {
     await page.goto("/link-cleaner.html");
 
-    await page.locator("#long_url").fill(
-      "https://example.com/page?utm_source=twitter&utm_medium=social&id=123"
-    );
+    await page
+      .locator("#long_url")
+      .fill(
+        "https://example.com/page?utm_source=twitter&utm_medium=social&id=123",
+      );
 
     const shortUrl = page.locator("#short_url a");
     await expect(shortUrl).toHaveText("https://example.com/page?id=123");
@@ -20,22 +22,22 @@ test.describe("Link Cleaner", () => {
   test("cleans Amazon URLs to short format", async ({ page }) => {
     await page.goto("/link-cleaner.html");
 
-    await page.locator("#long_url").fill(
-      "https://www.amazon.com/Some-Product-Name/dp/B08N5WRWNW/ref=sr_1_1?keywords=test"
-    );
+    await page
+      .locator("#long_url")
+      .fill(
+        "https://www.amazon.com/Some-Product-Name/dp/B08N5WRWNW/ref=sr_1_1?keywords=test",
+      );
 
     const shortUrl = page.locator("#short_url a");
-    await expect(shortUrl).toHaveText(
-      "https://www.amazon.com/dp/B08N5WRWNW"
-    );
+    await expect(shortUrl).toHaveText("https://www.amazon.com/dp/B08N5WRWNW");
   });
 
   test("cleans Google search URLs", async ({ page }) => {
     await page.goto("/link-cleaner.html");
 
-    await page.locator("#long_url").fill(
-      "https://www.google.com/search?q=test+query&source=hp&ei=abc123"
-    );
+    await page
+      .locator("#long_url")
+      .fill("https://www.google.com/search?q=test+query&source=hp&ei=abc123");
 
     const shortUrl = page.locator("#short_url a");
     await expect(shortUrl).toHaveText("https://google.com/search?q=test+query");
@@ -84,9 +86,9 @@ test.describe("Link Cleaner", () => {
   test("cleans fbclid parameter", async ({ page }) => {
     await page.goto("/link-cleaner.html");
 
-    await page.locator("#long_url").fill(
-      "https://example.com/article?fbclid=abc123&title=test"
-    );
+    await page
+      .locator("#long_url")
+      .fill("https://example.com/article?fbclid=abc123&title=test");
 
     const shortUrl = page.locator("#short_url a");
     await expect(shortUrl).toHaveText("https://example.com/article?title=test");

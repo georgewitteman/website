@@ -9,7 +9,7 @@ use axum::response::{IntoResponse, Response};
 use crate::helpers::requested_html;
 
 #[derive(Template, WebTemplate)]
-#[template(path = "uuid.html")]
+#[template(path = "uuid.html.jinja")]
 struct UuidTemplate {
     path: String,
     value: String,

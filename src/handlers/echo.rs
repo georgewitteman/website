@@ -16,7 +16,7 @@ use crate::extractors::{get_real_ip, get_real_proto};
 use crate::helpers::{get_user_agent, pretty_multimap, requested_html};
 
 #[derive(Template, WebTemplate)]
-#[template(path = "echo.html")]
+#[template(path = "echo.html.jinja")]
 struct EchoTemplate {
     path: String,
     value: String,
