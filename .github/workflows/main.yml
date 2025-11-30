@@ -4,35 +4,18 @@ name: main
   workflow_dispatch:
   push: { branches: [main] }
 
-concurrency:
-  group: deploy
-  cancel-in-progress: false
-
 permissions:
-  # This is required for requesting the JWT for OIDC
-  id-token: write
-  # Required for actions/checkout
   contents: read
-  # Required to leave a comment on a pull request
-  pull-requests: write
 
 jobs:
-  deploy:
+  lint:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     env:
       CARGO_TERM_COLOR: always
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v5
-        with:
-          # https://github.com/georgewitteman/terraform/blob/main/aws_iam.tf
-          role-to-assume: arn:aws:iam::866631827662:role/GitHubActionsOIDC
-          aws-region: us-west-2
-          mask-aws-account-id: false
 
       # https://github.com/rust-lang/rust-analyzer/blob/935883fd826c46e7e7e6de19cf24377c21f1b2ba/.github/workflows/ci.yaml#L63-L67
       - name: Install Rust toolchain
@@ -45,14 +28,11 @@ jobs:
       - name: Cache Build
         uses: Swatinem/rust-cache@v2
 
-      - name: Check formatting
+      - name: Check Rust formatting
         run: cargo fmt --check
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
-
-      - name: Run tests
-        run: cargo test
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -68,6 +48,35 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        run: |
+          rustup update --no-self-update stable
+          rustup default stable
+          rustup show
+
+      - name: Cache Build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Rust tests
+        run: cargo test
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: "package.json"
+
+      - name: Install npm dependencies
+        run: npm ci
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
@@ -80,6 +89,41 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+  deploy:
+    needs: [lint, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://georgewitteman.com
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          # https://github.com/georgewitteman/terraform/blob/main/aws_iam.tf
+          role-to-assume: arn:aws:iam::866631827662:role/GitHubActionsOIDC
+          aws-region: us-west-2
+          mask-aws-account-id: false
+
+      - name: Install Rust toolchain
+        run: |
+          rustup update --no-self-update stable
+          rustup default stable
+          rustup target add x86_64-unknown-linux-gnu
+          rustup show
+
+      - name: Cache Build
+        uses: Swatinem/rust-cache@v2
 
       - name: Deploy
         run: ./scripts/build-and-deploy.sh
