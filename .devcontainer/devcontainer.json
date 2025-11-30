@@ -1,13 +1,14 @@
 {
   "image": "mcr.microsoft.com/devcontainers/rust:2-1-trixie",
   "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
+    "ghcr.io/devcontainers-extra/features/caddy:1": {},
     "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {
       "dockerDashComposeVersion": "v2",
       "moby": false
     },
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
-    "ghcr.io/devcontainers-extra/features/caddy:1": {}
+    "ghcr.io/devcontainers/features/node:1": {}
   },
   "updateContentCommand": {
     "hooks-setup": [
