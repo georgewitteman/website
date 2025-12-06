@@ -201,6 +201,14 @@ function onInput() {
 
   const shortUrl = cleanUrl(url);
 
+  // Validate shortUrl scheme before embedding
+  if (!/^https?:\/\//.test(shortUrl)) {
+    // Invalid or dangerous scheme - don't show a link.
+    shortUrlElement.innerText = "";
+    copyShortUrl.classList.add("hidden");
+    return;
+  }
+
   const shortLinkElement = document.createElement("a");
   shortLinkElement.setAttribute("href", shortUrl);
   shortLinkElement.setAttribute("target", "_blank");
