@@ -33,7 +33,7 @@ formElement.addEventListener("input", function () {
     throw new Error("invalid type");
   }
   const email = emailInputElement.value;
-  // Basic email validation: update the regex as needed for your use case.
+  // Validate the email to prevent potential XSS
   const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
   if (!email || !emailPattern.test(email)) {
     gmailOutputElement.value = "";
