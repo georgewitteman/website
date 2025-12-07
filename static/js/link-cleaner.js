@@ -152,7 +152,7 @@ function cleanUrl(url) {
   }
   const googleUrl = cleanGoogleSearchUrl(url);
   if (googleUrl) {
-    return googleUrl;
+    return googleUrl.href;
   }
   // We can't iterate directly over url.searchParams.keys() while deleting because modifying the
   // URLSearchParams object during iteration would invalidate the iterator. To avoid this, we
@@ -192,8 +192,11 @@ function onInput() {
   if (!(longUrlElement instanceof HTMLInputElement)) {
     throw new Error("Invalid type");
   }
+
+  // Parse and validate the input scheme before embedding to prevent possible XSS attacks.
   const url = safeUrlParse(longUrlElement.value);
-  if (!url) {
+  if (!url || (url.protocol !== "http:" && url.protocol !== "https:")) {
+    // Invalid or dangerous URL/scheme - don't show a link.
     shortUrlElement.innerText = "";
     copyShortUrl.classList.add("hidden");
     return;
@@ -201,21 +204,12 @@ function onInput() {
 
   const shortUrl = cleanUrl(url);
 
-  // Validate shortUrl scheme before embedding
-  if (!/^https?:\/\//.test(shortUrl)) {
-    // Invalid or dangerous scheme - don't show a link.
-    shortUrlElement.innerText = "";
-    copyShortUrl.classList.add("hidden");
-    return;
-  }
-
   const shortLinkElement = document.createElement("a");
   shortLinkElement.setAttribute("href", shortUrl);
   shortLinkElement.setAttribute("target", "_blank");
   shortLinkElement.innerText = shortUrl;
 
   shortUrlElement.replaceChildren(shortLinkElement);
-
   copyShortUrl.classList.remove("hidden");
 }
 
