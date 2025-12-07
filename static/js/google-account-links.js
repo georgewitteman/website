@@ -34,7 +34,8 @@ formElement.addEventListener("input", function () {
   }
   const email = emailInputElement.value;
   // Validate the email to prevent potential XSS
-  const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  const emailPattern =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
   if (!email || !emailPattern.test(email)) {
     gmailOutputElement.value = "";
     googleDriveOutputElement.value = "";
