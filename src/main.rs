@@ -19,7 +19,7 @@ async fn main() -> std::io::Result<()> {
     // Configure log level from RUST_LOG, with a fallback
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    fmt().with_env_filter(filter).init();
+    fmt().with_env_filter(filter).compact().init();
     tracing::info!("Starting server");
 
     let config = get_config();
