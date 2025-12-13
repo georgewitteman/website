@@ -1,0 +1,94 @@
+{% extends "layout.html.jinja" %}
+
+{% block title %}Microwave Time Calculator - {% call super() %}{% endblock %}
+
+{% block content %}
+  <h2>Microwave Time Calculator</h2>
+
+  <p>
+    This calculates the best microwave settings to use based on your microwave.
+    It first tries to match the intended wattage based on the power setting on
+    the box. Using that wattage, it then calculates the time that will cook the
+    food most similarly to the box settings.
+  </p>
+
+  <p>
+    The URL is also updated, so you can create a bookmark with your microwave
+    settings for easy use.
+  </p>
+
+  <form method="get" action="/microwave">
+    <div>
+      <label for="bw">Box Wattage</label><br />
+      <input
+        type="number"
+        name="bw"
+        id="bw"
+        value="{{ box_wattage }}"
+        step="50"
+        min="0"
+        max="1500"
+      />
+    </div>
+
+    <div>
+      <label for="bm">Box Time</label><br />
+      <input
+        type="number"
+        name="bm"
+        id="bm"
+        value="{{ box_minutes }}"
+        min="0"
+        max="60"
+      />
+      <span>mins</span>
+      <input
+        type="number"
+        name="bs"
+        id="bs"
+        value="{{ box_seconds }}"
+        step="5"
+        min="0"
+        max="600"
+      />
+      <span>secs</span>
+    </div>
+
+    <div>
+      <label for="bp">Box Power (1-10)</label><br />
+      <input
+        type="number"
+        name="bp"
+        id="bp"
+        value="{{ box_power }}"
+        min="1"
+        max="10"
+      />
+    </div>
+
+    <div>
+      <label for="w">Your Wattage</label><br />
+      <input
+        type="number"
+        name="w"
+        id="w"
+        value="{{ your_wattage }}"
+        step="25"
+        min="0"
+        max="10000"
+      />
+    </div>
+
+    <div>
+      <button type="submit">Calculate</button>
+      <a href="/microwave">Reset</a>
+    </div>
+
+    {% if let Some(r) = result %}
+      <p>
+        <strong>Your Time:</strong> {{ r.minutes }} min {{ r.seconds }} sec
+        (Power: {{ r.power }})
+      </p>
+    {% endif %}
+  </form>
+{% endblock %}

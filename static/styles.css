@@ -140,7 +140,8 @@ body {
 }
 
 .header-nav-li {
-  display: block;
+  display: flex;
+  align-items: center;
 }
 
 .header-nav-link {

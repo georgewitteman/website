@@ -16,6 +16,16 @@ test.describe("Navigation", () => {
     );
   });
 
+  test("Microwave link has active class on Microwave page", async ({
+    page,
+  }) => {
+    await page.goto("/microwave");
+    const microwaveLink = page.locator('nav a[href="/microwave"]');
+    await expect(microwaveLink).toHaveClass(
+      "header-nav-link header-nav-link-active",
+    );
+  });
+
   test("UUID link does not have active class on other pages", async ({
     page,
   }) => {
@@ -30,5 +40,13 @@ test.describe("Navigation", () => {
     await page.goto("/uuid");
     const echoLink = page.locator('a[href="/echo"]');
     await expect(echoLink).toHaveClass("header-nav-link ");
+  });
+
+  test("Microwave link does not have active class on other pages", async ({
+    page,
+  }) => {
+    await page.goto("/uuid");
+    const microwaveLink = page.locator('nav a[href="/microwave"]');
+    await expect(microwaveLink).toHaveClass("header-nav-link ");
   });
 });

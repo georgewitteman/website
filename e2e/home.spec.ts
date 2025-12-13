@@ -9,8 +9,6 @@ test.describe("Home page", () => {
   test("contains navigation links", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator('a[href="/icloud-private-relay"]')).toBeVisible();
-    await expect(
-      page.locator('a[href="/microwave-time-calculator.html"]'),
-    ).toBeVisible();
+    await expect(page.locator('nav a[href="/microwave"]')).toBeVisible();
   });
 });
