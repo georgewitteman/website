@@ -15,7 +15,7 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # https://github.com/rust-lang/rust-analyzer/blob/935883fd826c46e7e7e6de19cf24377c21f1b2ba/.github/workflows/ci.yaml#L63-L67
       - name: Install Rust toolchain
@@ -55,7 +55,7 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         run: |
@@ -105,7 +105,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
