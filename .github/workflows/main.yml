@@ -35,7 +35,7 @@ jobs:
         run: cargo clippy -- -D warnings
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: "package.json"
 
@@ -70,7 +70,7 @@ jobs:
         run: cargo test
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: "package.json"
 
