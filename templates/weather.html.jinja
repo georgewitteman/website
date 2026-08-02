@@ -409,6 +409,12 @@
           degrees genuinely changes what goes on, and widest at the ends, where
           everything is just very cold or very hot.
         </p>
+        <p>
+          The temperatures below are <strong>felt</strong> temperatures &mdash;
+          what the air does to a person standing in it, wind and humidity and
+          sun included. They are not air temperatures, and on a windy or sunny
+          day the two are a long way apart.
+        </p>
         <ul class="weather-key-list">
           {% for step in key %}
             <li class="weather-key-item">
@@ -416,7 +422,10 @@
                 >{{ step.level }}</span
               >
               <span
-                >{{ step.label }} &middot; about {{ step.degrees }}&deg;</span
+                >{{ step.word }} &mdash; {{ step.advice }}
+                <span class="weather-key-degrees"
+                  >felt {{ step.degrees }}&deg;</span
+                ></span
               >
             </li>
           {% endfor %}

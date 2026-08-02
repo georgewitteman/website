@@ -260,7 +260,7 @@ impl<'a> Modelled<'a> {
         Probe {
             level: score.level(),
             score: score.to_string(),
-            label: score.label().to_owned(),
+            label: score.label(),
             degrees: felt.round_fahrenheit(),
             hour_label: hour_label(self.hour),
             air_f: self.raw.air.round_fahrenheit(),
@@ -612,7 +612,9 @@ struct Alternate {
 /// One row of the printed scale key.
 struct KeyStep {
     level: u8,
-    label: &'static str,
+    word: &'static str,
+    advice: &'static str,
+    /// The felt temperature that lands on this point, not the air temperature.
     degrees: i32,
 }
 
@@ -787,16 +789,17 @@ fn verdict(today: &Extremes, peak: Score, peak_hour: &str, sunset_label: &str) -
     let low = today.min_shade_score;
 
     let mut sentences = vec![format!(
-        "Dress for {typical} \u{2014} {} ({}\u{b0}).",
-        typical.label(),
-        today.typical.round_fahrenheit()
+        "Dress for {typical} \u{2014} {} at {}\u{b0}: {}.",
+        typical.word(),
+        today.typical.round_fahrenheit(),
+        typical.advice()
     )];
 
     // Only worth a sentence when the peak lands somewhere else on the scale.
     if peak.value() - typical.value() >= 0.4 {
         sentences.push(format!(
             "Around {peak_hour}, out in the open, it reaches {peak} \u{2014} {}.",
-            peak.label()
+            peak.word()
         ));
     }
 
@@ -1079,9 +1082,10 @@ pub async fn weather(OriginalUri(uri): OriginalUri, Query(query): Query<WeatherQ
         error,
         key: scale::key()
             .into_iter()
-            .map(|(level, label, degrees)| KeyStep {
+            .map(|(level, word, advice, degrees)| KeyStep {
                 level,
-                label,
+                word,
+                advice,
                 degrees,
             })
             .collect(),

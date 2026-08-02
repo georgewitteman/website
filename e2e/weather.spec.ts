@@ -58,8 +58,11 @@ test.describe("Weather", () => {
   });
 
   test("the tooltip can be dismissed again", async ({ page }) => {
-    // On a touch screen there is no way to un-hover, so an opened tooltip that
-    // cannot be closed covers the page it is explaining.
+    // On a touch screen there is no way to un-hover, so a tooltip that opens
+    // on tap and cannot be closed sits on top of the page it is explaining.
+    // The pointer is parked away from the trigger between steps because on a
+    // hover-capable browser :hover is a second, independent reason to show it
+    // -- there, moving the mouse off is itself the dismissal.
     await page.goto("/weather");
     const trigger = page
       .locator(".weather-hero .weather-probe-trigger")
@@ -68,17 +71,21 @@ test.describe("Weather", () => {
 
     await trigger.click();
     await expect(tip).toBeVisible();
+
     await trigger.click(); // tapping the same score again closes it
+    await page.mouse.move(0, 0);
     await expect(tip).toBeHidden();
 
     await trigger.click();
     await expect(tip).toBeVisible();
     await page.locator(".weather-place-name").click(); // tapping elsewhere
+    await page.mouse.move(0, 0);
     await expect(tip).toBeHidden();
 
     await trigger.click();
     await expect(tip).toBeVisible();
     await page.keyboard.press("Escape");
+    await page.mouse.move(0, 0);
     await expect(tip).toBeHidden();
   });
 

@@ -57,19 +57,23 @@ const ANCHORS: [(f64, f64); 11] = [
     (110.0, 10.0),
 ];
 
-/// What each whole point means, indexed by the rounded score.
-const LABELS: [&str; 11] = [
-    "dangerous cold, do not go out",
-    "extremely cold, heavy coats",
-    "cold, warm jacket and pants",
-    "cold but tolerable",
-    "cool, light jacket",
-    "perfect",
-    "cool, but the jacket can come off",
-    "warming up, jeans and a t-shirt",
-    "warm, shorts if you like",
-    "hot, shorts and a t-shirt",
-    "dangerous heat, do not go out",
+/// `(what it feels like, what to wear)` for each whole point.
+///
+/// Every sensation word appears exactly once, so the word alone identifies the
+/// point, and every garment line differs from its neighbours' — otherwise two
+/// adjacent scores give the same instruction and the resolution is fictional.
+const LABELS: [(&str, &str); 11] = [
+    ("dangerous cold", "don't go out"),
+    ("brutal", "heavy coat, hat and gloves"),
+    ("freezing", "winter coat over warm layers"),
+    ("cold", "proper jacket, long sleeves"),
+    ("chilly", "light jacket, staying on"),
+    ("ideal", "light jacket"),
+    ("mild", "light jacket you'll take off"),
+    ("pleasant", "t-shirt and jeans"),
+    ("warm", "t-shirt, shorts if you like"),
+    ("hot", "shorts and a t-shirt, find shade"),
+    ("dangerous heat", "don't go out"),
 ];
 
 /// A point on the comfort scale, 0 through 10.
@@ -81,9 +85,19 @@ impl Score {
         self.0
     }
 
-    /// The description of the nearest whole point.
-    pub fn label(self) -> &'static str {
-        LABELS[self.level() as usize]
+    /// What the nearest whole point feels like, in one word.
+    pub fn word(self) -> &'static str {
+        LABELS[self.level() as usize].0
+    }
+
+    /// What to wear at the nearest whole point.
+    pub fn advice(self) -> &'static str {
+        LABELS[self.level() as usize].1
+    }
+
+    /// Both together, for a caption that has room for them.
+    pub fn label(self) -> String {
+        format!("{} \u{2014} {}", self.word(), self.advice())
     }
 
     /// The nearest whole point, which is also the colour band this score sits
@@ -111,11 +125,14 @@ impl fmt::Display for Score {
 
 /// The whole scale, for the key printed on the page. Without it the colours
 /// and the numbers are both undecodable.
-pub fn key() -> Vec<(u8, &'static str, i32)> {
+pub fn key() -> Vec<(u8, &'static str, &'static str, i32)> {
     ANCHORS
         .iter()
         .enumerate()
-        .map(|(level, (degrees, _))| (level as u8, LABELS[level], *degrees as i32))
+        .map(|(level, (degrees, _))| {
+            let (word, advice) = LABELS[level];
+            (level as u8, word, advice, *degrees as i32)
+        })
         .collect()
 }
 
@@ -160,7 +177,8 @@ mod tests {
 
     #[test]
     fn five_is_the_weather_this_site_is_calibrated_for() {
-        assert_eq!(at(60.0).label(), "perfect");
+        assert_eq!(at(60.0).word(), "ideal");
+        assert_eq!(at(60.0).advice(), "light jacket");
         assert_eq!(format!("{}", at(60.0)), "5.0");
     }
 
@@ -216,18 +234,36 @@ mod tests {
 
     #[test]
     fn labels_describe_what_to_wear_at_each_point() {
-        assert_eq!(at(10.0).label(), "extremely cold, heavy coats");
-        assert_eq!(at(54.0).label(), "cool, light jacket");
-        assert_eq!(at(72.0).label(), "warming up, jeans and a t-shirt");
-        assert_eq!(at(88.0).label(), "hot, shorts and a t-shirt");
-        assert_eq!(at(110.0).label(), "dangerous heat, do not go out");
+        assert_eq!(at(10.0).word(), "brutal");
+        assert_eq!(at(54.0).advice(), "light jacket, staying on");
+        assert_eq!(at(72.0).advice(), "t-shirt and jeans");
+        assert_eq!(at(88.0).word(), "hot");
+        assert_eq!(at(110.0).advice(), "don't go out");
+        assert_eq!(
+            at(88.0).label(),
+            "hot \u{2014} shorts and a t-shirt, find shade"
+        );
+    }
+
+    #[test]
+    fn no_two_points_read_the_same() {
+        // If a word or a garment line repeats, the extra resolution is fake:
+        // the reader cannot tell which point they are looking at from the text.
+        let words: std::collections::HashSet<&str> = LABELS.iter().map(|(word, _)| *word).collect();
+        assert_eq!(words.len(), LABELS.len(), "a sensation word repeats");
+
+        // The two ends share "don't go out" by design; everything between is
+        // a distinct instruction.
+        let middle: std::collections::HashSet<&str> =
+            LABELS[1..10].iter().map(|(_, advice)| *advice).collect();
+        assert_eq!(middle.len(), 9, "a garment line repeats");
     }
 
     #[test]
     fn labels_snap_to_the_nearest_whole_point() {
-        assert_eq!(at(61.0).label(), at(60.0).label());
+        assert_eq!(at(61.0).word(), at(60.0).word());
         // 63°F sits midway between 5 and 6 and rounds up.
-        assert_eq!(at(64.0).label(), at(66.0).label());
+        assert_eq!(at(64.0).word(), at(66.0).word());
     }
 
     #[test]
@@ -253,9 +289,11 @@ mod tests {
     fn the_key_covers_every_point_in_order() {
         let key = key();
         assert_eq!(key.len(), 11);
-        for (index, (level, label, degrees)) in key.iter().enumerate() {
+        for (index, (level, word, advice, degrees)) in key.iter().enumerate() {
             assert_eq!(usize::from(*level), index);
-            assert_eq!(*label, LABELS[index]);
+            assert_eq!((*word, *advice), LABELS[index]);
+            // The temperature shown beside each point is a felt temperature,
+            // and must be one that actually lands on that point.
             assert_eq!(at(f64::from(*degrees)).level(), *level);
         }
     }

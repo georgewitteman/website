@@ -208,21 +208,27 @@ body {
    * with equal steps per arm, so lightness is monotone outward from the middle
    * and the two arms are mirror images.
    *
+   * 5 is green rather than the usual neutral grey, because on this scale the
+   * midpoint is the best value rather than the least meaningful one. It is a
+   * deeper green than its neighbours on purpose: a pale mint sits only ΔE 2.7
+   * from step 6 under deuteranopia, where this separates by lightness as well
+   * as hue and scores 6.0, matching the grey it replaces.
+   *
    * Used as chip backgrounds rather than text colour, which keeps every step
    * legible: --weather-ink on the darkest step still measures 4.95:1, and the
    * number is always printed inside the chip, so colour never carries the
    * reading on its own.
    */
   --weather-feel-0: #408ee7;
-  --weather-feel-1: #65a2ec;
-  --weather-feel-2: #87b6f0;
-  --weather-feel-3: #a8caf4;
-  --weather-feel-4: #c9ddf6;
-  --weather-feel-5: #f0efec;
-  --weather-feel-6: #f6d2ca;
-  --weather-feel-7: #f3b6a9;
-  --weather-feel-8: #ed9a89;
-  --weather-feel-9: #e67d69;
+  --weather-feel-1: #63a2ee;
+  --weather-feel-2: #83b6f4;
+  --weather-feel-3: #a2c9fa;
+  --weather-feel-4: #c2ddff;
+  --weather-feel-5: #8fb07d;
+  --weather-feel-6: #fecdc3;
+  --weather-feel-7: #f8b2a4;
+  --weather-feel-8: #f09786;
+  --weather-feel-9: #e87c67;
   --weather-feel-10: #de5e47;
   --weather-muted: #6b7280;
   --weather-rule: #e5e7eb;
@@ -949,6 +955,11 @@ body {
   align-items: baseline;
   gap: 0.5rem;
   padding: 0.125rem 0;
+}
+
+.weather-key-degrees {
+  color: var(--weather-muted);
+  white-space: nowrap;
 }
 
 .weather-key-chip {
