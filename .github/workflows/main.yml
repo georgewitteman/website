@@ -3,6 +3,13 @@ name: main
 "on":
   workflow_dispatch:
   push: { branches: [main] }
+  # Pull requests run the exact same lint/build/test jobs as main, against the
+  # PR merged into main, so a green PR means a green main after merge.
+  pull_request: { branches: [main] }
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -90,8 +97,57 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+  # The dev container is not part of the deployment, but it silently rotted
+  # because nothing ever built it. Build it on every PR so feature/image bumps
+  # are verified before they land.
+  devcontainer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Build dev container
+        uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          runCmd: |
+            set -o errexit
+            cargo --version
+            node --version
+            npx playwright --version
+            caddy version
+            aws --version
+
+  # Compiles exactly what the deploy job compiles, so a release-only build
+  # failure is caught on the PR instead of after merging to main.
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        run: |
+          rustup update --no-self-update stable
+          rustup default stable
+          rustup target add x86_64-unknown-linux-gnu
+          rustup show
+
+      - name: Cache Build
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+
   deploy:
-    needs: [lint, test]
+    needs: [lint, test, build]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
@@ -124,6 +180,8 @@ jobs:
 
       - name: Cache Build
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release
 
       - name: Deploy
         run: ./scripts/build-and-deploy.sh
