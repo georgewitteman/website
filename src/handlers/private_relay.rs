@@ -23,12 +23,12 @@ pub async fn icloud_private_relay(
             format!("{} is not iCloud Private Relay", real_ip),
         )
             .into_response(),
-        Ok(Some(line)) => (
+        Ok(Some(range)) => (
             [(
                 header::CONTENT_TYPE,
                 HeaderValue::from_static("text/plain; charset=utf-8"),
             )],
-            format!("{}: {}", real_ip, line),
+            format!("{} is iCloud Private Relay ({})", real_ip, range),
         )
             .into_response(),
         Err(err) => (
