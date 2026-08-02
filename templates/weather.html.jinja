@@ -1,0 +1,477 @@
+{% extends "layout.html.jinja" %}
+
+{#
+  A score, with the numbers behind it on hover or tap. The trigger is a real
+  button so a tap focuses it on touch devices and the tooltip opens from CSS
+  alone -- the page's Content-Security-Policy forbids inline script, and this
+  needs no script at all.
+#}
+{% macro probe(reading, modifier) %}
+  <span class="weather-probe {{ modifier }}">
+    <button
+      class="weather-probe-trigger weather-feel-{{ reading.level }}"
+      type="button"
+    >
+      {{- reading.score -}}
+    </button>
+    <span class="weather-probe-tip" role="tooltip">
+      <span class="weather-probe-tip-head"
+        >{{ reading.score }} &middot; {{ reading.label }}</span
+      >
+      <span class="weather-probe-tip-body">
+        {{ reading.hour_label }} &middot; felt {{ reading.degrees }}&deg;<br />
+        air {{ reading.air_f }}&deg; &middot; wind {{ reading.wind_mph }} mph
+        &middot; {{ reading.humidity }}% humidity &middot; {{ reading.cloud }}%
+        cloud
+      </span>
+    </span>
+  </span>
+{% endmacro %}
+
+{% block title %}Weather - {{ super() }}{% endblock %}
+
+{% block head %}
+  <script src="/js/weather.js"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="weather">
+    <header class="weather-place">
+      <h2 class="weather-place-name">{{ place_name }}</h2>
+      {% if place_detail != "" %}
+        <p class="weather-place-detail">{{ place_detail }}</p>
+      {% endif %}
+    </header>
+
+    {% if let Some(message) = error %}
+      <p class="weather-error">{{ message }}</p>
+    {% endif %}
+
+    {% if let Some(today) = report %}
+      <section class="weather-headline">
+        <p class="weather-eyebrow">How {{ today.headline_scope }} feels</p>
+        <p class="weather-hero">
+          {% call probe(today.typical, "weather-hero-value") %}{% endcall %}
+          <span class="weather-hero-gloss">
+            <span class="weather-hero-label">{{ today.typical.label }}</span>
+            <span class="weather-hero-share"
+              >for {{ today.typical_share }}% of it</span
+            >
+          </span>
+        </p>
+        <p class="weather-bounds">
+          <span class="weather-bound">
+            <span class="weather-bound-label">coolest, out of the sun</span>
+            {% call probe(today.low, "weather-bound-value") %}{% endcall %}
+          </span>
+          <span class="weather-bound">
+            <span class="weather-bound-label"
+              >warmest, {{ today.high_hour }}</span
+            >
+            {% call probe(today.high, "weather-bound-value") %}{% endcall %}
+          </span>
+        </p>
+        <p class="weather-range-note">
+          {{ today.low.degrees }}&deg; to {{ today.high.degrees }}&deg;, a
+          {{ today.swing_f }}&deg; swing.
+        </p>
+        <div class="weather-verdict">
+          {% for line in today.verdict %}
+            <p class="weather-verdict-line">{{ line }}</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% if let Some(now) = today.now %}
+        <section class="weather-now">
+          <p class="weather-eyebrow">Right now &middot; {{ now.label }}</p>
+          <p class="weather-pair">
+            {% if now.has_sun %}
+              <span class="weather-pair-sun">
+                <span class="weather-pair-label">in sun</span>
+                {% call probe(now.sun, "weather-pair-value") %}{% endcall %}
+              </span>
+              <span class="weather-pair-shade">
+                <span class="weather-pair-label">in shade</span>
+                {% call probe(now.shade, "weather-pair-value") %}{% endcall %}
+              </span>
+            {% else %}
+              <span class="weather-pair-shade">
+                <span class="weather-pair-label">feels like</span>
+                {% call probe(now.shade, "weather-pair-value") %}{% endcall %}
+              </span>
+              <span class="weather-pair-none">no direct sun on you</span>
+            {% endif %}
+          </p>
+          <p class="weather-now-meta">
+            Air {{ now.air_f }}&deg; &middot; wind {{ now.wind_mph }}
+            mph{% if let Some(versus) = now.versus_yesterday %}
+              &middot; {{ versus }}
+            {% endif %}
+          </p>
+        </section>
+      {% endif %}
+
+      {% if let Some(chart) = today.chart %}
+        <section class="weather-chart-section">
+          <svg
+            class="weather-chart"
+            viewBox="0 0 {{ chart.width }} {{ chart.height }}"
+            role="img"
+            aria-label="How the day feels hour by hour, on a 0 to 10 scale. Today runs from {{ today.low.score }} out of the sun to {{ today.high.score }} at its warmest."
+          >
+            {% for band in chart.bands %}
+              <rect
+                class="weather-chart-band-fill weather-feel-{{ band.level }}"
+                x="{{ chart.plot_left }}"
+                y="{{ band.y }}"
+                width="{{ chart.plot_width }}"
+                height="{{ band.height }}"
+              />
+            {% endfor %}
+
+            {% for line in chart.grid %}
+              <line
+                class="weather-chart-grid"
+                x1="{{ chart.plot_left }}"
+                y1="{{ line.y }}"
+                x2="{{ chart.plot_right }}"
+                y2="{{ line.y }}"
+              />
+              <text
+                class="weather-chart-tick"
+                x="{{ chart.grid_label_x }}"
+                y="{{ line.y }}"
+                text-anchor="end"
+                dominant-baseline="middle"
+              >
+                {{- line.label -}}
+              </text>
+            {% endfor %}
+
+            {% if let Some(yesterday) = chart.yesterday_band %}
+              <polygon
+                class="weather-chart-yesterday"
+                points="{{ yesterday }}"
+              />
+            {% endif %}
+
+            <polyline class="weather-chart-sun" points="{{ chart.sun_line }}" />
+            <polyline
+              class="weather-chart-shade"
+              points="{{ chart.shade_line }}"
+            />
+
+            {% if let Some(sunset) = chart.sunset %}
+              <line
+                class="weather-chart-sunset"
+                x1="{{ sunset.x }}"
+                y1="{{ chart.plot_top }}"
+                x2="{{ sunset.x }}"
+                y2="{{ chart.plot_bottom }}"
+              />
+              <text
+                class="weather-chart-marker"
+                x="{{ sunset.label_x }}"
+                y="{{ chart.marker_label_y }}"
+                text-anchor="middle"
+              >
+                {{- sunset.label -}}
+              </text>
+            {% endif %}
+
+            {% if let Some(now) = chart.now %}
+              <line
+                class="weather-chart-now"
+                x1="{{ now.x }}"
+                y1="{{ chart.plot_top }}"
+                x2="{{ now.x }}"
+                y2="{{ chart.plot_bottom }}"
+              />
+              {% if now.show_label %}
+                <text
+                  class="weather-chart-marker"
+                  x="{{ now.label_x }}"
+                  y="{{ chart.marker_label_y }}"
+                  text-anchor="middle"
+                >
+                  {{- now.label -}}
+                </text>
+              {% endif %}
+            {% endif %}
+
+            {% for tick in chart.ticks %}
+              <text
+                class="weather-chart-tick"
+                x="{{ tick.x }}"
+                y="{{ chart.axis_label_y }}"
+                text-anchor="middle"
+              >
+                {{- tick.label -}}
+              </text>
+            {% endfor %}
+          </svg>
+          <p class="weather-legend">
+            <span class="weather-legend-sun">Orange</span> is full sun,
+            <span class="weather-legend-shade">blue</span> is shade; the gap
+            between them is the part you get to choose.
+            {% if chart.yesterday_band.is_some() %}
+              <span class="weather-legend-yesterday">Dashed</span> is yesterday.
+            {% endif %}
+            Background stripes are the scale below.
+          </p>
+        </section>
+      {% endif %}
+
+      <section class="weather-hours-section">
+        <h3 class="weather-section-title">Hour by hour</h3>
+        <div class="weather-table-scroll">
+          <table class="weather-table weather-hours">
+            <thead>
+              <tr>
+                <th scope="col">Hour</th>
+                <th scope="col">In sun</th>
+                <th scope="col">In shade</th>
+                <th scope="col">Air</th>
+                <th scope="col">Wind<span class="weather-unit">mph</span></th>
+                <th scope="col">Cloud</th>
+                <th scope="col">Rain</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for hour in today.hours %}
+                <tr
+                  class="{% if hour.is_now %}weather-row-now{% endif %} {% if hour.past %}weather-row-past{% endif %}"
+                >
+                  <th scope="row">{{ hour.label }}</th>
+                  <td class="weather-cell-sun">
+                    {% if hour.has_sun %}
+                      <span
+                        class="weather-cell-score weather-feel-{{ hour.sun_level }}"
+                        >{{ hour.sun_score }}</span
+                      >
+                      <span class="weather-cell-degrees"
+                        >{{ hour.sun_f }}&deg;</span
+                      >
+                    {% else %}
+                      <span
+                        class="weather-cell-empty"
+                        aria-label="no direct sun"
+                        >&mdash;</span
+                      >
+                    {% endif %}
+                  </td>
+                  <td class="weather-cell-shade">
+                    <span
+                      class="weather-cell-score weather-feel-{{ hour.shade_level }}"
+                      >{{ hour.shade_score }}</span
+                    >
+                    <span class="weather-cell-degrees"
+                      >{{ hour.shade_f }}&deg;</span
+                    >
+                  </td>
+                  <td>{{ hour.air_f }}&deg;</td>
+                  <td>{{ hour.wind_mph }}</td>
+                  <td>{{ hour.cloud }}%</td>
+                  <td>{{ hour.rain_chance }}%</td>
+                </tr>
+                {% if hour.sunset_follows %}
+                  <tr class="weather-row-sunset">
+                    <td colspan="7">
+                      Sunset {{ today.sunset_label }} &mdash; direct sun ends,
+                      only the shade column applies after this
+                    </td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="weather-secondary">
+          Air high {{ today.air_high_f }}&deg; &middot; low
+          {{ today.air_low_f }}&deg; &middot; sunrise {{ today.sunrise_label }}
+          &middot; sunset {{ today.sunset_label }} &middot; rain
+          {{ today.rain_chance }}% at its likeliest, {{ today.rain_total_in }}
+          in expected
+        </p>
+      </section>
+
+      {% if today.has_yesterday %}
+        <section class="weather-compare">
+          <h3 class="weather-section-title">Against yesterday</h3>
+          <div class="weather-table-scroll">
+            <table class="weather-table">
+              <thead>
+                <tr>
+                  <th scope="col">&nbsp;</th>
+                  <th scope="col">Today</th>
+                  <th scope="col">Yesterday</th>
+                  <th scope="col">Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in today.comparisons %}
+                  <tr>
+                    <th scope="row">{{ row.label }}</th>
+                    <td>{{ row.today }}</td>
+                    <td>{{ row.yesterday }}</td>
+                    <td class="weather-delta weather-delta-{{ row.direction }}">
+                      {{- row.delta -}}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <p class="weather-secondary">
+            Yesterday is the same daylight window, so the two columns cover the
+            same hours of the day.
+          </p>
+        </section>
+      {% endif %}
+
+      <p class="weather-resolution">
+        The model grid point used here is {{ today.grid_distance_mi }} mi from
+        the pin, at {{ today.grid_elevation_ft }} ft. Places closer together
+        than about a mile land in the same cell, so this cannot tell one block
+        from the next &mdash; it can tell the Inner Sunset from the Financial
+        District, and that gap is real. Times are {{ today.timezone }}, last
+        read at {{ today.updated_label }}.
+      </p>
+    {% endif %}
+
+    <section class="weather-locations">
+      <h3 class="weather-section-title">Location</h3>
+      <ul class="weather-pins">
+        {% for pin in pins %}
+          <li class="weather-pin-item">
+            <a
+              class="weather-pin {% if pin.active %}weather-pin-active{% endif %}"
+              href="{{ pin.href }}"
+              title="{{ pin.detail }}"
+              >{{ pin.name }}</a
+            >
+          </li>
+        {% endfor %}
+      </ul>
+
+      <form class="weather-search" method="get" action="/weather">
+        <label class="weather-search-label" for="q">Somewhere else</label>
+        <div class="weather-search-row">
+          <input
+            class="weather-search-input"
+            type="search"
+            id="q"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="City or neighborhood"
+            autocomplete="off"
+          />
+          <button class="weather-search-button" type="submit">Look up</button>
+        </div>
+      </form>
+
+      {% if !alternates.is_empty() %}
+        <p class="weather-alternates">
+          Or did you mean:
+          {% for alternate in alternates %}
+            <a class="link" href="{{ alternate.href }}">{{ alternate.label }}</a
+            >{% if !loop.last %},{% endif %}
+          {% endfor %}
+        </p>
+      {% endif %}
+
+      <p class="weather-default">
+        <button
+          class="weather-default-button"
+          type="button"
+          id="weather-set-default"
+          data-param="{{ place_param }}"
+          hidden
+        >
+          Open here by default
+        </button>
+        <span
+          class="weather-default-note"
+          id="weather-default-note"
+          hidden
+        ></span>
+      </p>
+    </section>
+
+    <details class="weather-method">
+      <summary class="weather-method-summary">What the 0 to 10 means</summary>
+      <div class="weather-method-body">
+        <p>
+          A personal scale, not a published index. 5 is the weather this site's
+          owner likes best; everything else is described relative to it. The
+          steps are closest together through the mild middle, where a couple of
+          degrees genuinely changes what goes on, and widest at the ends, where
+          everything is just very cold or very hot.
+        </p>
+        <ul class="weather-key-list">
+          {% for step in key %}
+            <li class="weather-key-item">
+              <span class="weather-key-chip weather-feel-{{ step.level }}"
+                >{{ step.level }}</span
+              >
+              <span
+                >{{ step.label }} &middot; about {{ step.degrees }}&deg;</span
+              >
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </details>
+
+    <details class="weather-method">
+      <summary class="weather-method-summary">
+        How these numbers are made
+      </summary>
+      <div class="weather-method-body">
+        <p>
+          <strong>Felt temperature</strong> is Steadman's apparent temperature
+          in its radiation form, the one the Australian Bureau of Meteorology
+          publishes:
+          <code class="code"
+            >AT = Ta + 0.348e &minus; 0.70v + 0.70Q/(v + 10) &minus; 4.25</code
+          >, where <em>e</em> is vapour pressure, <em>v</em> the 10 m wind and
+          <em>Q</em> the net radiation a body absorbs. It was chosen over the
+          usual "feels like" because those are a heat index above about 80&deg;
+          spliced to a wind chill below about 50&deg;, and plain air temperature
+          in between &mdash; which is precisely the range this page is for.
+          Steadman's stays continuous across the whole band and takes wind,
+          humidity and sunlight as real inputs.
+        </p>
+        <p>
+          <strong>Q</strong> is built as the standard radiation budget for a
+          standing person: the beam scaled by Fanger's projected-area factor,
+          plus diffuse sky and ground-reflected shortwave over the body's sky
+          and ground view factors, plus a longwave term using Brunt's sky
+          emissivity blended toward a black body by cloud cover. The sun and
+          shade figures differ only in Q &mdash; shade drops the direct beam and
+          reflects off shaded ground. Q is expressed relative to a radiatively
+          neutral environment, so an overcast night lands on Steadman's
+          non-radiation formula rather than drifting away from it.
+        </p>
+        <p>
+          <strong>Data</strong> is Open-Meteo, picked because it is the only
+          free source that publishes direct normal, direct horizontal and
+          diffuse radiation hourly &mdash; without those three the sun/shade
+          split cannot be computed at all. No API key, so this server holds no
+          secret. Yesterday's column comes from the same endpoint's past days,
+          which is model analysis for hours that have already happened, not a
+          reading from a thermometer down the street.
+        </p>
+        <p>
+          <strong
+            >The sun figure assumes nothing is between you and the sun.</strong
+          >
+          Under an awning, on the north side of a building, or in a street
+          canyon, read the shade column. Real days are spent moving between the
+          two, which is why both are shown.
+        </p>
+      </div>
+    </details>
+  </div>
+{% endblock %}

@@ -2,3 +2,6 @@
 node_modules/
 test-results/
 playwright-report/
+
+# Core dumps, e.g. from a headless browser killed mid-test.
+core.*

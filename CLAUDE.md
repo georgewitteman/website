@@ -36,10 +36,32 @@ cargo build --release --target x86_64-unknown-linux-gnu   # Production build for
 
 - **`src/main.rs`** - Entry point, server setup with graceful shutdown, and all integration tests
 - **`src/router.rs`** - Route definitions and security header middleware (CSP, HSTS, X-Frame-Options, etc.)
-- **`src/handlers/`** - Request handlers for each route (echo, uuid, sha, slot, icloud-private-relay, index)
+- **`src/handlers/`** - Request handlers for each route (echo, uuid, sha, slot, icloud-private-relay, weather, index)
 - **`src/extractors.rs`** - Proxy header handling (X-Forwarded-For, X-Forwarded-Proto) with trust verification for localhost
 - **`src/config.rs`** - Environment-based configuration (PORT, SERVER_HOSTNAME)
-- **`src/services/`** - External service integrations (iCloud Private Relay IP detection)
+- **`src/services/`** - External service integrations (iCloud Private Relay IP detection, Open-Meteo weather)
+- **`src/units.rs`** - Typed quantities (`Temperature`, `TemperatureDelta`, `Speed`), each storing one canonical unit
+- **`src/comfort.rs`** - Steadman apparent temperature plus a radiation budget, giving felt temperature in sun and in shade
+- **`src/scale.rs`** - The personal 0-10 comfort scale the weather page leads with
+- **`src/locations.rs`** - Committed saved locations for the weather page
+
+### The weather page
+
+`/weather` answers "what do I wear, and do I need a layer for later". It is
+rendered server-side in one pass and leads with a 0-10 comfort score rather than
+a temperature; degrees are kept as supporting detail.
+
+- Felt temperature is Steadman's apparent temperature in its radiation form, so
+  it stays informative between 50-80°F where consumer "feels like" values fall
+  back to raw air temperature. See the module docs in `src/comfort.rs`.
+- The sun/shade pair needs direct and diffuse solar radiation separately, which
+  is why the data source is Open-Meteo — see `src/services/open_meteo.rs` for
+  the comparison against the alternatives. No API key is involved.
+- Forecasts are cached in memory per location for ten minutes. There is no
+  database: saved locations are committed to `src/locations.rs`, and the browser
+  keeps any personal default in `localStorage`.
+- The page's CSP is `default-src 'self'`, so there is no inline script or style.
+  The score tooltips are CSS-only (`:hover` plus `:focus` for touch).
 
 ### Templates and Static Files
 
