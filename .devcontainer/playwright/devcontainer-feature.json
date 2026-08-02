@@ -1,6 +1,0 @@
-{
-  "id": "playwright",
-  "version": "1.0.0",
-  "name": "Playwright",
-  "description": "Installs Playwright browsers and system dependencies"
-}
