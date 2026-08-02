@@ -236,6 +236,7 @@ impl<'a> Modelled<'a> {
                 direct_horizontal: raw.direct_horizontal,
                 diffuse: raw.diffuse,
                 cloud_cover: raw.cloud_cover,
+                sunlit_fraction: raw.sunshine_seconds / 3600.0,
             }),
             raw,
         })
@@ -648,6 +649,7 @@ struct HourRow {
     has_sun: bool,
     air_f: i32,
     wind_mph: i32,
+    humidity: i32,
     cloud: i32,
     rain_chance: i32,
     is_now: bool,
@@ -895,6 +897,7 @@ fn build_report(forecast: &Forecast, target: &Target) -> Option<Report> {
             has_sun: hour.sunlit(),
             air_f: hour.raw.air.round_fahrenheit(),
             wind_mph: hour.raw.wind.round_miles_per_hour(),
+            humidity: hour.raw.relative_humidity.round() as i32,
             cloud: hour.raw.cloud_cover.round() as i32,
             rain_chance: hour.raw.precipitation_probability.round() as i32,
             is_now: now_hour == Some(hour.hour),
@@ -1114,6 +1117,7 @@ mod tests {
             precipitation_mm: 0.0,
             precipitation_probability: 0.0,
             cloud_cover: 10.0,
+            sunshine_seconds: if direct_normal > 0.0 { 3600.0 } else { 0.0 },
             direct_normal,
             // A 58° solar elevation, near enough for a fixture.
             direct_horizontal: direct_normal * 0.85,
@@ -1253,6 +1257,7 @@ mod tests {
         let mut overcast = forecast();
         for hour in &mut overcast.hours {
             hour.cloud_cover = 95.0;
+            hour.sunshine_seconds = 180.0;
         }
         let clear = report();
         let socked_in = build_report(&overcast, &target()).unwrap();
@@ -1379,6 +1384,7 @@ mod tests {
             hour.direct_horizontal = 0.0;
             hour.diffuse = 120.0;
             hour.cloud_cover = 100.0;
+            hour.sunshine_seconds = 0.0;
         }
         let report = build_report(&fogged, &target()).unwrap();
         // With no beam at all, each hour's sun and shade readings collapse
@@ -1401,6 +1407,7 @@ mod tests {
         let now: Vec<&HourRow> = report.hours.iter().filter(|row| row.is_now).collect();
         assert_eq!(now.len(), 1);
         assert_eq!(now[0].label, "1 PM");
+        assert!((0..=100).contains(&now[0].humidity));
 
         let sunset: Vec<&HourRow> = report
             .hours

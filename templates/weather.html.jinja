@@ -230,12 +230,13 @@
             <thead>
               <tr>
                 <th scope="col">Hour</th>
-                <th scope="col">In sun</th>
-                <th scope="col">In shade</th>
+                <th scope="col">Sun</th>
+                <th scope="col">Shade</th>
                 <th scope="col">Air</th>
                 <th scope="col">Wind<span class="weather-unit">mph</span></th>
-                <th scope="col">Cloud</th>
-                <th scope="col">Rain</th>
+                <th scope="col">Humid<span class="weather-unit">%</span></th>
+                <th scope="col">Cloud<span class="weather-unit">%</span></th>
+                <th scope="col">Rain<span class="weather-unit">%</span></th>
               </tr>
             </thead>
             <tbody>
@@ -272,12 +273,13 @@
                   </td>
                   <td>{{ hour.air_f }}&deg;</td>
                   <td>{{ hour.wind_mph }}</td>
-                  <td>{{ hour.cloud }}%</td>
-                  <td>{{ hour.rain_chance }}%</td>
+                  <td>{{ hour.humidity }}</td>
+                  <td>{{ hour.cloud }}</td>
+                  <td>{{ hour.rain_chance }}</td>
                 </tr>
                 {% if hour.sunset_follows %}
                   <tr class="weather-row-sunset">
-                    <td colspan="7">
+                    <td colspan="8">
                       Sunset {{ today.sunset_label }} &mdash; direct sun ends,
                       only the shade column applies after this
                     </td>

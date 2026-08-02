@@ -61,10 +61,16 @@
 //! beam is on you, which under heavy cloud is a place you may not stand all
 //! day — cloud cover is not the same thing as shade, and reporting the sunlit
 //! ceiling as "how it feels" overstates an overcast day badly. [`Felt::typical`]
-//! is the two blended by how much sky is actually clear: cloud cover is the
-//! fraction of sky covered, so `1 - cloud` approximates the chance the sun's
-//! disc is on you at any given moment. Under a solid deck it collapses onto the
+//! is the two blended by [`Conditions::sunlit_fraction`] — the share of the
+//! hour the sun is actually on you. Under a solid deck it collapses onto the
 //! shade figure; under a clear sky it is the sun figure.
+//!
+//! That fraction comes from the model's bright-sunshine duration rather than
+//! from cloud cover, because the two disagree: high thin cloud can cover the
+//! whole sky while the sun shines straight through it. On an Inner Sunset
+//! morning with 67% cloud and a full sixty minutes of sunshine, reading the
+//! cloud figure instead costs 1.7 points on the scale — the difference between
+//! keeping a jacket on and leaving it at home.
 //!
 //! Inputs and outputs are typed ([`Temperature`], [`Speed`]) so a caller cannot
 //! feed Fahrenheit or mph into formulas calibrated for neither. Inside a single
@@ -109,8 +115,11 @@ pub struct Conditions {
     pub direct_horizontal: f64,
     /// Diffuse (sky) irradiance on a horizontal plane (W/m²).
     pub diffuse: f64,
-    /// Cloud cover (%).
+    /// Cloud cover (%). Used for the longwave term, where what matters is how
+    /// much of the sky is covered rather than whether the disc is visible.
     pub cloud_cover: f64,
+    /// Share of the hour the sun is actually on you, 0 to 1.
+    pub sunlit_fraction: f64,
 }
 
 /// How one hour feels: the two bounds, and the expectation between them.
@@ -209,12 +218,12 @@ pub fn felt(conditions: &Conditions) -> Felt {
 
     let sun = apparent_temperature_c(air_c, vapour, wind, sun_radiation);
     let shade = apparent_temperature_c(air_c, vapour, wind, shade_radiation);
-    let clear_sky = 1.0 - (conditions.cloud_cover / 100.0).clamp(0.0, 1.0);
+    let sunlit = conditions.sunlit_fraction.clamp(0.0, 1.0);
 
     Felt {
         sun: Temperature::from_celsius(sun),
         shade: Temperature::from_celsius(shade),
-        typical: Temperature::from_celsius(shade + clear_sky * (sun - shade)),
+        typical: Temperature::from_celsius(shade + sunlit * (sun - shade)),
     }
 }
 
@@ -232,6 +241,7 @@ mod tests {
             direct_horizontal: 736.0, // 850 · sin(60°)
             diffuse: 100.0,
             cloud_cover: 0.0,
+            sunlit_fraction: 1.0,
         }
     }
 
@@ -242,6 +252,7 @@ mod tests {
             direct_horizontal: 0.0,
             diffuse: 180.0,
             cloud_cover: 100.0,
+            sunlit_fraction: 0.0,
             ..sunny_sf()
         }
     }
@@ -251,6 +262,7 @@ mod tests {
             direct_normal: 0.0,
             direct_horizontal: 0.0,
             diffuse: 0.0,
+            sunlit_fraction: 0.0,
             ..sunny_sf()
         }
     }
@@ -315,6 +327,8 @@ mod tests {
         // cloud was reporting the full-sun ceiling as how the day would feel.
         let socked_in = Conditions {
             cloud_cover: 95.0,
+            // Three minutes of sun in the hour.
+            sunlit_fraction: 0.05,
             ..sunny_sf()
         };
         let felt = felt(&socked_in);
@@ -335,16 +349,37 @@ mod tests {
 
     #[test]
     fn typical_always_sits_between_the_two_bounds() {
-        for cloud in 0..=100 {
+        for tenth in 0..=10 {
             let felt = felt(&Conditions {
-                cloud_cover: f64::from(cloud),
+                sunlit_fraction: f64::from(tenth) / 10.0,
                 ..sunny_sf()
             });
             assert!(
                 felt.typical >= felt.shade && felt.typical <= felt.sun,
-                "{cloud}% cloud put typical outside the pair"
+                "{tenth}/10 sunlit put typical outside the pair"
             );
         }
+    }
+
+    #[test]
+    fn sunshine_rather_than_cloud_cover_decides_the_typical_hour() {
+        // The Inner Sunset case: two thirds of the sky covered, and a full
+        // hour of sun through it. Blending on cloud cover would land a third
+        // of the way to the sun figure; blending on sunshine lands on it.
+        let broken_cloud = Conditions {
+            cloud_cover: 67.0,
+            sunlit_fraction: 1.0,
+            ..sunny_sf()
+        };
+        let felt = felt(&broken_cloud);
+        assert_eq!(felt.typical, felt.sun);
+
+        let span = felt.sun.celsius() - felt.shade.celsius();
+        let by_cloud = felt.shade.celsius() + 0.33 * span;
+        assert!(
+            felt.typical.celsius() - by_cloud > 1.0,
+            "the two readings should differ materially"
+        );
     }
 
     #[test]
@@ -443,6 +478,7 @@ mod tests {
             direct_horizontal: -10.0,
             diffuse: -10.0,
             cloud_cover: 300.0,
+            sunlit_fraction: 7.0,
         };
         let felt = felt(&broken);
         assert!(felt.sun.celsius().is_finite() && felt.shade.celsius().is_finite());

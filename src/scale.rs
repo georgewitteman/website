@@ -5,10 +5,11 @@
 //! maps felt temperature onto one calibrated number so the page leads with the
 //! answer rather than the measurement.
 //!
-//! The calibration is deliberately personal, not a published index: 5 is the
-//! weather this site's owner likes best, and every other point is described
-//! relative to that. It is committed to the repo for the same reason the home
-//! location is — there is nowhere else to put it.
+//! The calibration is deliberately personal, not a published index: 5 is
+//! neutral — neither cold nor warm, which for this site's owner is also the
+//! weather they like best — and every other point is described relative to
+//! that. It is committed to the repo for the same reason the home location is:
+//! there is nowhere else to put it.
 //!
 //! Spacing is uneven on purpose. Six degrees to a point through the mild band,
 //! where a couple of degrees genuinely changes what goes on; twenty or more at
@@ -68,7 +69,7 @@ const LABELS: [(&str, &str); 11] = [
     ("freezing", "winter coat over warm layers"),
     ("cold", "proper jacket, long sleeves"),
     ("chilly", "light jacket, staying on"),
-    ("ideal", "light jacket"),
+    ("neutral", "light jacket"),
     ("mild", "light jacket you'll take off"),
     ("pleasant", "t-shirt and jeans"),
     ("warm", "t-shirt, shorts if you like"),
@@ -125,10 +126,13 @@ impl fmt::Display for Score {
 
 /// The whole scale, for the key printed on the page. Without it the colours
 /// and the numbers are both undecodable.
+///
+/// Hottest first, the way a thermometer is drawn.
 pub fn key() -> Vec<(u8, &'static str, &'static str, i32)> {
     ANCHORS
         .iter()
         .enumerate()
+        .rev()
         .map(|(level, (degrees, _))| {
             let (word, advice) = LABELS[level];
             (level as u8, word, advice, *degrees as i32)
@@ -177,7 +181,7 @@ mod tests {
 
     #[test]
     fn five_is_the_weather_this_site_is_calibrated_for() {
-        assert_eq!(at(60.0).word(), "ideal");
+        assert_eq!(at(60.0).word(), "neutral");
         assert_eq!(at(60.0).advice(), "light jacket");
         assert_eq!(format!("{}", at(60.0)), "5.0");
     }
@@ -289,7 +293,11 @@ mod tests {
     fn the_key_covers_every_point_in_order() {
         let key = key();
         assert_eq!(key.len(), 11);
-        for (index, (level, word, advice, degrees)) in key.iter().enumerate() {
+        // Hottest first: 10 at the top of the list, 0 at the bottom.
+        assert_eq!(key[0].0, 10);
+        assert_eq!(key[10].0, 0);
+        for (position, (level, word, advice, degrees)) in key.iter().enumerate() {
+            let index = 10 - position;
             assert_eq!(usize::from(*level), index);
             assert_eq!((*word, *advice), LABELS[index]);
             // The temperature shown beside each point is a felt temperature,

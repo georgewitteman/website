@@ -107,6 +107,11 @@ pub struct Hour {
     pub precipitation_mm: f64,
     pub precipitation_probability: f64,
     pub cloud_cover: f64,
+    /// Seconds of bright sunshine in the hour, as the model reckons it.
+    ///
+    /// Not the same thing as `100 - cloud_cover`: high thin cloud can cover the
+    /// whole sky while the sun shines straight through it.
+    pub sunshine_seconds: f64,
     pub direct_normal: f64,
     pub direct_horizontal: f64,
     pub diffuse: f64,
@@ -188,8 +193,8 @@ pub async fn forecast(latitude: f64, longitude: f64) -> Result<Arc<Forecast>, Er
         (
             "hourly",
             "temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,\
-             cloud_cover,wind_speed_10m,direct_radiation,diffuse_radiation,\
-             direct_normal_irradiance",
+             cloud_cover,sunshine_duration,wind_speed_10m,direct_radiation,\
+             diffuse_radiation,direct_normal_irradiance",
         ),
         (
             "daily",
@@ -311,6 +316,7 @@ struct ApiHourly {
     precipitation: Vec<Option<f64>>,
     precipitation_probability: Vec<Option<f64>>,
     cloud_cover: Vec<Option<f64>>,
+    sunshine_duration: Vec<Option<f64>>,
     wind_speed_10m: Vec<Option<f64>>,
     direct_radiation: Vec<Option<f64>>,
     diffuse_radiation: Vec<Option<f64>>,
@@ -384,6 +390,12 @@ impl ApiForecast {
                     precipitation_mm: value_or_zero(&hourly.precipitation, i),
                     precipitation_probability: value_or_zero(&hourly.precipitation_probability, i),
                     cloud_cover: value_or_zero(&hourly.cloud_cover, i),
+                    // Absent means "not reported", not "no sun", so fall back
+                    // to the cloud-cover estimate rather than to zero.
+                    sunshine_seconds: value_at(&hourly.sunshine_duration, i).unwrap_or_else(|| {
+                        let clear = 1.0 - value_or_zero(&hourly.cloud_cover, i) / 100.0;
+                        clear.clamp(0.0, 1.0) * 3600.0
+                    }),
                     direct_normal: value_or_zero(&hourly.direct_normal_irradiance, i),
                     direct_horizontal: value_or_zero(&hourly.direct_radiation, i),
                     diffuse: value_or_zero(&hourly.diffuse_radiation, i),
@@ -441,6 +453,7 @@ mod tests {
         "precipitation": [0.0, 0.0, 0.1],
         "precipitation_probability": [0, 0, 12],
         "cloud_cover": [4, 0, 11],
+        "sunshine_duration": [3600.0, 3600.0, 1800.0],
         "wind_speed_10m": [3.04, 5.22, 4.1],
         "direct_radiation": [722.0, 863.0, 700.5],
         "diffuse_radiation": [160.5, 112.0, 150.0],
@@ -491,6 +504,7 @@ mod tests {
         assert_eq!(hour.direct_normal, 936.6);
         assert_eq!(hour.direct_horizontal, 863.0);
         assert_eq!(hour.diffuse, 112.0);
+        assert_eq!(hour.sunshine_seconds, 3600.0);
     }
 
     #[test]
@@ -511,6 +525,19 @@ mod tests {
             .unwrap();
         assert_eq!(forecast.hours.len(), 2);
         assert_eq!(forecast.hours[1].time, "2026-08-02T12:00");
+    }
+
+    #[test]
+    fn falls_back_to_cloud_cover_when_sunshine_is_not_reported() {
+        // Zero would read as "no sun at all", which for a clear hour is the
+        // opposite of the truth.
+        let json = SAMPLE.replace("[3600.0, 3600.0, 1800.0]", "[3600.0, null, 1800.0]");
+        let forecast = serde_json::from_slice::<ApiForecast>(json.as_bytes())
+            .unwrap()
+            .into_forecast()
+            .unwrap();
+        // That hour reports 0% cloud, so the fallback is a full hour of sun.
+        assert_eq!(forecast.hours[1].sunshine_seconds, 3600.0);
     }
 
     #[test]

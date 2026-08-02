@@ -208,12 +208,12 @@ body {
    * with equal steps per arm, so lightness is monotone outward from the middle
    * and the two arms are mirror images.
    *
-   * The midpoint stays neutral. Filling it green was tried and dropped: an
-   * abrupt green breaks a ramp that is otherwise smooth, and a green that
-   * eases in has to travel through cyan and yellow to get there, which is a
-   * rainbow — it measures ΔE 5.5, under the 6.0 floor, and stops reading as
-   * cold-to-hot at all. The ideal band is marked with a ring instead, which
-   * is a separate channel and costs the ramp nothing.
+   * The midpoint is neutral, which is the standard shape for a diverging ramp
+   * and the one that survived trying the alternatives. Filling 5 green broke
+   * the ramp: every other step moves about 0.06 in lightness where 4 to 5
+   * moved 0.17. Easing into the green instead needs a route through cyan and
+   * yellow, which is a rainbow — ΔE 5.5, under the 6.0 floor, and the middle
+   * stops reading as cold-to-hot once steps 2 to 4 are teal.
    *
    * Used as chip backgrounds rather than text colour, which keeps every step
    * legible: --weather-ink on the darkest step still measures 4.95:1, and the
@@ -793,23 +793,13 @@ body {
   background-color: var(--weather-feel-10);
 }
 
-/*
- * 5 is the best value on the scale, so it gets a green ring. A ring is a
- * separate channel from the fill: it says "this is the one you want" without
- * putting a third hue into a two-hue ramp.
- */
-.weather-feel-5 {
-  box-shadow:
-    inset 0 0 0 2px #4f8a5b,
-    inset 0 0 0 3px #fff;
-}
-
 /* The pale middle steps would otherwise have no edge against the page. */
 .weather-feel-0,
 .weather-feel-1,
 .weather-feel-2,
 .weather-feel-3,
 .weather-feel-4,
+.weather-feel-5,
 .weather-feel-6,
 .weather-feel-7,
 .weather-feel-8,
@@ -819,8 +809,7 @@ body {
 }
 
 /* SVG stripes take the same colours as flat fills, without the chip edge. */
-.weather-chart-band-fill,
-.weather-chart-band-fill.weather-feel-5 {
+.weather-chart-band-fill {
   box-shadow: none;
 }
 

@@ -110,11 +110,9 @@ test.describe("Weather", () => {
 
   test("shows a sun and shade reading for every hour", async ({ page }) => {
     await page.goto("/weather");
+    await expect(page.getByRole("columnheader", { name: "Sun" })).toBeVisible();
     await expect(
-      page.getByRole("columnheader", { name: "In sun" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("columnheader", { name: "In shade" }),
+      page.getByRole("columnheader", { name: "Shade" }),
     ).toBeVisible();
     expect(
       await page.locator(".weather-hours tbody tr").count(),
