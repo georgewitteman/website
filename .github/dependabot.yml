@@ -17,9 +17,13 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    ignore:
-      - dependency-name: "@types/node"
-        update-types: ["version-update:semver-major"]
+    # One pull request for all npm updates. A Node major shows up as a bump to
+    # @types/node, which is the only part of it Dependabot can update: `engines`,
+    # @tsconfig/nodeNN and the dev container feature option all have to be edited
+    # by hand in the same PR. `npm run check:node` fails the build until they are.
+    groups:
+      npm:
+        patterns: ["*"]
   - package-ecosystem: "devcontainers"
     directory: "/"
     schedule:

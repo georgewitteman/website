@@ -1,6 +1,6 @@
 {
   "extends": [
-    "@tsconfig/node24/tsconfig.json",
+    "@tsconfig/node26/tsconfig.json",
     // https://nodejs.org/api/typescript.html#type-stripping
     "@tsconfig/node-ts/tsconfig.json"
   ],
