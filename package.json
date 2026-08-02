@@ -4,15 +4,16 @@
   "license": "UNLICENSED",
   "type": "module",
   "engines": {
-    "node": "^24"
+    "node": "^26"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24"
+      "version": "^26"
     }
   },
   "scripts": {
+    "check:node": "node scripts/check-node-version.mjs",
     "typecheck": "tsc",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -22,8 +23,8 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@tsconfig/node-ts": "^23.6.4",
-    "@tsconfig/node24": "^24.0.4",
-    "@types/node": "^24.13.3",
+    "@tsconfig/node26": "^26.0.0",
+    "@types/node": "^26.1.2",
     "prettier": "^3.9.6",
     "prettier-plugin-jinja-template": "^2.2.0",
     "typescript": "^7.0.2"

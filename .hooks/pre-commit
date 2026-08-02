@@ -7,5 +7,6 @@ set -o pipefail
 cargo fmt --check
 caddy fmt --diff Caddyfile
 caddy validate --config Caddyfile --adapter caddyfile
+npm run check:node
 npm run typecheck
 npm run format:check

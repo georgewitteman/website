@@ -10,7 +10,7 @@
       "dockerDashComposeVersion": "v2",
       "moby": false
     },
-    "ghcr.io/devcontainers/features/node:2": { "version": "24" }
+    "ghcr.io/devcontainers/features/node:2": { "version": "26" }
   },
   "updateContentCommand": {
     "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"],
