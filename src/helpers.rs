@@ -4,6 +4,34 @@ use axum::http::header::{self, HeaderMap};
 use multimap::MultiMap;
 use serde_json::Value;
 
+/// Percent-encodes one query-string value.
+///
+/// Hand-rolled because `reqwest`'s `query` feature is not enabled and turning
+/// it on would pull `serde_urlencoded` in for the handful of parameters this
+/// site sends.
+pub fn urlencode(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                encoded.push(byte as char);
+            }
+            b' ' => encoded.push('+'),
+            _ => encoded.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    encoded
+}
+
+/// Builds a `key=value&key=value` query string, encoding each value.
+pub fn query_string(parameters: &[(&str, &str)]) -> String {
+    parameters
+        .iter()
+        .map(|(key, value)| format!("{key}={}", urlencode(value)))
+        .collect::<Vec<String>>()
+        .join("&")
+}
+
 /// Parses a User-Agent string into structured data.
 pub fn get_user_agent(header: &str) -> woothee::parser::WootheeResult<'_> {
     let parser = woothee::parser::Parser::new();
@@ -43,6 +71,28 @@ pub fn pretty_multimap(map: &MultiMap<String, String>) -> serde_json::Map<String
 mod tests {
     use super::*;
     use axum::http::HeaderValue;
+
+    #[test]
+    fn urlencode_escapes_everything_outside_the_unreserved_set() {
+        assert_eq!(urlencode("San Francisco"), "San+Francisco");
+        assert_eq!(urlencode("Ni\u{f1}o"), "Ni%C3%B1o");
+        assert_eq!(urlencode("a-b_c.d~e"), "a-b_c.d~e");
+        assert_eq!(urlencode("a&b=c"), "a%26b%3Dc");
+        assert_eq!(
+            urlencode("temperature_2m,cloud_cover"),
+            "temperature_2m%2Ccloud_cover"
+        );
+        assert_eq!(urlencode(""), "");
+    }
+
+    #[test]
+    fn query_string_joins_and_encodes_each_value() {
+        assert_eq!(
+            query_string(&[("latitude", "37.7596"), ("name", "San Francisco")]),
+            "latitude=37.7596&name=San+Francisco"
+        );
+        assert_eq!(query_string(&[]), "");
+    }
 
     #[test]
     fn requested_html_detects_html_accept_header() {

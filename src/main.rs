@@ -1,11 +1,15 @@
 //! Personal website backend server.
 
+mod comfort;
 mod config;
 mod extractors;
 mod handlers;
 mod helpers;
+mod locations;
 mod router;
+mod scale;
 mod services;
+mod units;
 
 use std::net::SocketAddr;
 
