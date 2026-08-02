@@ -4,16 +4,22 @@
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
     "ghcr.io/devcontainers-extra/features/caddy:1": {},
     "ghcr.io/devcontainers/features/aws-cli:1": {},
-    "ghcr.io/devcontainers/features/docker-in-docker": {
+    // Keep every feature version-tagged: Dependabot cannot track an untagged
+    // reference, which is why this one sat on :latest and never got bumped.
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
       "dockerDashComposeVersion": "v2",
       "moby": false
     },
-    "ghcr.io/devcontainers/features/node:2": { "version": "24" },
-    "./playwright": {}
+    "ghcr.io/devcontainers/features/node:2": { "version": "24" }
   },
   "updateContentCommand": {
     "hooks-setup": ["git", "config", "core.hooksPath", ".hooks"],
-    "cargo-watch": ["cargo", "install", "cargo-watch"]
+    "cargo-watch": ["cargo", "install", "cargo-watch"],
+    // Runs in the workspace as the container user, so `npx` resolves the
+    // @playwright/test version pinned in package.json and the browsers land in
+    // that user's cache. The old ./playwright feature ran at image build time,
+    // before the node feature existed, and failed with "npx: command not found".
+    "playwright": "npm ci && npx playwright install --with-deps"
   },
   "customizations": {
     "vscode": {
