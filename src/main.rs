@@ -510,6 +510,50 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn static_files_must_be_revalidated() {
+        // Nothing here is fingerprinted, so without this a browser invents its
+        // own freshness lifetime and serves stale CSS after a deploy.
+        let app = test_app();
+        for path in ["/styles.css", "/js/uuid.js", "/favicon.ico"] {
+            let response = app
+                .clone()
+                .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(
+                response
+                    .headers()
+                    .get(header::CACHE_CONTROL)
+                    .and_then(|value| value.to_str().ok()),
+                Some("no-cache"),
+                "{path} may be cached without revalidating"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn rendered_pages_keep_their_own_cache_policy() {
+        // The static-file rule must not reach the routes, which set their own.
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/weather")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            response
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .and_then(|value| value.to_str().ok()),
+            Some("public, max-age=300")
+        );
+    }
+
+    #[tokio::test]
     async fn static_js_file_returns_200() {
         let app = test_app();
         let response = app

@@ -52,17 +52,53 @@ test.describe("Weather", () => {
     const tip = page.locator(".weather-hero .weather-probe-tip").first();
     await expect(tip).toBeHidden();
 
-    // Tap is the mobile path; it focuses the button, which opens the tooltip.
     await page.locator(".weather-hero .weather-probe-trigger").first().click();
     await expect(tip).toBeVisible();
     await expect(tip).toContainText(/air \d+° · wind \d+ mph/);
   });
 
-  test("explains what the 0-10 scale means", async ({ page }) => {
+  test("the tooltip can be dismissed again", async ({ page }) => {
+    // On a touch screen there is no way to un-hover, so an opened tooltip that
+    // cannot be closed covers the page it is explaining.
     await page.goto("/weather");
-    await page.getByText("What the 0 to 10 means").click();
-    await expect(page.locator(".weather-key-list li")).toHaveCount(11);
-    await expect(page.getByText("perfect · about 60°")).toBeVisible();
+    const trigger = page
+      .locator(".weather-hero .weather-probe-trigger")
+      .first();
+    const tip = page.locator(".weather-hero .weather-probe-tip").first();
+
+    await trigger.click();
+    await expect(tip).toBeVisible();
+    await trigger.click(); // tapping the same score again closes it
+    await expect(tip).toBeHidden();
+
+    await trigger.click();
+    await expect(tip).toBeVisible();
+    await page.locator(".weather-place-name").click(); // tapping elsewhere
+    await expect(tip).toBeHidden();
+
+    await trigger.click();
+    await expect(tip).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tip).toBeHidden();
+  });
+
+  test("the nav bar fills the width and keeps its links on one line", async ({
+    page,
+  }) => {
+    // Adding a sixth nav item used to squeeze the links until their text
+    // wrapped and spilled past the right edge of the dark bar.
+    await page.goto("/weather");
+    const viewport = page.viewportSize();
+    const header = await page.locator(".header").boundingBox();
+    expect(header?.width ?? 0).toBeGreaterThanOrEqual(
+      (viewport?.width ?? 0) - 1,
+    );
+
+    const weather = await page.locator('nav a[href="/weather"]').boundingBox();
+    const cleaner = await page
+      .locator('nav a[href="/link-cleaner.html"]')
+      .boundingBox();
+    expect(cleaner?.height ?? 0).toBeCloseTo(weather?.height ?? 0, 0);
   });
 
   test("shows a sun and shade reading for every hour", async ({ page }) => {
@@ -110,6 +146,16 @@ test.describe("Weather", () => {
     await expect(
       page.getByRole("heading", { name: "Financial District" }),
     ).toBeVisible();
+  });
+
+  test("the look-up button keeps its label next to a long search term", async ({
+    page,
+  }) => {
+    await page.goto("/weather?q=Green+brook+township");
+    const button = page.getByRole("button", { name: "Look up" });
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThan(40);
   });
 
   test("the search form submits a place name", async ({ page }) => {

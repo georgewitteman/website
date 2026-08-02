@@ -62,7 +62,57 @@ if (window.location.pathname === "/weather" && window.location.search === "") {
   }
 }
 
+/**
+ * Opens and closes the score tooltips.
+ *
+ * CSS alone handles hover on pointer devices. Touch needs script: a tap leaves
+ * the button in `:hover` and `:focus` with no gesture that undoes either, so a
+ * tooltip opened by tapping could never be dismissed. Here a second tap on the
+ * same score, a tap anywhere else, or Escape all close it.
+ */
+function setUpProbes() {
+  const OPEN = "weather-probe-open";
+  const probes = document.querySelectorAll(".weather-probe");
+
+  /** @param {Element | null} keep */
+  function closeAll(keep) {
+    for (const probe of probes) {
+      if (probe !== keep) {
+        probe.classList.remove(OPEN);
+        probe
+          .querySelector(".weather-probe-trigger")
+          ?.setAttribute("aria-expanded", "false");
+      }
+    }
+  }
+
+  for (const probe of probes) {
+    const trigger = probe.querySelector(".weather-probe-trigger");
+    if (!(trigger instanceof HTMLButtonElement)) {
+      continue;
+    }
+    trigger.setAttribute("aria-expanded", "false");
+
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const opening = !probe.classList.contains(OPEN);
+      closeAll(probe);
+      probe.classList.toggle(OPEN, opening);
+      trigger.setAttribute("aria-expanded", String(opening));
+    });
+  }
+
+  document.addEventListener("click", () => closeAll(null));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAll(null);
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  setUpProbes();
+
   const button = document.getElementById("weather-set-default");
   const note = document.getElementById("weather-default-note");
   if (

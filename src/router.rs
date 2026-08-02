@@ -31,9 +31,23 @@ fn not_found() -> Response {
 
 /// Creates the main application router with all routes and middleware.
 pub fn create_app_router() -> Router {
+    // Static files carry no version in their names, so a browser that caches
+    // `/styles.css` keeps serving it after a deploy changes it. With no
+    // `Cache-Control` at all the browser is free to invent a freshness lifetime
+    // — commonly a tenth of the file's age — which for a stylesheet last
+    // touched weeks ago is days of stale CSS on an otherwise updated page.
+    //
+    // `no-cache` still lets the browser store the file; it just has to
+    // revalidate first, and `ServeDir` answers that with a 304 off the ETag.
+    // Fingerprinted filenames would allow real caching, but they need a build
+    // step this site does not have.
     let static_files = axum::routing::get_service(ServeDir::new("./static").fallback(service_fn(
         |_req| async move { Ok::<_, Infallible>(not_found()) },
-    )));
+    )))
+    .layer(SetResponseHeaderLayer::overriding(
+        axum::http::header::CACHE_CONTROL,
+        HeaderValue::from_static("no-cache"),
+    ));
 
     Router::new()
         .route("/", get(index))
