@@ -5,6 +5,9 @@
     "@tsconfig/node-ts/tsconfig.json"
   ],
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // Required as of TypeScript 7: @types/node is no longer picked up
+    // implicitly, so `process` in playwright.config.ts fails to resolve.
+    "types": ["node"]
   }
 }
