@@ -13,9 +13,39 @@ const EGRESS_RANGES_URL: &str = "https://mask-api.icloud.com/egress-ip-ranges.cs
 /// Used when a response carries no usable `max-age`. Matches what Apple sends.
 const DEFAULT_MAX_AGE: Duration = Duration::from_secs(3600);
 
+/// One row of Apple's egress ranges CSV.
+///
+/// The file's fifth column is empty on every row, so it is not modelled.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EgressRange {
+    pub subnet: ipnet::IpNet,
+    /// ISO 3166-1 alpha-2, e.g. `GB`. Always present.
+    pub country: String,
+    /// ISO 3166-2 subdivision, e.g. `GB-EN`. Absent on roughly 10% of rows.
+    pub region: Option<String>,
+    /// e.g. `London`. Absent on a small number of rows.
+    pub city: Option<String>,
+}
+
+impl std::fmt::Display for EgressRange {
+    /// e.g. `172.224.226.0/27, London, GB-EN, GB`, skipping absent fields.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.subnet)?;
+        let details = [
+            self.city.as_deref(),
+            self.region.as_deref(),
+            Some(self.country.as_str()),
+        ];
+        for detail in details.into_iter().flatten() {
+            write!(f, ", {detail}")?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone)]
 struct CachedRanges {
-    body: Arc<[u8]>,
+    ranges: Arc<[EgressRange]>,
     etag: Option<String>,
     fresh_until: Instant,
 }
@@ -24,24 +54,27 @@ static CACHE: LazyLock<Mutex<Option<CachedRanges>>> = LazyLock::new(|| Mutex::ne
 
 /// Checks if an IP address belongs to iCloud Private Relay.
 /// Returns the matching CSV line if found, or None if not a Private Relay IP.
-pub async fn get_private_relay_range(ip_addr: &IpAddr) -> Result<Option<String>, reqwest::Error> {
-    let csv = egress_ranges().await?;
-    Ok(find_egress_range(&csv, ip_addr))
+pub async fn get_private_relay_range(
+    ip_addr: &IpAddr,
+) -> Result<Option<EgressRange>, reqwest::Error> {
+    let ranges = egress_ranges().await?;
+    Ok(find_egress_range(&ranges, ip_addr).cloned())
 }
 
-/// Fetches Apple's egress ranges, honouring `Cache-Control` and `ETag`.
+/// Fetches and parses Apple's egress ranges, honouring `Cache-Control` and `ETag`.
 ///
-/// The file is ~12 MB, and it was previously downloaded and parsed on every
-/// request. It is now held in memory for the `max-age` the response advertises,
-/// then revalidated with `If-None-Match`: Apple answers `304 Not Modified` when
-/// nothing changed, which refreshes the entry without transferring the body.
-async fn egress_ranges() -> Result<Arc<[u8]>, reqwest::Error> {
+/// The file is ~12 MB and nearly 300k rows, and it used to be downloaded and
+/// parsed on every request. The parsed ranges are now held in memory for the
+/// `max-age` the response advertises, then revalidated with `If-None-Match`:
+/// Apple answers `304 Not Modified` when nothing changed, which refreshes the
+/// entry without transferring or reparsing anything.
+async fn egress_ranges() -> Result<Arc<[EgressRange]>, reqwest::Error> {
     // Cloned out so the lock is never held across an await.
     let cached = CACHE.lock().expect("cache mutex poisoned").clone();
 
     if let Some(entry) = &cached {
         if Instant::now() < entry.fresh_until {
-            return Ok(entry.body.clone());
+            return Ok(entry.ranges.clone());
         }
     }
 
@@ -61,18 +94,18 @@ async fn egress_ranges() -> Result<Arc<[u8]>, reqwest::Error> {
         .map(str::to_owned)
         .or_else(|| cached.as_ref().and_then(|entry| entry.etag.clone()));
 
-    let body = match cached {
-        Some(entry) if status == StatusCode::NOT_MODIFIED => entry.body,
-        _ => Arc::from(response.bytes().await?.as_ref()),
+    let ranges = match cached {
+        Some(entry) if status == StatusCode::NOT_MODIFIED => entry.ranges,
+        _ => Arc::from(parse_egress_ranges(&response.bytes().await?)),
     };
 
     *CACHE.lock().expect("cache mutex poisoned") = Some(CachedRanges {
-        body: body.clone(),
+        ranges: ranges.clone(),
         etag,
         fresh_until,
     });
 
-    Ok(body)
+    Ok(ranges)
 }
 
 /// Reads `max-age` out of `Cache-Control`, falling back to [`DEFAULT_MAX_AGE`].
@@ -93,66 +126,117 @@ fn max_age(headers: &HeaderMap) -> Duration {
         .unwrap_or(DEFAULT_MAX_AGE)
 }
 
-/// Finds the egress range covering `ip_addr` in Apple's egress ranges CSV.
+/// Parses Apple's egress ranges CSV.
 ///
 /// Rows that are malformed or whose first column is not a subnet are skipped:
 /// this file is fetched from a third party, so a bad row should not take down
 /// the request.
-fn find_egress_range(csv: &[u8], ip_addr: &IpAddr) -> Option<String> {
+fn parse_egress_ranges(csv: &[u8]) -> Vec<EgressRange> {
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .flexible(true)
         .from_reader(csv);
 
-    for record in reader.records().flatten() {
-        let Some(Ok(subnet)) = record.get(0).map(str::parse::<ipnet::IpNet>) else {
-            continue;
-        };
-        if subnet.contains(ip_addr) {
-            return Some(record.as_slice().to_owned());
-        }
-    }
+    reader
+        .records()
+        .flatten()
+        .filter_map(|record| {
+            Some(EgressRange {
+                subnet: record.get(0)?.parse().ok()?,
+                country: record.get(1)?.to_owned(),
+                region: optional_field(record.get(2)),
+                city: optional_field(record.get(3)),
+            })
+        })
+        .collect()
+}
 
-    None
+/// Apple leaves an unknown field empty rather than omitting the column.
+fn optional_field(field: Option<&str>) -> Option<String> {
+    field.filter(|value| !value.is_empty()).map(str::to_owned)
+}
+
+/// Finds the first range covering `ip_addr`.
+fn find_egress_range<'a>(ranges: &'a [EgressRange], ip_addr: &IpAddr) -> Option<&'a EgressRange> {
+    ranges.iter().find(|range| range.subnet.contains(ip_addr))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Same shape as https://mask-api.icloud.com/egress-ip-ranges.csv
+    /// Real rows from https://mask-api.icloud.com/egress-ip-ranges.csv.
+    /// The fifth column is empty on every row of the real file.
     const SAMPLE: &[u8] = b"\
-172.224.224.0/24,US,USCA,Santa Clara,7922
-2a04:4e42:200::/48,US,USNY,New York,0
-203.0.113.0/24,GB,GBENG,London,0
+172.224.226.0/27,GB,GB-EN,London,
+2a02:26f7:e52c:583a::/64,BR,BR-MG,Alfenas,
+146.75.253.252/31,US,US-MA,NEEDHAM,
+5.62.61.64/29,AD,,Andorra la Vella,
+41.207.98.0/25,TG,,,
 ";
+
+    /// Looks an address up the way the service does: parse, then search.
+    fn lookup(csv: &[u8], ip: &str) -> Option<EgressRange> {
+        find_egress_range(&parse_egress_ranges(csv), &ip.parse().unwrap()).cloned()
+    }
 
     #[test]
     fn finds_ipv4_range_containing_address() {
-        let ip: IpAddr = "172.224.224.7".parse().unwrap();
         assert_eq!(
-            find_egress_range(SAMPLE, &ip).as_deref(),
-            Some("172.224.224.0/24USUSCASanta Clara7922")
+            lookup(SAMPLE, "172.224.226.5"),
+            Some(EgressRange {
+                subnet: "172.224.226.0/27".parse().unwrap(),
+                country: "GB".to_owned(),
+                region: Some("GB-EN".to_owned()),
+                city: Some("London".to_owned()),
+            })
         );
     }
 
     #[test]
     fn finds_ipv6_range_containing_address() {
-        let ip: IpAddr = "2a04:4e42:200::1".parse().unwrap();
-        assert!(find_egress_range(SAMPLE, &ip)
-            .is_some_and(|line| line.starts_with("2a04:4e42:200::/48")));
+        let found = lookup(SAMPLE, "2a02:26f7:e52c:583a::1").unwrap();
+        assert_eq!(found.subnet, "2a02:26f7:e52c:583a::/64".parse().unwrap());
+        assert_eq!(found.city.as_deref(), Some("Alfenas"));
+    }
+
+    #[test]
+    fn treats_empty_columns_as_absent() {
+        let no_region = lookup(SAMPLE, "5.62.61.65").unwrap();
+        assert_eq!(no_region.region, None);
+        assert_eq!(no_region.city.as_deref(), Some("Andorra la Vella"));
+
+        let neither = lookup(SAMPLE, "41.207.98.1").unwrap();
+        assert_eq!(neither.region, None);
+        assert_eq!(neither.city, None);
+        assert_eq!(neither.country, "TG");
+    }
+
+    #[test]
+    fn formats_a_range_for_display() {
+        assert_eq!(
+            lookup(SAMPLE, "172.224.226.5").unwrap().to_string(),
+            "172.224.226.0/27, London, GB-EN, GB"
+        );
+        // Absent fields are skipped rather than left as empty gaps.
+        assert_eq!(
+            lookup(SAMPLE, "5.62.61.65").unwrap().to_string(),
+            "5.62.61.64/29, Andorra la Vella, AD"
+        );
+        assert_eq!(
+            lookup(SAMPLE, "41.207.98.1").unwrap().to_string(),
+            "41.207.98.0/25, TG"
+        );
     }
 
     #[test]
     fn returns_none_for_address_outside_every_range() {
-        let ip: IpAddr = "8.8.8.8".parse().unwrap();
-        assert_eq!(find_egress_range(SAMPLE, &ip), None);
+        assert_eq!(lookup(SAMPLE, "8.8.8.8"), None);
     }
 
     #[test]
     fn returns_none_for_empty_input() {
-        let ip: IpAddr = "172.224.224.7".parse().unwrap();
-        assert_eq!(find_egress_range(b"", &ip), None);
+        assert_eq!(lookup(b"", "172.224.226.5"), None);
     }
 
     fn headers(cache_control: &str) -> HeaderMap {
@@ -196,14 +280,12 @@ mod tests {
     #[test]
     fn skips_malformed_rows_instead_of_panicking() {
         let csv = b"\
-not-a-subnet,US,USCA,Santa Clara,7922
+not-a-subnet,GB,GB-EN,London,
 
-172.224.224.0/24,US,USCA,Santa Clara,7922
+172.224.226.0/27,GB,GB-EN,London,
 ";
-        let ip: IpAddr = "172.224.224.7".parse().unwrap();
-        assert!(find_egress_range(csv, &ip).is_some());
-
-        let ip: IpAddr = "8.8.8.8".parse().unwrap();
-        assert_eq!(find_egress_range(csv, &ip), None);
+        assert_eq!(parse_egress_ranges(csv).len(), 1);
+        assert!(lookup(csv, "172.224.226.5").is_some());
+        assert_eq!(lookup(csv, "8.8.8.8"), None);
     }
 }
