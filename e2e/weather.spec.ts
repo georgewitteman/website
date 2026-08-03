@@ -23,7 +23,7 @@ test.describe("Weather", () => {
       page.locator(".weather-hero-value .weather-probe-trigger"),
     ).toHaveText(/^\d\.\d$/);
     await expect(page.locator(".weather-hero-share")).toHaveText(
-      /for \d+% of it/,
+      /\d+% of the day/,
     );
   });
 

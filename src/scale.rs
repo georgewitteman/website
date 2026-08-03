@@ -11,9 +11,10 @@
 //! that. It is committed to the repo for the same reason the home location is:
 //! there is nowhere else to put it.
 //!
-//! Spacing is uneven on purpose. Six degrees to a point through the mild band,
-//! where a couple of degrees genuinely changes what goes on; twenty or more at
-//! the ends, where everything is just "very cold" or "very hot" and the extra
+//! Spacing is uneven on purpose, and follows the clothing rather than the
+//! thermometer: seven degrees to a point through the mild band, where swapping
+//! a shirt for a jacket is a real decision, and fifteen to twenty-five at the
+//! ends, where everything is just "very cold" or "very hot" and the extra
 //! resolution would be false precision.
 //!
 //! The ends are anchored on being unable to go out at all, not merely on being
@@ -45,36 +46,43 @@ use std::fmt;
 
 /// `(felt °F, score)`, ascending. Interpolated between, clamped outside.
 const ANCHORS: [(f64, f64); 11] = [
-    (-25.0, 0.0),
-    (10.0, 1.0),
-    (33.0, 2.0),
-    (45.0, 3.0),
-    (54.0, 4.0),
-    (60.0, 5.0),
-    (66.0, 6.0),
-    (72.0, 7.0),
-    (78.0, 8.0),
-    (88.0, 9.0),
-    (110.0, 10.0),
+    (-20.0, 0.0),
+    (5.0, 1.0),
+    (22.0, 2.0),
+    (36.0, 3.0),
+    (47.0, 4.0),
+    (56.0, 5.0),
+    (63.0, 6.0),
+    (71.0, 7.0),
+    (79.0, 8.0),
+    (89.0, 9.0),
+    (105.0, 10.0),
 ];
 
 /// `(what it feels like, what to wear)` for each whole point.
 ///
-/// Every sensation word appears exactly once, so the word alone identifies the
-/// point, and every garment line differs from its neighbours' — otherwise two
-/// adjacent scores give the same instruction and the resolution is fictional.
+/// The second half is the point of the scale: one number, one outfit, no
+/// hedging about what you might get away with. Deciding whether to accommodate
+/// more than one of these is what the three numbers at the top of the page are
+/// for — a single score should never have to say "or".
+///
+/// Every sensation word appears exactly once and every outfit differs from its
+/// neighbours', so both halves identify the point on their own. Read bottom to
+/// top it is a ladder of insulation, roughly even in `clo` per step, which is
+/// why the temperatures below are unevenly spaced: adding a jacket buys more
+/// degrees than swapping a t-shirt for a long-sleeve shirt.
 const LABELS: [(&str, &str); 11] = [
-    ("dangerous cold", "don't go out"),
-    ("brutal", "heavy coat, hat and gloves"),
-    ("freezing", "winter coat over warm layers"),
-    ("cold", "proper jacket, long sleeves"),
-    ("chilly", "light jacket, staying on"),
-    ("neutral", "light jacket"),
-    ("mild", "light jacket you'll take off"),
-    ("pleasant", "t-shirt and jeans"),
-    ("warm", "t-shirt, shorts if you like"),
-    ("hot", "shorts and a t-shirt, find shade"),
-    ("dangerous heat", "don't go out"),
+    ("dangerous cold", "avoid outdoors"),
+    ("brutal", "heavy winter coat, hat and gloves"),
+    ("freezing", "winter coat"),
+    ("cold", "coat"),
+    ("chilly", "warm jacket"),
+    ("neutral", "jeans and a jacket"),
+    ("mild", "jeans and a light jacket"),
+    ("pleasant", "jeans and a long-sleeve shirt"),
+    ("warm", "jeans and a t-shirt"),
+    ("hot", "shorts and a light t-shirt"),
+    ("dangerous heat", "avoid outdoors"),
 ];
 
 /// A point on the comfort scale, 0 through 10.
@@ -104,8 +112,15 @@ impl Score {
     /// The nearest whole point, which is also the colour band this score sits
     /// in. The page prints the number beside the colour everywhere, so the
     /// colour never carries meaning on its own.
+    ///
+    /// Derived from the digit actually printed rather than from the underlying
+    /// float, so a chip can never read 4.5 while wearing the colour of 4.
+    /// Rounding the value separately is not enough: at an exact `.x5` the
+    /// formatter and `round` disagree, because the decimal is not representable
+    /// and each breaks the tie its own way.
     pub fn level(self) -> u8 {
-        self.0.round().clamp(0.0, 10.0) as u8
+        let printed: f64 = self.to_string().parse().unwrap_or(self.0);
+        printed.round().clamp(0.0, 10.0) as u8
     }
 
     pub fn min(self, other: Self) -> Self {
@@ -181,38 +196,38 @@ mod tests {
 
     #[test]
     fn five_is_the_weather_this_site_is_calibrated_for() {
-        assert_eq!(at(60.0).word(), "neutral");
-        assert_eq!(at(60.0).advice(), "light jacket");
-        assert_eq!(format!("{}", at(60.0)), "5.0");
+        assert_eq!(at(56.0).word(), "neutral");
+        assert_eq!(at(56.0).advice(), "jeans and a jacket");
+        assert_eq!(format!("{}", at(56.0)), "5.0");
     }
 
     #[test]
     fn interpolates_between_anchors() {
-        // Halfway from 54°F (4) to 60°F (5).
-        assert!((at(57.0).value() - 4.5).abs() < 1e-9);
-        // A third of the way from 72°F (7) to 78°F (8).
-        assert!((at(74.0).value() - 7.333).abs() < 0.001);
+        // Halfway from 47°F (4) to 56°F (5).
+        assert!((at(51.5).value() - 4.5).abs() < 1e-9);
+        // A quarter of the way from 71°F (7) to 79°F (8).
+        assert!((at(73.0).value() - 7.25).abs() < 0.001);
     }
 
     #[test]
     fn clamps_outside_the_scale_instead_of_running_off_it() {
         assert_eq!(at(-60.0).value(), 0.0);
-        assert_eq!(at(-25.0).value(), 0.0);
+        assert_eq!(at(-20.0).value(), 0.0);
         assert_eq!(at(130.0).value(), 10.0);
-        assert_eq!(at(110.0).value(), 10.0);
+        assert_eq!(at(105.0).value(), 10.0);
     }
 
     #[test]
     fn the_ends_mean_do_not_go_outside() {
         // An Alaskan midwinter afternoon and a clear Singapore summer day.
-        assert!(at(-25.0).value() <= 0.2, "{}", at(-25.0));
+        assert!(at(-20.0).value() <= 0.2, "{}", at(-20.0));
         assert!(at(108.0).value() >= 9.8, "{}", at(108.0));
 
         // And an ordinary hot day is emphatically not one of those.
-        let shorts_weather = at(88.0);
+        let shorts_weather = at(89.0);
         assert!(
             (8.5..9.5).contains(&shorts_weather.value()),
-            "88°F scored {shorts_weather}, which should be shorts, not danger"
+            "89°F scored {shorts_weather}, which should be shorts, not danger"
         );
     }
 
@@ -229,24 +244,21 @@ mod tests {
     #[test]
     fn the_mild_band_has_the_finest_resolution() {
         // A page for deciding on a layer needs to separate 58° from 64°.
-        let mild = at(66.0).value() - at(60.0).value();
-        let frigid = at(10.0).value() - at(4.0).value();
-        let scorching = at(104.0).value() - at(98.0).value();
+        let mild = at(63.0).value() - at(56.0).value();
+        let frigid = at(5.0).value() - at(-2.0).value();
+        let scorching = at(105.0).value() - at(98.0).value();
         assert!(mild > frigid * 2.0, "mild {mild} vs frigid {frigid}");
         assert!(mild > scorching * 2.0, "mild {mild} vs hot {scorching}");
     }
 
     #[test]
     fn labels_describe_what_to_wear_at_each_point() {
-        assert_eq!(at(10.0).word(), "brutal");
-        assert_eq!(at(54.0).advice(), "light jacket, staying on");
-        assert_eq!(at(72.0).advice(), "t-shirt and jeans");
-        assert_eq!(at(88.0).word(), "hot");
-        assert_eq!(at(110.0).advice(), "don't go out");
-        assert_eq!(
-            at(88.0).label(),
-            "hot \u{2014} shorts and a t-shirt, find shade"
-        );
+        assert_eq!(at(5.0).word(), "brutal");
+        assert_eq!(at(47.0).advice(), "warm jacket");
+        assert_eq!(at(71.0).advice(), "jeans and a long-sleeve shirt");
+        assert_eq!(at(89.0).word(), "hot");
+        assert_eq!(at(105.0).advice(), "avoid outdoors");
+        assert_eq!(at(89.0).label(), "hot \u{2014} shorts and a light t-shirt");
     }
 
     #[test]
@@ -265,23 +277,38 @@ mod tests {
 
     #[test]
     fn labels_snap_to_the_nearest_whole_point() {
-        assert_eq!(at(61.0).word(), at(60.0).word());
-        // 63°F sits midway between 5 and 6 and rounds up.
-        assert_eq!(at(64.0).word(), at(66.0).word());
+        assert_eq!(at(57.0).word(), at(56.0).word());
+        // 59.5°F sits midway between 5 and 6 and rounds up.
+        assert_eq!(at(61.0).word(), at(63.0).word());
     }
 
     #[test]
     fn always_renders_with_one_decimal() {
-        assert_eq!(format!("{}", at(60.0)), "5.0");
-        assert_eq!(format!("{}", at(57.0)), "4.5");
-        assert_eq!(format!("{}", at(-25.0)), "0.0");
+        assert_eq!(format!("{}", at(56.0)), "5.0");
+        assert_eq!(format!("{}", at(51.5)), "4.5");
+        assert_eq!(format!("{}", at(-20.0)), "0.0");
         assert_eq!(format!("{}", at(120.0)), "10.0");
     }
 
     #[test]
+    fn the_colour_band_always_matches_the_number_printed_on_it() {
+        // 4.45 prints as "4.5", so it must wear 5's colour, not 4's.
+        for tenth in -400..1400 {
+            let scored = Score(f64::from(tenth) / 100.0);
+            let printed: f64 = scored.to_string().parse().unwrap();
+            assert_eq!(
+                u32::from(scored.level()),
+                printed.round().clamp(0.0, 10.0) as u32,
+                "{scored} sits in band {}",
+                scored.level()
+            );
+        }
+    }
+
+    #[test]
     fn the_level_is_the_nearest_whole_point() {
-        assert_eq!(at(60.0).level(), 5);
-        assert_eq!(at(57.0).level(), 5); // 4.5 rounds up
+        assert_eq!(at(56.0).level(), 5);
+        assert_eq!(at(51.5).level(), 5); // exactly 4.5, rounds away from zero
         assert_eq!(at(-40.0).level(), 0);
         assert_eq!(at(130.0).level(), 10);
         for degrees in -20..130 {
@@ -308,8 +335,8 @@ mod tests {
 
     #[test]
     fn extremes_pick_the_right_end() {
-        let cool = at(54.0);
-        let warm = at(78.0);
+        let cool = at(47.0);
+        let warm = at(79.0);
         assert_eq!(cool.min(warm), cool);
         assert_eq!(cool.max(warm), warm);
     }

@@ -20,9 +20,8 @@
       >
       <span class="weather-probe-tip-body">
         {{ reading.hour_label }} &middot; felt {{ reading.degrees }}&deg;<br />
-        air {{ reading.air_f }}&deg; &middot; wind {{ reading.wind_mph }} mph
-        &middot; {{ reading.humidity }}% humidity &middot; {{ reading.cloud }}%
-        cloud
+        air {{ reading.air_f }}&deg; &middot; wind {{ reading.wind }} &middot;
+        {{ reading.humidity }}% humidity &middot; {{ reading.cloud }}% cloud
       </span>
     </span>
   </span>
@@ -55,7 +54,7 @@
           <span class="weather-hero-gloss">
             <span class="weather-hero-label">{{ today.typical.label }}</span>
             <span class="weather-hero-share"
-              >for {{ today.typical_share }}% of it</span
+              >{{ today.typical_share }}% of the day</span
             >
           </span>
         </p>
@@ -104,8 +103,8 @@
             {% endif %}
           </p>
           <p class="weather-now-meta">
-            Air {{ now.air_f }}&deg; &middot; wind {{ now.wind_mph }}
-            mph{% if let Some(versus) = now.versus_yesterday %}
+            Air {{ now.air_f }}&deg; &middot; wind
+            {{ now.wind }}{% if let Some(versus) = now.versus_yesterday %}
               &middot; {{ versus }}
             {% endif %}
           </p>
@@ -405,11 +404,16 @@
       <summary class="weather-method-summary">What the 0 to 10 means</summary>
       <div class="weather-method-body">
         <p>
-          A personal scale, not a published index. 5 is the weather this site's
-          owner likes best; everything else is described relative to it. The
-          steps are closest together through the mild middle, where a couple of
-          degrees genuinely changes what goes on, and widest at the ends, where
-          everything is just very cold or very hot.
+          A personal scale, not a published index. Each point is one outfit, so
+          a single number never has to say "or"; deciding whether the day needs
+          more than one outfit is what the three numbers at the top are for.
+        </p>
+        <p>
+          Read bottom to top it is a ladder of clothing rather than of degrees,
+          which is why the temperatures are unevenly spaced: adding a jacket
+          buys more degrees than swapping a t-shirt for a long-sleeve shirt. The
+          ends are anchored on not going out at all, so a day that merely wants
+          shorts is a 9, not a 10.
         </p>
         <p>
           The temperatures below are <strong>felt</strong> temperatures &mdash;

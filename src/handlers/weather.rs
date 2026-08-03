@@ -265,7 +265,7 @@ impl<'a> Modelled<'a> {
             degrees: felt.round_fahrenheit(),
             hour_label: hour_label(self.hour),
             air_f: self.raw.air.round_fahrenheit(),
-            wind_mph: self.raw.wind.round_miles_per_hour(),
+            wind: wind_phrase(self.raw.wind, self.raw.gust),
             humidity: self.raw.relative_humidity.round() as i32,
             cloud: self.raw.cloud_cover.round() as i32,
         }
@@ -313,9 +313,65 @@ struct Extremes {
     typical: Temperature,
     air_high: Temperature,
     max_wind: Speed,
+    max_gust: Speed,
     mean_cloud: f64,
     max_rain_chance: f64,
     total_rain_inches: f64,
+}
+
+/// `8 mph`, or `8 mph, gusting 21` when the gust is worth knowing about.
+///
+/// Assembled here rather than in the template: a conditional clause mid-sentence
+/// picks up stray whitespace from the template's own line breaks, and ends up
+/// rendering as "8 mph , gusting 21".
+fn wind_phrase(wind: Speed, gust: Speed) -> String {
+    let mean = wind.round_miles_per_hour();
+    let peak = gust.round_miles_per_hour();
+    if peak > mean {
+        format!("{mean} mph, gusting {peak}")
+    } else {
+        format!("{mean} mph")
+    }
+}
+
+/// A chance of rain worth planning around. Below this the model is hedging
+/// rather than forecasting, and saying so would put a raincoat in every day.
+const RAIN_WORTH_MENTIONING: f64 = 30.0;
+
+/// When rain is likely, phrased the way it changes a plan: the hour it starts,
+/// and the hour it stops. A daily total answers a question nobody asked.
+fn rain_window(hours: &[Modelled]) -> Option<String> {
+    let wet: Vec<u32> = hours
+        .iter()
+        .filter(|hour| hour.raw.precipitation_probability >= RAIN_WORTH_MENTIONING)
+        .map(|hour| hour.hour)
+        .collect();
+    let first = *wet.first()?;
+    let last = *wet.last()?;
+
+    let peak = hours
+        .iter()
+        .map(|hour| hour.raw.precipitation_probability)
+        .fold(0.0, f64::max)
+        .round() as i32;
+
+    Some(if first == last {
+        format!(
+            "Rain around {}, {peak}% at its likeliest.",
+            hour_label(first)
+        )
+    } else if hours.first().is_some_and(|hour| hour.hour == first) {
+        format!(
+            "Rain from the start of the day until about {}, {peak}% at its likeliest.",
+            hour_label(last)
+        )
+    } else {
+        format!(
+            "Dry until about {}, then rain until {} \u{2014} {peak}% at its likeliest.",
+            hour_label(first),
+            hour_label(last)
+        )
+    })
 }
 
 /// The middle value, which shrugs off an hour or two of freak weather in a way
@@ -332,17 +388,21 @@ fn median_temperature(values: impl Iterator<Item = Temperature>) -> Option<Tempe
     sorted.get(sorted.len() / 2).copied()
 }
 
-/// The share of hours that round to the same whole point as `typical`, which is
-/// what lets the page say "8.2, and that is most of the day".
-fn share_near(hours: &[Modelled], typical: Score) -> i32 {
+/// The share of hours that call for the same outfit as `typical`.
+///
+/// Matching on the whole point rather than on a fixed span of the scale, because
+/// the scale is not evenly spaced: a fixed span covers three quarters of a
+/// winter day and a couple of hours of a spring one, which would say more about
+/// the season than about the day.
+fn share_in_the_same_outfit(hours: &[Modelled], typical: Score) -> i32 {
     if hours.is_empty() {
         return 0;
     }
-    let near = hours
+    let matching = hours
         .iter()
-        .filter(|hour| (scale::score(hour.felt.typical).value() - typical.value()).abs() <= 0.5)
+        .filter(|hour| scale::score(hour.felt.typical).level() == typical.level())
         .count();
-    (near as f64 / hours.len() as f64 * 100.0).round() as i32
+    (matching as f64 / hours.len() as f64 * 100.0).round() as i32
 }
 
 fn extremes(hours: &[Modelled]) -> Option<Extremes> {
@@ -365,6 +425,7 @@ fn extremes(hours: &[Modelled]) -> Option<Extremes> {
         typical: median_temperature(hours.iter().map(|h| h.felt.typical))?,
         air_high: hours.iter().map(|h| h.raw.air).reduce(Temperature::max)?,
         max_wind: hours.iter().map(|h| h.raw.wind).reduce(Speed::max)?,
+        max_gust: hours.iter().map(|h| h.raw.gust).reduce(Speed::max)?,
         mean_cloud: hours.iter().map(|h| h.raw.cloud_cover).sum::<f64>() / hours.len() as f64,
         max_rain_chance: hours
             .iter()
@@ -631,7 +692,7 @@ struct Probe {
     degrees: i32,
     hour_label: String,
     air_f: i32,
-    wind_mph: i32,
+    wind: String,
     humidity: i32,
     cloud: i32,
 }
@@ -664,7 +725,7 @@ struct NowRow {
     shade: Probe,
     has_sun: bool,
     air_f: i32,
-    wind_mph: i32,
+    wind: String,
     versus_yesterday: Option<String>,
 }
 
@@ -786,7 +847,13 @@ fn score_row(label: &str, today: Score, yesterday: Score) -> Comparison {
 ///
 /// Written in the 0-10 scale with degrees in brackets: the score is the
 /// decision, the temperature is the evidence for it.
-fn verdict(today: &Extremes, peak: Score, peak_hour: &str, sunset_label: &str) -> Vec<String> {
+fn verdict(
+    today: &Extremes,
+    peak: Score,
+    peak_hour: &str,
+    sunset_label: &str,
+    rain: Option<String>,
+) -> Vec<String> {
     let typical = today.typical_score;
     let low = today.min_shade_score;
 
@@ -815,16 +882,22 @@ fn verdict(today: &Extremes, peak: Score, peak_hour: &str, sunset_label: &str) -
         format!("{shade_clause}.")
     });
 
-    if today.max_wind.miles_per_hour() >= 18.0 {
+    // Gusts get their own sentence when they are the thing you would notice:
+    // the mean wind is already inside every number above, the gust is not.
+    let gust = today.max_gust.round_miles_per_hour();
+    if gust >= 25 && today.max_gust.miles_per_hour() - today.max_wind.miles_per_hour() >= 7.0 {
+        sentences.push(format!(
+            "Gusting to {gust} mph, so whatever you take wants to fasten shut."
+        ));
+    } else if today.max_wind.miles_per_hour() >= 18.0 {
         sentences.push(format!(
             "Wind peaks near {} mph, which is most of why the shade reads colder than the air.",
             today.max_wind.round_miles_per_hour()
         ));
-    } else if today.max_rain_chance >= 40.0 {
-        sentences.push(format!(
-            "Rain reaches {}% at its likeliest \u{2014} bring the shell rather than the sweater.",
-            today.max_rain_chance.round() as i32
-        ));
+    }
+
+    if let Some(rain) = rain {
+        sentences.push(rain);
     }
 
     sentences
@@ -914,7 +987,7 @@ fn build_report(forecast: &Forecast, target: &Target) -> Option<Report> {
             shade: current.probe(Exposure::Shade),
             has_sun: current.sunlit(),
             air_f: current.raw.air.round_fahrenheit(),
-            wind_mph: current.raw.wind.round_miles_per_hour(),
+            wind: wind_phrase(current.raw.wind, current.raw.gust),
             versus_yesterday: yesterday_visible
                 .iter()
                 .find(|previous| previous.hour == current.hour)
@@ -1005,7 +1078,7 @@ fn build_report(forecast: &Forecast, target: &Target) -> Option<Report> {
             "today"
         },
         typical: representative.probe(Exposure::Typical),
-        typical_share: share_near(decision, today_extremes.typical_score),
+        typical_share: share_in_the_same_outfit(decision, today_extremes.typical_score),
         low: coldest.probe(Exposure::Shade),
         high: warmest.probe(Exposure::Typical),
         high_hour: hour_label(warmest.hour),
@@ -1017,6 +1090,7 @@ fn build_report(forecast: &Forecast, target: &Target) -> Option<Report> {
             scale::score(warmest.felt.typical),
             &hour_label(warmest.hour),
             &sunset_label,
+            rain_window(decision),
         ),
         now,
         chart,
@@ -1114,6 +1188,7 @@ mod tests {
             air: Temperature::from_celsius(air_c),
             relative_humidity: 70.0,
             wind: Speed::from_meters_per_second(5.0),
+            gust: Speed::from_meters_per_second(7.0),
             precipitation_mm: 0.0,
             precipitation_probability: 0.0,
             cloud_cover: 10.0,
@@ -1238,6 +1313,27 @@ mod tests {
     }
 
     #[test]
+    fn the_share_counts_hours_wearing_the_same_outfit() {
+        let report = report();
+        assert!(
+            (1..=100).contains(&report.typical_share),
+            "share was {}",
+            report.typical_share
+        );
+
+        // A day pinned to one temperature is entirely one outfit.
+        let mut flat = forecast();
+        for hour in &mut flat.hours {
+            hour.air = Temperature::from_celsius(18.0);
+            hour.direct_normal = 0.0;
+            hour.direct_horizontal = 0.0;
+            hour.diffuse = 0.0;
+            hour.sunshine_seconds = 0.0;
+        }
+        assert_eq!(build_report(&flat, &target()).unwrap().typical_share, 100);
+    }
+
+    #[test]
     fn the_headline_is_the_typical_hour_not_the_sunlit_ceiling() {
         let report = report();
         // Typical sits inside the bounds, and covers a real share of the day.
@@ -1302,7 +1398,7 @@ mod tests {
         for probe in [&report.typical, &report.low, &report.high] {
             assert!(probe.hour_label.ends_with("AM") || probe.hour_label.ends_with("PM"));
             assert!(probe.degrees > -100 && probe.degrees < 150);
-            assert!(probe.wind_mph >= 0);
+            assert!(probe.wind.ends_with("mph") || probe.wind.contains("gusting"));
             assert!((0..=100).contains(&probe.humidity));
             assert!((0..=100).contains(&probe.cloud));
         }
@@ -1442,6 +1538,55 @@ mod tests {
         let report = report();
         assert_eq!(report.sunset_label, "8:17 PM");
         assert_eq!(report.sunrise_label, "6:14 AM");
+    }
+
+    #[test]
+    fn rain_is_described_by_when_it_arrives_not_by_how_much_falls() {
+        let mut showery = forecast();
+        for hour in &mut showery.hours {
+            // Dry morning, wet from 3 PM.
+            hour.precipitation_probability = if hour_of(&hour.time).unwrap_or(0) >= 15 {
+                70.0
+            } else {
+                5.0
+            };
+        }
+        let report = build_report(&showery, &target()).unwrap();
+        let rain = report
+            .verdict
+            .iter()
+            .find(|line| line.contains("rain"))
+            .expect("a rain sentence");
+        assert!(rain.contains("Dry until about 3 PM"), "{rain}");
+        assert!(rain.contains("70%"), "{rain}");
+    }
+
+    #[test]
+    fn a_dry_day_says_nothing_about_rain_at_all() {
+        let report = report();
+        assert!(
+            !report.verdict.iter().any(|line| line.contains("rain")),
+            "{:?}",
+            report.verdict
+        );
+    }
+
+    #[test]
+    fn a_gusty_day_warns_about_the_gust_rather_than_the_mean() {
+        let mut blustery = forecast();
+        for hour in &mut blustery.hours {
+            hour.wind = Speed::from_meters_per_second(6.0); // 13 mph
+            hour.gust = Speed::from_meters_per_second(14.0); // 31 mph
+        }
+        let report = build_report(&blustery, &target()).unwrap();
+        assert!(
+            report
+                .verdict
+                .iter()
+                .any(|line| line.contains("Gusting to 31 mph")),
+            "{:?}",
+            report.verdict
+        );
     }
 
     #[test]

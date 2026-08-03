@@ -104,6 +104,9 @@ pub struct Hour {
     pub relative_humidity: f64,
     /// The request asks for `wind_speed_unit=ms`, which this type pins down.
     pub wind: Speed,
+    /// Peak gust in the hour. The mean is what Steadman's formula wants, but
+    /// the gust is what decides whether a jacket stays done up.
+    pub gust: Speed,
     pub precipitation_mm: f64,
     pub precipitation_probability: f64,
     pub cloud_cover: f64,
@@ -193,8 +196,8 @@ pub async fn forecast(latitude: f64, longitude: f64) -> Result<Arc<Forecast>, Er
         (
             "hourly",
             "temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,\
-             cloud_cover,sunshine_duration,wind_speed_10m,direct_radiation,\
-             diffuse_radiation,direct_normal_irradiance",
+             cloud_cover,sunshine_duration,wind_speed_10m,wind_gusts_10m,\
+             direct_radiation,diffuse_radiation,direct_normal_irradiance",
         ),
         (
             "daily",
@@ -318,6 +321,7 @@ struct ApiHourly {
     cloud_cover: Vec<Option<f64>>,
     sunshine_duration: Vec<Option<f64>>,
     wind_speed_10m: Vec<Option<f64>>,
+    wind_gusts_10m: Vec<Option<f64>>,
     direct_radiation: Vec<Option<f64>>,
     diffuse_radiation: Vec<Option<f64>>,
     direct_normal_irradiance: Vec<Option<f64>>,
@@ -387,6 +391,12 @@ impl ApiForecast {
                     air: Temperature::from_celsius(value_at(&hourly.temperature_2m, i)?),
                     relative_humidity: value_at(&hourly.relative_humidity_2m, i)?,
                     wind: Speed::from_meters_per_second(value_at(&hourly.wind_speed_10m, i)?),
+                    // A missing gust means "no stronger than the mean", which
+                    // is the honest reading and never overstates the wind.
+                    gust: Speed::from_meters_per_second(
+                        value_at(&hourly.wind_gusts_10m, i)
+                            .unwrap_or_else(|| value_at(&hourly.wind_speed_10m, i).unwrap_or(0.0)),
+                    ),
                     precipitation_mm: value_or_zero(&hourly.precipitation, i),
                     precipitation_probability: value_or_zero(&hourly.precipitation_probability, i),
                     cloud_cover: value_or_zero(&hourly.cloud_cover, i),
@@ -455,6 +465,7 @@ mod tests {
         "cloud_cover": [4, 0, 11],
         "sunshine_duration": [3600.0, 3600.0, 1800.0],
         "wind_speed_10m": [3.04, 5.22, 4.1],
+        "wind_gusts_10m": [6.1, 9.8, 7.2],
         "direct_radiation": [722.0, 863.0, 700.5],
         "diffuse_radiation": [160.5, 112.0, 150.0],
         "direct_normal_irradiance": [841.9, 936.6, 830.0]
@@ -501,6 +512,7 @@ mod tests {
         assert_eq!(hour.air.celsius(), 21.9);
         assert_eq!(hour.relative_humidity, 71.0);
         assert_eq!(hour.wind.meters_per_second(), 5.22);
+        assert_eq!(hour.gust.meters_per_second(), 9.8);
         assert_eq!(hour.direct_normal, 936.6);
         assert_eq!(hour.direct_horizontal, 863.0);
         assert_eq!(hour.diffuse, 112.0);
@@ -525,6 +537,16 @@ mod tests {
             .unwrap();
         assert_eq!(forecast.hours.len(), 2);
         assert_eq!(forecast.hours[1].time, "2026-08-02T12:00");
+    }
+
+    #[test]
+    fn a_missing_gust_falls_back_to_the_mean_wind() {
+        let json = SAMPLE.replace("[6.1, 9.8, 7.2]", "[6.1, null, 7.2]");
+        let forecast = serde_json::from_slice::<ApiForecast>(json.as_bytes())
+            .unwrap()
+            .into_forecast()
+            .unwrap();
+        assert_eq!(forecast.hours[1].gust, forecast.hours[1].wind);
     }
 
     #[test]
