@@ -40,6 +40,37 @@
 //!
 //! The presentation owes more to the UV Index: a small bounded number with a
 //! colour per point and an action attached to each.
+//!
+//! # Checked against PMV
+//!
+//! Because every point names an outfit, the anchors can be checked rather than
+//! merely asserted. Assigning ASHRAE 55 garment insulation to each outfit and
+//! running Fanger's PMV at 2.4 met (a moderate walk) gives, for the prescribed
+//! clothing at each point's own temperature:
+//!
+//! ```text
+//!   9  shorts and a light t-shirt        +1.57   warm, going on hot
+//!   8  jeans and a t-shirt               +0.72   warm but tolerable
+//!   7  jeans and a long-sleeve shirt     +0.29   neutral
+//!   6  jeans and a light jacket          -0.03   neutral
+//!   5  jeans and a jacket                -0.05   neutral
+//!   4  warm jacket                       -0.25   neutral
+//!   3  coat                              -0.46   neutral
+//!   2  winter coat                       -0.67   slightly cool
+//!   1  heavy winter coat, hat and gloves -0.88   slightly cool
+//! ```
+//!
+//! Which is the intent: 3 through 7 sit inside ASHRAE's ±0.5 comfort band, so
+//! the clothing named there genuinely makes the weather comfortable. 8 is warm
+//! in jeans (+0.72) and comfortable in shorts (+0.19), and 9 stays hot however
+//! you dress, because below a t-shirt there is nothing left to remove. The cold
+//! end drifts only slightly cool, which is right: you can always add more.
+//!
+//! Two things that check are sensitive to. It assumes a moderate walk — at a
+//! brisk 2.9 met the whole scale reads about half a point warm, and at a stroll
+//! half a point cool, so the anchors encode a pace as well as a preference. And
+//! PMV is known to overstate warmth above about 2 met (Humphreys & Nicol,
+//! 2002), which is the direction that would matter most at 9.
 
 use crate::units::Temperature;
 use std::fmt;
@@ -71,18 +102,26 @@ const ANCHORS: [(f64, f64); 11] = [
 /// top it is a ladder of insulation, roughly even in `clo` per step, which is
 /// why the temperatures below are unevenly spaced: adding a jacket buys more
 /// degrees than swapping a t-shirt for a long-sleeve shirt.
-const LABELS: [(&str, &str); 11] = [
-    ("dangerous cold", "avoid outdoors"),
-    ("brutal", "heavy winter coat, hat and gloves"),
-    ("freezing", "winter coat"),
-    ("cold", "coat"),
-    ("chilly", "warm jacket"),
-    ("neutral", "jeans and a jacket"),
-    ("mild", "jeans and a light jacket"),
-    ("pleasant", "jeans and a long-sleeve shirt"),
-    ("warm", "jeans and a t-shirt"),
-    ("hot", "shorts and a light t-shirt"),
-    ("dangerous heat", "avoid outdoors"),
+const LABELS: [(&str, &str, Option<&str>); 11] = [
+    ("dangerous cold", "avoid outdoors", None),
+    (
+        "brutal",
+        "heavy winter coat, hat and gloves",
+        Some("a heavy winter coat, hat and gloves"),
+    ),
+    ("freezing", "winter coat", Some("a winter coat")),
+    ("cold", "coat", Some("a coat")),
+    ("chilly", "warm jacket", Some("a warm jacket")),
+    ("neutral", "jeans and a jacket", Some("a jacket")),
+    ("mild", "jeans and a light jacket", Some("a light jacket")),
+    (
+        "pleasant",
+        "jeans and a long-sleeve shirt",
+        Some("a long-sleeve shirt"),
+    ),
+    ("warm", "jeans and a t-shirt", None),
+    ("hot", "shorts and a light t-shirt", None),
+    ("dangerous heat", "avoid outdoors", None),
 ];
 
 /// A point on the comfort scale, 0 through 10.
@@ -102,6 +141,15 @@ impl Score {
     /// What to wear at the nearest whole point.
     pub fn advice(self) -> &'static str {
         LABELS[self.level() as usize].1
+    }
+
+    /// The item this point adds over the one above it — what you would carry to
+    /// be ready for it, rather than wear the whole time.
+    ///
+    /// `None` from 8 up: at a t-shirt there is nothing left to take off, so a
+    /// warmer point cannot be reached by carrying something.
+    pub fn layer(self) -> Option<&'static str> {
+        LABELS[self.level() as usize].2
     }
 
     /// Both together, for a caption that has room for them.
@@ -149,7 +197,7 @@ pub fn key() -> Vec<(u8, &'static str, &'static str, i32)> {
         .enumerate()
         .rev()
         .map(|(level, (degrees, _))| {
-            let (word, advice) = LABELS[level];
+            let (word, advice, _) = LABELS[level];
             (level as u8, word, advice, *degrees as i32)
         })
         .collect()
@@ -265,13 +313,14 @@ mod tests {
     fn no_two_points_read_the_same() {
         // If a word or a garment line repeats, the extra resolution is fake:
         // the reader cannot tell which point they are looking at from the text.
-        let words: std::collections::HashSet<&str> = LABELS.iter().map(|(word, _)| *word).collect();
+        let words: std::collections::HashSet<&str> =
+            LABELS.iter().map(|(word, _, _)| *word).collect();
         assert_eq!(words.len(), LABELS.len(), "a sensation word repeats");
 
         // The two ends share "don't go out" by design; everything between is
         // a distinct instruction.
         let middle: std::collections::HashSet<&str> =
-            LABELS[1..10].iter().map(|(_, advice)| *advice).collect();
+            LABELS[1..10].iter().map(|(_, advice, _)| *advice).collect();
         assert_eq!(middle.len(), 9, "a garment line repeats");
     }
 
@@ -326,10 +375,24 @@ mod tests {
         for (position, (level, word, advice, degrees)) in key.iter().enumerate() {
             let index = 10 - position;
             assert_eq!(usize::from(*level), index);
-            assert_eq!((*word, *advice), LABELS[index]);
+            assert_eq!((*word, *advice), (LABELS[index].0, LABELS[index].1));
             // The temperature shown beside each point is a felt temperature,
             // and must be one that actually lands on that point.
             assert_eq!(at(f64::from(*degrees)).level(), *level);
+        }
+    }
+
+    #[test]
+    fn a_layer_is_something_you_could_carry() {
+        // Below a t-shirt every point is reachable by adding an outer layer.
+        for degrees in [5.0, 22.0, 36.0, 47.0, 56.0, 63.0, 71.0] {
+            assert!(at(degrees).layer().is_some(), "{degrees}F has no layer");
+        }
+        assert_eq!(at(47.0).layer(), Some("a warm jacket"));
+
+        // Above it there is nothing left to take off, so nothing to carry.
+        for degrees in [79.0, 89.0, 105.0] {
+            assert_eq!(at(degrees).layer(), None, "{degrees}F offered a layer");
         }
     }
 

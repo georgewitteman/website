@@ -51,10 +51,6 @@ impl Temperature {
         self.fahrenheit().round() as i32
     }
 
-    pub fn min(self, other: Self) -> Self {
-        Temperature(self.0.min(other.0))
-    }
-
     pub fn max(self, other: Self) -> Self {
         Temperature(self.0.max(other.0))
     }
@@ -157,7 +153,6 @@ mod tests {
     fn extremes_pick_the_right_end() {
         let cool = Temperature::from_celsius(3.0);
         let warm = Temperature::from_celsius(8.0);
-        assert_eq!(cool.min(warm), cool);
         assert_eq!(cool.max(warm), warm);
 
         let breeze = Speed::from_meters_per_second(4.0);

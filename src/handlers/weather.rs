@@ -305,12 +305,10 @@ fn daylight_window(day: &Day) -> (u32, u32) {
 
 /// Summary statistics over the visible window.
 struct Extremes {
-    min_shade: Temperature,
     peak_sun_score: Score,
     min_shade_score: Score,
     /// The middle of the day's exposure-weighted hours.
     typical_score: Score,
-    typical: Temperature,
     air_high: Temperature,
     max_wind: Speed,
     max_gust: Speed,
@@ -382,12 +380,6 @@ fn median(scores: impl Iterator<Item = Score>) -> Option<Score> {
     sorted.get(sorted.len() / 2).copied()
 }
 
-fn median_temperature(values: impl Iterator<Item = Temperature>) -> Option<Temperature> {
-    let mut sorted: Vec<Temperature> = values.collect();
-    sorted.sort_by(|a, b| a.partial_cmp(b).expect("no NaN"));
-    sorted.get(sorted.len() / 2).copied()
-}
-
 /// The share of hours that call for the same outfit as `typical`.
 ///
 /// Matching on the whole point rather than on a fixed span of the scale, because
@@ -409,10 +401,6 @@ fn extremes(hours: &[Modelled]) -> Option<Extremes> {
     Some(Extremes {
         // `reduce` yields None on an empty window, which is the only failure
         // mode here and short-circuits the whole struct.
-        min_shade: hours
-            .iter()
-            .map(|h| h.felt.shade)
-            .reduce(Temperature::min)?,
         peak_sun_score: hours
             .iter()
             .map(|h| scale::score(h.felt.sun))
@@ -422,7 +410,6 @@ fn extremes(hours: &[Modelled]) -> Option<Extremes> {
             .map(|h| scale::score(h.felt.shade))
             .reduce(Score::min)?,
         typical_score: median(hours.iter().map(|h| scale::score(h.felt.typical)))?,
-        typical: median_temperature(hours.iter().map(|h| h.felt.typical))?,
         air_high: hours.iter().map(|h| h.raw.air).reduce(Temperature::max)?,
         max_wind: hours.iter().map(|h| h.raw.wind).reduce(Speed::max)?,
         max_gust: hours.iter().map(|h| h.raw.gust).reduce(Speed::max)?,
@@ -854,62 +841,83 @@ fn score_row(label: &str, today: Score, yesterday: Score) -> Comparison {
 
 /// The answer to the question the page exists for, in at most four sentences.
 ///
-/// Written in the 0-10 scale with degrees in brackets: the score is the
-/// decision, the temperature is the evidence for it.
-fn verdict(
-    today: &Extremes,
-    peak: Score,
-    peak_hour: &str,
-    sunset_label: &str,
-    rain: Option<String>,
-) -> Vec<String> {
-    let typical = today.typical_score;
-    let low = today.min_shade_score;
+/// Two numbers, two decisions. You wear the outfit for the warmest you will be,
+/// because a shirt you are too hot in cannot be taken off and left anywhere;
+/// you carry whatever bridges down to the coolest, because a jacket can be
+/// taken off and carried. Advising the middle — the average of the day — is the
+/// one answer that is wrong at both ends of it.
+fn verdict(input: &VerdictInput) -> Vec<String> {
+    let warm = input.warmest;
+    let cool = input.coolest;
 
-    let mut sentences = vec![format!(
-        "Dress for {typical} \u{2014} {} at {}\u{b0}: {}.",
-        typical.word(),
-        today.typical.round_fahrenheit(),
-        typical.advice()
-    )];
+    let mut sentences = vec![if warm.level() >= 10 {
+        format!(
+            "It reaches {warm} around {} \u{2014} {}.",
+            input.warmest_hour,
+            warm.advice()
+        )
+    } else if warm.level() == cool.level() {
+        format!(
+            "Wear {}. It sits at {warm} \u{2014} {} \u{2014} all day.",
+            warm.advice(),
+            warm.word()
+        )
+    } else {
+        format!(
+            "Wear {}, for {warm} ({}\u{b0}) around {}.",
+            warm.advice(),
+            input.warmest_degrees,
+            input.warmest_hour
+        )
+    }];
 
-    // Only worth a sentence when the peak lands somewhere else on the scale.
-    if peak.value() - typical.value() >= 0.4 {
-        sentences.push(format!(
-            "Around {peak_hour}, out in the open, it reaches {peak} \u{2014} {}.",
-            peak.word()
-        ));
+    // The carry sentence, which is the whole reason the page exists.
+    if cool.level() < warm.level() {
+        let coolest = format!("{cool} ({}\u{b0})", input.coolest_degrees);
+        sentences.push(match cool.layer() {
+            Some(layer) => format!(
+                "Take {layer}: out of the sun, and once it goes at {}, it drops to {coolest}.",
+                input.sunset
+            ),
+            // Only reachable when the cold end is itself t-shirt weather, so
+            // there is nothing to add and nothing to promise.
+            None => format!(
+                "It stays warm even out of the sun, easing only to {coolest} after {}.",
+                input.sunset
+            ),
+        });
     }
 
-    let shade_clause = format!(
-        "Out of the sun, and once it goes at {sunset_label}, it eases to {low} ({}\u{b0})",
-        today.min_shade.round_fahrenheit()
-    );
-    sentences.push(if peak.value() - low.value() >= 1.0 {
-        format!("{shade_clause} \u{2014} enough of a spread to carry a layer for.")
-    } else {
-        format!("{shade_clause}.")
-    });
-
-    // Gusts get their own sentence when they are the thing you would notice:
-    // the mean wind is already inside every number above, the gust is not.
-    let gust = today.max_gust.round_miles_per_hour();
-    if gust >= 25 && today.max_gust.miles_per_hour() - today.max_wind.miles_per_hour() >= 7.0 {
+    let gust = input.max_gust.round_miles_per_hour();
+    if gust >= 25 && input.max_gust.miles_per_hour() - input.max_wind.miles_per_hour() >= 7.0 {
         sentences.push(format!(
             "Gusting to {gust} mph, so whatever you take wants to fasten shut."
         ));
-    } else if today.max_wind.miles_per_hour() >= 18.0 {
+    } else if input.max_wind.miles_per_hour() >= 18.0 {
         sentences.push(format!(
             "Wind peaks near {} mph, which is most of why the shade reads colder than the air.",
-            today.max_wind.round_miles_per_hour()
+            input.max_wind.round_miles_per_hour()
         ));
     }
 
-    if let Some(rain) = rain {
-        sentences.push(rain);
+    if let Some(rain) = &input.rain {
+        sentences.push(rain.clone());
     }
 
     sentences
+}
+
+/// Everything the verdict needs, gathered so it reads as one thought.
+struct VerdictInput {
+    warmest: Score,
+    warmest_degrees: i32,
+    warmest_hour: String,
+    coolest: Score,
+    coolest_degrees: i32,
+    sunset: String,
+    max_wind: Speed,
+    max_gust: Speed,
+    rain: Option<String>,
 }
 
 fn build_report(forecast: &Forecast, target: &Target) -> Option<Report> {
@@ -1094,13 +1102,17 @@ fn build_report(forecast: &Forecast, target: &Target) -> Option<Report> {
         // Derived from the rounded pair rather than rounded separately, so the
         // swing always equals the two numbers printed beside it.
         swing_f,
-        verdict: verdict(
-            &today_extremes,
-            scale::score(warmest.felt.typical),
-            &hour_label(warmest.hour),
-            &sunset_label,
-            rain_window(decision),
-        ),
+        verdict: verdict(&VerdictInput {
+            warmest: scale::score(warmest.felt.typical),
+            warmest_degrees: warmest.felt.typical.round_fahrenheit(),
+            warmest_hour: hour_label(warmest.hour),
+            coolest: scale::score(coldest.felt.shade),
+            coolest_degrees: coldest.felt.shade.round_fahrenheit(),
+            sunset: sunset_label.clone(),
+            max_wind: today_extremes.max_wind,
+            max_gust: today_extremes.max_gust,
+            rain: rain_window(decision),
+        }),
         now,
         chart,
         hours,
@@ -1461,23 +1473,62 @@ mod tests {
     #[test]
     fn verdict_tells_you_what_to_wear_and_whether_to_carry_a_layer() {
         let report = report();
-        assert!(report.verdict[0].starts_with("Dress for "));
-        assert!(report.verdict.len() >= 2);
+        // Wear for the warmest, carry down to the coolest. Advising the middle
+        // is the one answer that is wrong at both ends of the day.
         assert!(
-            report
-                .verdict
-                .iter()
-                .any(|line| line.contains("once it goes at 8:17 PM")),
+            report.verdict[0].starts_with("Wear "),
             "{:?}",
             report.verdict
         );
         assert!(
-            report
-                .verdict
-                .iter()
-                .any(|line| line.contains("carry a layer for")),
+            report.verdict[1].starts_with("Take "),
             "{:?}",
             report.verdict
+        );
+        assert!(
+            report.verdict[1].contains("once it goes at 8:17 PM"),
+            "{:?}",
+            report.verdict
+        );
+    }
+
+    #[test]
+    fn a_day_that_never_changes_asks_you_to_carry_nothing() {
+        let mut steady = forecast();
+        for hour in &mut steady.hours {
+            hour.air = Temperature::from_celsius(18.0);
+            hour.direct_normal = 0.0;
+            hour.direct_horizontal = 0.0;
+            hour.diffuse = 0.0;
+            hour.sunshine_seconds = 0.0;
+        }
+        let report = build_report(&steady, &target()).unwrap();
+        assert!(
+            report.verdict[0].starts_with("Wear "),
+            "{:?}",
+            report.verdict
+        );
+        assert!(
+            report.verdict.iter().all(|line| !line.starts_with("Take ")),
+            "nothing to carry on a flat day: {:?}",
+            report.verdict
+        );
+    }
+
+    #[test]
+    fn the_outfit_is_the_one_you_can_still_take_off() {
+        // The failure this replaced: advising the day's average leaves you
+        // sweating in a shirt you cannot remove at the peak.
+        let report = report();
+        let warmest_outfit = report.verdict[0].clone();
+        assert!(
+            warmest_outfit.contains(&report.high.score),
+            "the outfit sentence should name the warmest score: {warmest_outfit}"
+        );
+        assert!(
+            report.verdict[1].contains(&report.low.score),
+            "the carry sentence should name the coolest score: {:?}",
+            report.verdict[1]
         );
     }
 

@@ -36,9 +36,13 @@ test.describe("Weather", () => {
     ).toHaveCount(2);
   });
 
-  test("tells you what to wear", async ({ page }) => {
+  test("tells you what to wear, and what to carry", async ({ page }) => {
+    // Two decisions, not one: the outfit is for the warmest you will be, since
+    // a shirt you are too hot in cannot be taken off; the layer covers the
+    // coolest, since a jacket can.
     await page.goto("/weather");
-    await expect(page.getByText(/^Dress for \d\.\d —/)).toBeVisible();
+    const verdict = page.locator(".weather-verdict");
+    await expect(verdict).toContainText(/Wear .+, for \d\.\d \(-?\d+°\)/);
   });
 
   test("colours each score by how it feels", async ({ page }) => {
