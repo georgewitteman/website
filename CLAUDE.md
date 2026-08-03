@@ -42,7 +42,7 @@ cargo build --release --target x86_64-unknown-linux-gnu   # Production build for
 - **`src/services/`** - External service integrations (iCloud Private Relay IP detection, Open-Meteo weather)
 - **`src/units.rs`** - Typed quantities (`Temperature`, `TemperatureDelta`, `Speed`), each storing one canonical unit
 - **`src/comfort.rs`** - Steadman apparent temperature plus a radiation budget, giving felt temperature in sun and in shade
-- **`src/scale.rs`** - The personal 0-10 comfort scale the weather page leads with
+- **`src/scale.rs`** - The personal 0-10 comfort scale the weather page leads with. Each point names one outfit; its temperature is _solved_ so that PMV (ISO 7730) returns the sensation the point claims, given that outfit's ASHRAE 55 insulation. Changing an outfit means re-solving its temperature, not guessing one.
 - **`src/locations.rs`** - Committed saved locations for the weather page
 
 ### The weather page

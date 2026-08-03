@@ -317,6 +317,22 @@ struct Extremes {
     total_rain_inches: f64,
 }
 
+/// The outfit to actually put on, given the day's middle and its peak.
+///
+/// One rung below the peak: the scale is built so each outfit is neutral at its
+/// own point, which makes the one below it slightly warm there and comfortable
+/// everywhere cooler. Slightly warm for an hour is a tolerance the evening does
+/// not offer in reverse. Floored at the typical hour so a brief sunny peak
+/// cannot strip the day down to shorts.
+fn wear_for(typical: Score, warmest: Score) -> Score {
+    let one_below = Score::from_value(warmest.value() - 1.0);
+    if typical > one_below {
+        typical
+    } else {
+        one_below
+    }
+}
+
 /// `8 mph`, or `8 mph, gusting 21` when the gust is worth knowing about.
 ///
 /// Assembled here rather than in the template: a conditional clause mid-sentence
@@ -841,13 +857,19 @@ fn score_row(label: &str, today: Score, yesterday: Score) -> Comparison {
 
 /// The answer to the question the page exists for, in at most four sentences.
 ///
-/// Two numbers, two decisions. You wear the outfit for the warmest you will be,
-/// because a shirt you are too hot in cannot be taken off and left anywhere;
-/// you carry whatever bridges down to the coolest, because a jacket can be
-/// taken off and carried. Advising the middle — the average of the day — is the
-/// one answer that is wrong at both ends of it.
+/// Two decisions, from the three numbers at the top.
+///
+/// The outfit has to survive the whole day, because trousers cannot be taken
+/// off and carried the way a jacket can. Dressing for the average leaves you
+/// stuck in a shirt you are too hot in at the peak; dressing for the peak
+/// itself leaves you in shorts at nine in the evening. So it takes the outfit
+/// one rung below the warmest, which the scale's own calibration makes only
+/// *slightly* warm there — a tolerance the cold end does not have — and never
+/// lets that fall below the typical hour, in case the peak is a brief one.
+///
+/// The layer is separate, and comes from the coolest: that one you carry.
 fn verdict(input: &VerdictInput) -> Vec<String> {
-    let warm = input.warmest;
+    let warm = input.wear;
     let cool = input.coolest;
 
     let mut sentences = vec![if warm.level() >= 10 {
@@ -864,8 +886,9 @@ fn verdict(input: &VerdictInput) -> Vec<String> {
         )
     } else {
         format!(
-            "Wear {}, for {warm} ({}\u{b0}) around {}.",
+            "Wear {}, which holds up to {} ({}\u{b0}) around {}.",
             warm.advice(),
+            input.warmest,
             input.warmest_degrees,
             input.warmest_hour
         )
@@ -909,6 +932,8 @@ fn verdict(input: &VerdictInput) -> Vec<String> {
 
 /// Everything the verdict needs, gathered so it reads as one thought.
 struct VerdictInput {
+    /// The outfit to put on: one rung below the peak, floored at the typical.
+    wear: Score,
     warmest: Score,
     warmest_degrees: i32,
     warmest_hour: String,
@@ -1103,6 +1128,10 @@ fn build_report(forecast: &Forecast, target: &Target) -> Option<Report> {
         // swing always equals the two numbers printed beside it.
         swing_f,
         verdict: verdict(&VerdictInput {
+            wear: wear_for(
+                today_extremes.typical_score,
+                scale::score(warmest.felt.typical),
+            ),
             warmest: scale::score(warmest.felt.typical),
             warmest_degrees: warmest.felt.typical.round_fahrenheit(),
             warmest_hour: hour_label(warmest.hour),
@@ -1516,20 +1545,38 @@ mod tests {
     }
 
     #[test]
-    fn the_outfit_is_the_one_you_can_still_take_off() {
-        // The failure this replaced: advising the day's average leaves you
-        // sweating in a shirt you cannot remove at the peak.
+    fn the_outfit_survives_the_peak_without_stripping_the_day_to_shorts() {
         let report = report();
-        let warmest_outfit = report.verdict[0].clone();
+        assert!(report.verdict[0].starts_with("Wear "));
         assert!(
-            warmest_outfit.contains(&report.high.score),
-            "the outfit sentence should name the warmest score: {warmest_outfit}"
+            report.verdict[0].contains(&report.high.score),
+            "the outfit sentence should name the peak it holds up to: {:?}",
+            report.verdict[0]
         );
         assert!(
             report.verdict[1].contains(&report.low.score),
             "the carry sentence should name the coolest score: {:?}",
             report.verdict[1]
         );
+    }
+
+    #[test]
+    fn a_brief_sunny_peak_does_not_strip_the_day_down_to_shorts() {
+        // The Inner Sunset case: a cool day with one bright hour. Dressing for
+        // that hour leaves you bare-legged at nine in the evening.
+        let typical = Score::from_value(5.3);
+        let peak = Score::from_value(8.1);
+        assert_eq!(wear_for(typical, peak).level(), 7);
+
+        // A genuinely warm day is still allowed to reach the top of the ladder.
+        assert_eq!(
+            wear_for(Score::from_value(8.6), Score::from_value(9.3)).level(),
+            9
+        );
+
+        // And a flat day wears its own outfit rather than one rung under it.
+        let flat = Score::from_value(6.0);
+        assert_eq!(wear_for(flat, flat).level(), 6);
     }
 
     #[test]

@@ -11,11 +11,13 @@
 //! that. It is committed to the repo for the same reason the home location is:
 //! there is nowhere else to put it.
 //!
-//! Spacing is uneven on purpose, and follows the clothing rather than the
-//! thermometer: seven degrees to a point through the mild band, where swapping
-//! a shirt for a jacket is a real decision, and fifteen to twenty-five at the
-//! ends, where everything is just "very cold" or "very hot" and the extra
-//! resolution would be false precision.
+//! Spacing is uneven because the clothing is. Each temperature is solved, not
+//! chosen: it is the felt temperature at which that point's outfit produces the
+//! sensation the point claims, under PMV at a moderate walk. So the rungs come
+//! out as far apart as the garments between them are warm — three degrees
+//! between a t-shirt and a long-sleeve one, twenty between a winter coat and a
+//! heavy one — and the ends stretch wide because clothing has stopped being the
+//! variable.
 //!
 //! The ends are anchored on being unable to go out at all, not merely on being
 //! uncomfortable: 0 is an Alaskan midwinter afternoon, windy and sunless, and
@@ -41,52 +43,54 @@
 //! The presentation owes more to the UV Index: a small bounded number with a
 //! colour per point and an action attached to each.
 //!
-//! # Checked against PMV
+//! # Where the temperatures come from
 //!
-//! Because every point names an outfit, the anchors can be checked rather than
-//! merely asserted. Assigning ASHRAE 55 garment insulation to each outfit and
-//! running Fanger's PMV at 2.4 met (a moderate walk) gives, for the prescribed
-//! clothing at each point's own temperature:
+//! Not from taste. Each outfit is priced in ASHRAE 55 garment insulation, and
+//! the temperature is then solved so that Fanger's PMV returns the sensation
+//! the point claims, for a walker at 2.4 met in a light breeze:
 //!
 //! ```text
-//!   9  shorts and a light t-shirt        +1.57   warm, going on hot
-//!   8  jeans and a t-shirt               +0.72   warm but tolerable
-//!   7  jeans and a long-sleeve shirt     +0.29   neutral
-//!   6  jeans and a light jacket          -0.03   neutral
-//!   5  jeans and a jacket                -0.05   neutral
-//!   4  warm jacket                       -0.25   neutral
-//!   3  coat                              -0.46   neutral
-//!   2  winter coat                       -0.67   slightly cool
-//!   1  heavy winter coat, hat and gloves -0.88   slightly cool
+//!   9  shorts and a light t-shirt        +2.2  warm, barely bearable    94F
+//!   8  shorts and a t-shirt               0.0  comfortable              78F
+//!   7  jeans and a t-shirt                0.0  comfortable              73F
+//!   6  jeans and a long-sleeve t-shirt    0.0  comfortable              70F
+//!   5  jeans and a light jacket           0.0  comfortable              61F
+//!   4  jeans and a warm jacket            0.0  comfortable              53F
+//!   3  coat                               0.0  comfortable              46F
+//!   2  winter coat                        0.0  comfortable              37F
+//!   1  heavy winter coat, hat and gloves -0.5  slightly cool            16F
 //! ```
 //!
-//! Which is the intent: 3 through 7 sit inside ASHRAE's ±0.5 comfort band, so
-//! the clothing named there genuinely makes the weather comfortable. 8 is warm
-//! in jeans (+0.72) and comfortable in shorts (+0.19), and 9 stays hot however
-//! you dress, because below a t-shirt there is nothing left to remove. The cold
-//! end drifts only slightly cool, which is right: you can always add more.
+//! Only 9 is deliberately uncomfortable, because that is the one end clothing
+//! cannot rescue: below a t-shirt there is nothing left to take off. The cold
+//! end can always be dressed for, so it is solved to comfortable and only the
+//! last rung is allowed to bite.
 //!
-//! Two things that check are sensitive to. It assumes a moderate walk — at a
-//! brisk 2.9 met the whole scale reads about half a point warm, and at a stroll
-//! half a point cool, so the anchors encode a pace as well as a preference. And
-//! PMV is known to overstate warmth above about 2 met (Humphreys & Nicol,
-//! 2002), which is the direction that would matter most at 9.
+//! 8 carries a second constraint that the solve satisfies without being asked:
+//! at 78°F shorts come out at 0.00 and jeans at +0.57, comfortable and slightly
+//! warm respectively, which is what that point is supposed to mean.
+//!
+//! Two sensitivities worth knowing. The anchors encode a pace as well as a
+//! preference — at a brisk 2.9 met the whole scale reads about half a point
+//! warm, at a stroll half a point cool. And PMV is known to overstate warmth
+//! above roughly 2 met (Humphreys & Nicol, 2002), which is the direction that
+//! matters most at 9.
 
 use crate::units::Temperature;
 use std::fmt;
 
 /// `(felt °F, score)`, ascending. Interpolated between, clamped outside.
 const ANCHORS: [(f64, f64); 11] = [
-    (-20.0, 0.0),
-    (5.0, 1.0),
-    (22.0, 2.0),
-    (36.0, 3.0),
-    (47.0, 4.0),
-    (56.0, 5.0),
-    (63.0, 6.0),
-    (71.0, 7.0),
-    (79.0, 8.0),
-    (89.0, 9.0),
+    (-34.0, 0.0),
+    (16.0, 1.0),
+    (37.0, 2.0),
+    (46.0, 3.0),
+    (53.0, 4.0),
+    (61.0, 5.0),
+    (70.0, 6.0),
+    (73.0, 7.0),
+    (78.0, 8.0),
+    (94.0, 9.0),
     (105.0, 10.0),
 ];
 
@@ -111,15 +115,21 @@ const LABELS: [(&str, &str, Option<&str>); 11] = [
     ),
     ("freezing", "winter coat", Some("a winter coat")),
     ("cold", "coat", Some("a coat")),
-    ("chilly", "warm jacket", Some("a warm jacket")),
-    ("neutral", "jeans and a jacket", Some("a jacket")),
-    ("mild", "jeans and a light jacket", Some("a light jacket")),
+    ("chilly", "jeans and a warm jacket", Some("a warm jacket")),
     (
-        "pleasant",
-        "jeans and a long-sleeve shirt",
-        Some("a long-sleeve shirt"),
+        "neutral",
+        "jeans and a light jacket",
+        Some("a light jacket"),
     ),
-    ("warm", "jeans and a t-shirt", None),
+    (
+        "mild",
+        "jeans and a long-sleeve t-shirt",
+        Some("a long-sleeve t-shirt"),
+    ),
+    // From here up there is nothing left to carry: swapping jeans for shorts
+    // is not something anyone does halfway through a walk.
+    ("pleasant", "jeans and a t-shirt", None),
+    ("warm", "shorts and a t-shirt", None),
     ("hot", "shorts and a light t-shirt", None),
     ("dangerous heat", "avoid outdoors", None),
 ];
@@ -129,6 +139,12 @@ const LABELS: [(&str, &str, Option<&str>); 11] = [
 pub struct Score(f64);
 
 impl Score {
+    /// Only for arithmetic on an existing score, such as stepping down a rung.
+    /// Felt temperatures come in through [`score`].
+    pub fn from_value(points: f64) -> Self {
+        Score(points.clamp(0.0, 10.0))
+    }
+
     pub fn value(self) -> f64 {
         self.0
     }
@@ -244,23 +260,23 @@ mod tests {
 
     #[test]
     fn five_is_the_weather_this_site_is_calibrated_for() {
-        assert_eq!(at(56.0).word(), "neutral");
-        assert_eq!(at(56.0).advice(), "jeans and a jacket");
-        assert_eq!(format!("{}", at(56.0)), "5.0");
+        assert_eq!(at(61.0).word(), "neutral");
+        assert_eq!(at(61.0).advice(), "jeans and a light jacket");
+        assert_eq!(format!("{}", at(61.0)), "5.0");
     }
 
     #[test]
     fn interpolates_between_anchors() {
-        // Halfway from 47°F (4) to 56°F (5).
-        assert!((at(51.5).value() - 4.5).abs() < 1e-9);
-        // A quarter of the way from 71°F (7) to 79°F (8).
-        assert!((at(73.0).value() - 7.25).abs() < 0.001);
+        // Halfway from 53°F (4) to 61°F (5).
+        assert!((at(57.0).value() - 4.5).abs() < 1e-9);
+        // A fifth of the way from 73°F (7) to 78°F (8).
+        assert!((at(74.0).value() - 7.2).abs() < 0.001);
     }
 
     #[test]
     fn clamps_outside_the_scale_instead_of_running_off_it() {
-        assert_eq!(at(-60.0).value(), 0.0);
-        assert_eq!(at(-20.0).value(), 0.0);
+        assert_eq!(at(-70.0).value(), 0.0);
+        assert_eq!(at(-34.0).value(), 0.0);
         assert_eq!(at(130.0).value(), 10.0);
         assert_eq!(at(105.0).value(), 10.0);
     }
@@ -268,14 +284,14 @@ mod tests {
     #[test]
     fn the_ends_mean_do_not_go_outside() {
         // An Alaskan midwinter afternoon and a clear Singapore summer day.
-        assert!(at(-20.0).value() <= 0.2, "{}", at(-20.0));
+        assert!(at(-34.0).value() <= 0.2, "{}", at(-34.0));
         assert!(at(108.0).value() >= 9.8, "{}", at(108.0));
 
         // And an ordinary hot day is emphatically not one of those.
-        let shorts_weather = at(89.0);
+        let shorts_weather = at(94.0);
         assert!(
             (8.5..9.5).contains(&shorts_weather.value()),
-            "89°F scored {shorts_weather}, which should be shorts, not danger"
+            "94°F scored {shorts_weather}, which should be shorts, not danger"
         );
     }
 
@@ -292,8 +308,8 @@ mod tests {
     #[test]
     fn the_mild_band_has_the_finest_resolution() {
         // A page for deciding on a layer needs to separate 58° from 64°.
-        let mild = at(63.0).value() - at(56.0).value();
-        let frigid = at(5.0).value() - at(-2.0).value();
+        let mild = at(78.0).value() - at(71.0).value();
+        let frigid = at(16.0).value() - at(9.0).value();
         let scorching = at(105.0).value() - at(98.0).value();
         assert!(mild > frigid * 2.0, "mild {mild} vs frigid {frigid}");
         assert!(mild > scorching * 2.0, "mild {mild} vs hot {scorching}");
@@ -301,12 +317,12 @@ mod tests {
 
     #[test]
     fn labels_describe_what_to_wear_at_each_point() {
-        assert_eq!(at(5.0).word(), "brutal");
-        assert_eq!(at(47.0).advice(), "warm jacket");
-        assert_eq!(at(71.0).advice(), "jeans and a long-sleeve shirt");
-        assert_eq!(at(89.0).word(), "hot");
+        assert_eq!(at(16.0).word(), "brutal");
+        assert_eq!(at(53.0).advice(), "jeans and a warm jacket");
+        assert_eq!(at(70.0).advice(), "jeans and a long-sleeve t-shirt");
+        assert_eq!(at(94.0).word(), "hot");
         assert_eq!(at(105.0).advice(), "avoid outdoors");
-        assert_eq!(at(89.0).label(), "hot \u{2014} shorts and a light t-shirt");
+        assert_eq!(at(94.0).label(), "hot \u{2014} shorts and a light t-shirt");
     }
 
     #[test]
@@ -326,16 +342,16 @@ mod tests {
 
     #[test]
     fn labels_snap_to_the_nearest_whole_point() {
-        assert_eq!(at(57.0).word(), at(56.0).word());
-        // 59.5°F sits midway between 5 and 6 and rounds up.
-        assert_eq!(at(61.0).word(), at(63.0).word());
+        assert_eq!(at(62.0).word(), at(61.0).word());
+        // 65.5°F sits midway between 5 and 6 and rounds up.
+        assert_eq!(at(66.0).word(), at(70.0).word());
     }
 
     #[test]
     fn always_renders_with_one_decimal() {
-        assert_eq!(format!("{}", at(56.0)), "5.0");
-        assert_eq!(format!("{}", at(51.5)), "4.5");
-        assert_eq!(format!("{}", at(-20.0)), "0.0");
+        assert_eq!(format!("{}", at(61.0)), "5.0");
+        assert_eq!(format!("{}", at(57.0)), "4.5");
+        assert_eq!(format!("{}", at(-34.0)), "0.0");
         assert_eq!(format!("{}", at(120.0)), "10.0");
     }
 
@@ -356,9 +372,9 @@ mod tests {
 
     #[test]
     fn the_level_is_the_nearest_whole_point() {
-        assert_eq!(at(56.0).level(), 5);
-        assert_eq!(at(51.5).level(), 5); // exactly 4.5, rounds away from zero
-        assert_eq!(at(-40.0).level(), 0);
+        assert_eq!(at(61.0).level(), 5);
+        assert_eq!(at(57.0).level(), 5); // exactly 4.5, rounds away from zero
+        assert_eq!(at(-50.0).level(), 0);
         assert_eq!(at(130.0).level(), 10);
         for degrees in -20..130 {
             assert!(at(f64::from(degrees)).level() <= 10);
@@ -385,21 +401,21 @@ mod tests {
     #[test]
     fn a_layer_is_something_you_could_carry() {
         // Below a t-shirt every point is reachable by adding an outer layer.
-        for degrees in [5.0, 22.0, 36.0, 47.0, 56.0, 63.0, 71.0] {
+        for degrees in [16.0, 37.0, 46.0, 53.0, 61.0, 70.0] {
             assert!(at(degrees).layer().is_some(), "{degrees}F has no layer");
         }
-        assert_eq!(at(47.0).layer(), Some("a warm jacket"));
+        assert_eq!(at(53.0).layer(), Some("a warm jacket"));
 
         // Above it there is nothing left to take off, so nothing to carry.
-        for degrees in [79.0, 89.0, 105.0] {
+        for degrees in [73.0, 78.0, 94.0, 105.0] {
             assert_eq!(at(degrees).layer(), None, "{degrees}F offered a layer");
         }
     }
 
     #[test]
     fn extremes_pick_the_right_end() {
-        let cool = at(47.0);
-        let warm = at(79.0);
+        let cool = at(53.0);
+        let warm = at(78.0);
         assert_eq!(cool.min(warm), cool);
         assert_eq!(cool.max(warm), warm);
     }

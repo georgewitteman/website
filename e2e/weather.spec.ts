@@ -42,7 +42,9 @@ test.describe("Weather", () => {
     // coolest, since a jacket can.
     await page.goto("/weather");
     const verdict = page.locator(".weather-verdict");
-    await expect(verdict).toContainText(/Wear .+, for \d\.\d \(-?\d+°\)/);
+    await expect(verdict).toContainText(
+      /Wear .+(which holds up to \d\.\d \(-?\d+°\)|all day)/,
+    );
   });
 
   test("colours each score by how it feels", async ({ page }) => {
