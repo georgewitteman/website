@@ -119,6 +119,36 @@ test.describe("Weather", () => {
     ).toBeGreaterThan(6);
   });
 
+  test("the hourly headings follow you down the table", async ({ page }) => {
+    // Eighteen rows is more than a screenful. This also guards the table
+    // against being put back into a scroll container, which would silently
+    // stop `position: sticky` working at all.
+    await page.goto("/weather");
+    const headerHeight =
+      (await page.locator(".header").boundingBox())?.height ?? 0;
+
+    await page
+      .locator(".weather-hours tbody tr")
+      .last()
+      .scrollIntoViewIfNeeded();
+    const heading = await page
+      .locator(".weather-hours thead th")
+      .first()
+      .boundingBox();
+    const table = await page.locator(".weather-hours").boundingBox();
+
+    expect(heading?.y ?? 0).toBeCloseTo(headerHeight, 0);
+    expect(heading?.y ?? 0).toBeGreaterThan((table?.y ?? 0) + 50);
+  });
+
+  test("nothing overhangs the side of the page", async ({ page }) => {
+    await page.goto("/weather");
+    const overflow = await page.evaluate(
+      "document.documentElement.scrollWidth - document.documentElement.clientWidth",
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+
   test("marks sunset in the hourly view", async ({ page }) => {
     await page.goto("/weather");
     await expect(page.locator(".weather-row-sunset")).toContainText(

@@ -810,12 +810,16 @@ fn direction_of(difference: f64) -> &'static str {
 }
 
 fn row(label: &str, today: f64, yesterday: f64, unit: &str) -> Comparison {
+    // Differenced after rounding, not before: 9.4 against 12.6 prints as 9 and
+    // 13, and a change of -3 beside them is a subtraction that does not work.
+    let now = today.round();
+    let then = yesterday.round();
     Comparison {
         label: label.to_owned(),
-        today: format!("{}{unit}", today.round() as i32),
-        yesterday: format!("{}{unit}", yesterday.round() as i32),
-        delta: signed(today - yesterday, unit),
-        direction: direction_of(today - yesterday),
+        today: format!("{}{unit}", now as i32),
+        yesterday: format!("{}{unit}", then as i32),
+        delta: signed(now - then, unit),
+        direction: direction_of(now - then),
     }
 }
 
@@ -826,11 +830,16 @@ fn temperature_row(label: &str, today: Temperature, yesterday: Temperature) -> C
 /// A comparison on the 0-10 scale, which needs its own formatting: whole
 /// degrees would hide a change of half a point.
 fn score_row(label: &str, today: Score, yesterday: Score) -> Comparison {
-    let difference = today.value() - yesterday.value();
+    // Same reasoning as `row`: subtract what is printed, so the three numbers
+    // in a row agree with each other.
+    let now = today.to_string();
+    let then = yesterday.to_string();
+    let difference = now.parse::<f64>().unwrap_or(today.value())
+        - then.parse::<f64>().unwrap_or(yesterday.value());
     Comparison {
         label: label.to_owned(),
-        today: today.to_string(),
-        yesterday: yesterday.to_string(),
+        today: now,
+        yesterday: then,
         delta: match format!("{difference:+.1}").as_str() {
             "+0.0" | "-0.0" => "same".to_owned(),
             signed => signed.to_owned(),
@@ -1820,6 +1829,21 @@ mod tests {
             let (target, _, _) = resolve(&query(None, Some(lat), Some(lon))).await;
             assert_eq!(target.pin.as_deref(), Some("inner-sunset"), "{lat},{lon}");
         }
+    }
+
+    #[test]
+    fn a_row_subtracts_the_numbers_it_actually_prints() {
+        // 9.4 and 12.6 print as 9 and 13, so the change must read -4.
+        let wind = row("Strongest wind", 9.4, 12.6, " mph");
+        assert_eq!(wind.today, "9 mph");
+        assert_eq!(wind.yesterday, "13 mph");
+        assert_eq!(wind.delta, "-4 mph");
+
+        // And two values that print the same must read as no change at all.
+        let flat = row("Cloud", 26.6, 27.4, "%");
+        assert_eq!(flat.today, flat.yesterday);
+        assert_eq!(flat.delta, "same");
+        assert_eq!(flat.direction, "flat");
     }
 
     #[test]

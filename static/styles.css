@@ -235,6 +235,9 @@ body {
   --weather-rule: #e5e7eb;
   --weather-surface: #f9fafb;
 
+  /* Height of the sticky site header, which the table headings stop beneath. */
+  --weather-header-height: 3.25rem;
+
   color: var(--weather-ink);
   padding-bottom: 3rem;
   max-width: 42rem;
@@ -511,6 +514,40 @@ body {
   overflow-x: auto;
 }
 
+/*
+ * Deliberately not a scroll container. `overflow-x: auto` forces overflow-y to
+ * compute to auto as well, which makes the element a scrollport and quietly
+ * stops `position: sticky` inside it from ever sticking to the page. The table
+ * is sized to fit instead, down to the narrowest phones, by the rules below.
+ */
+.weather-hours-wrap {
+  overflow: visible;
+}
+
+/*
+ * Eighteen rows is more than a screenful, so the column headings follow you
+ * down. They stop under the site header rather than at the top of the viewport,
+ * which is what `--weather-header-height` is measuring.
+ */
+.weather-hours thead th {
+  position: sticky;
+  top: var(--weather-header-height);
+  z-index: 1;
+  background-color: #fff;
+}
+
+/*
+ * A hairline drawn as a shadow, because a sticky cell's own border scrolls away
+ * with the row it belongs to.
+ */
+.weather-hours thead th::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background-color: var(--weather-rule);
+}
+
 .weather-table {
   width: 100%;
   border-collapse: collapse;
@@ -530,6 +567,39 @@ body {
   font-weight: 600;
   color: var(--weather-muted);
   border-bottom: 1px solid var(--weather-rule);
+}
+
+/*
+ * Eight columns is a squeeze on the smallest phones still in use, and the table
+ * has to fit: it is deliberately not in a scroll container, so anything it
+ * overhangs is the page itself.
+ */
+@media (max-width: 26rem) {
+  .weather-hours {
+    font-size: 0.75rem;
+  }
+
+  .weather-hours th,
+  .weather-hours td {
+    padding-left: 0.1875rem;
+    padding-right: 0.1875rem;
+  }
+
+  .weather-hours .weather-cell-score {
+    min-width: 1.875rem;
+  }
+}
+
+@media (max-width: 22rem) {
+  .weather-hours th,
+  .weather-hours td {
+    padding-left: 0.0625rem;
+    padding-right: 0.0625rem;
+  }
+
+  .weather-hours .weather-cell-score {
+    min-width: 1.625rem;
+  }
 }
 
 .weather-table tbody th {
@@ -900,6 +970,10 @@ body {
   display: block;
   width: max-content;
   max-width: 100%;
+  /* The site sets no global box-sizing, so without this the tip's own padding
+     is added to the 100% and it overhangs the page by a couple of pixels even
+     while hidden. */
+  box-sizing: border-box;
   padding: 0.5rem 0.625rem;
   border-radius: 0.375rem;
   background-color: #1f2937;
