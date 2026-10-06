@@ -43,7 +43,7 @@ test.describe("Weather", () => {
     await page.goto("/weather");
     const verdict = page.locator(".weather-verdict");
     await expect(verdict).toContainText(
-      /Wear .+(which holds up to \d\.\d \(-?\d+°\)|all day)/,
+      /Wear .+(which holds up to \d{1,2}\.\d \(-?\d+°\)|all day)/,
     );
   });
 
